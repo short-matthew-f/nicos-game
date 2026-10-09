@@ -37,3 +37,6 @@ The handoff isn't a complete list, and it isn't fixed. Nico will change his mind
 - The second hustle (cleaning, per §12) and when taxi and construction arrive.
 - How time works: rent and wages (§13.6), and what failure costs (§13.7).
 - How deep factory planning goes (§13.5). This matters at the worker/conveyor step, not before.
+
+## Idea parking lot (wanted, not scheduled)
+- **Karate class** (Nico does karate). It could be a dojo in the city with a timing or sequence minigame. Belts earned there would show up on his outfit and could unlock a reusable skill. It fits the "skills he builds and reuses" goal.
