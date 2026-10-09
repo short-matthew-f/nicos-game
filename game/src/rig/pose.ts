@@ -1,0 +1,106 @@
+// Pose math ported from src/rig.py (class Nico). Each part's transform is a list of ops
+// applied like a CSS transform list; test/pose.test.ts checks this against poses dumped
+// from the Python rig (python3 src/export_game.py).
+
+export type View = 'side' | 'front' | 'back';
+export type Op = ['t', number, number] | ['r', number] | ['s', number, number];
+
+export interface PoseState {
+  view: View;
+  face: number;      // side view: +1 right, -1 left
+  phase: number;     // gait distance in seconds of full-speed walking
+  amp: number;       // gait amplitude 0..1
+  stride_y: number;  // front/back: screen-y rig units per unit phase (foot planting)
+  crouch: number;    // 0..1
+  hold: number;      // 0..1 arms forward
+  breath: number;    // idle chest rise (units)
+}
+
+export const CYCLE = 0.7;
+export const DC = 30.745;
+export const LEAN_C = 25.0;
+const LX = 10.0, AX = 20.0, LIFT = 9.0, SWAY = 1.5, ARM_OUT = 7.0;
+const RAD = Math.PI / 180;
+
+export const neutral = (view: View = 'side'): PoseState =>
+  ({ view, face: 1, phase: 0, amp: 0, stride_y: 0, crouch: 0, hold: 0, breath: 0 });
+
+function gait(st: PoseState): [number, number] {
+  const an = 28.0 * st.amp * Math.sin(2 * Math.PI * st.phase / CYCLE);
+  const dw = 29.0 * (1 - Math.cos(an * RAD));
+  return [an, DC * st.crouch + dw];
+}
+
+function sideOps(st: PoseState): Record<string, Op[]> {
+  const [an, dd] = gait(st);
+  const lean = LEAN_C * st.crouch + 3.0 * st.amp;
+  const armang = (far: boolean) => {
+    const free = far ? 0.85 * an : -0.85 * an;
+    return (1 - st.hold) * free + st.hold * -56.0;
+  };
+  const l = 58 - DC * st.crouch;
+  const arm = (far: boolean): Op[] =>
+    [['t', 0, -58 + dd - st.breath], ['r', lean], ['t', 2, -42], ['r', armang(far)]];
+  const leg = (far: boolean): Op[] =>
+    [['t', far ? -3 : 3, -58 + dd], ['r', far ? -an : an], ['s', 1 + 0.35 * st.crouch, (l - 8) / 50.0]];
+  const shoe = (far: boolean): Op[] => {
+    const a = far ? -an : an, r = a * RAD, hx = far ? -3 : 3;
+    return [['t', hx - l * Math.sin(r), -58 + dd + l * Math.cos(r)], ['r', a * 0.4]];
+  };
+  return {
+    ba: arm(true), bl: leg(true), bs: shoe(true), fl: leg(false), fs: shoe(false),
+    up: [['t', 0, -58 + dd - st.breath], ['r', lean]], fa: arm(false),
+  };
+}
+
+function fbOps(st: PoseState): Record<string, Op[]> {
+  const ph = 2 * Math.PI * st.phase / CYCLE;
+  const amp = st.amp, [, dd] = gait(st);
+  const off = st.stride_y * CYCLE / (2 * Math.PI) * amp * Math.sin(ph);
+  const sway = SWAY * amp * Math.cos(ph);
+  const side = (i: number) => {
+    const sg = i < 0 ? 1 : -1;
+    return { lift: LIFT * amp * Math.max(0, sg * Math.cos(ph)), off: sg * off, arm: -sg * amp * Math.sin(ph) };
+  };
+  const leg = (i: number): Op[] => {
+    const q = side(i), l = 58 - dd - q.lift + q.off;
+    return [['t', i * LX + sway, -58 + dd], ['r', Math.asin(sway / l) / RAD], ['s', 1, (l - 8) / 50.0]];
+  };
+  const shoe = (i: number): Op[] => { const q = side(i); return [['t', i * LX, -q.lift + q.off]]; };
+  const arm = (i: number): Op[] => {
+    const a = side(i).arm;
+    return [['t', i * AX + sway, -100 + dd - st.breath], ['r', -i * (ARM_OUT + 3.0 * Math.abs(a))], ['s', 1, 1 - 0.14 * Math.abs(a)]];
+  };
+  return {
+    legl: leg(-1), legr: leg(1), shl: shoe(-1), shr: shoe(1),
+    up: [['t', sway, -58 + dd - st.breath]], arml: arm(-1), armr: arm(1),
+  };
+}
+
+/** Ops for every part of the active view, keyed by the part names in nico.json. */
+export function partOps(st: PoseState): Record<string, Op[]> {
+  return st.view === 'side' ? sideOps(st) : fbOps(st);
+}
+
+/** 2x3 affine [a, b, c, d, tx, ty] (x' = a x + c y + tx, y' = b x + d y + ty) of an op
+ * list, composed left to right the way CSS composes a transform list. */
+export type Mat = [number, number, number, number, number, number];
+export function opsMatrix(ops: Op[]): Mat {
+  let m: Mat = [1, 0, 0, 1, 0, 0];
+  for (const o of ops) {
+    let n: Mat;
+    if (o[0] === 't') n = [1, 0, 0, 1, o[1], o[2]];
+    else if (o[0] === 'r') { const c = Math.cos(o[1] * RAD), s = Math.sin(o[1] * RAD); n = [c, s, -s, c, 0, 0]; }
+    else n = [o[1], 0, 0, o[2], 0, 0];
+    m = mul(m, n);
+  }
+  return m;
+}
+export function mul(m: Mat, n: Mat): Mat {
+  return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+          m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+          m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+}
+export function apply(m: Mat, x: number, y: number): [number, number] {
+  return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+}

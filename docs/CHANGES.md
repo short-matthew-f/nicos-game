@@ -91,3 +91,39 @@ Matthew sent three photos of Nico and asked for the character to look more like 
   - The hair tie sat behind the side hair and was invisible, so it is now drawn on top.
 - **Not done:** martial-arts belts (from the photos) as an outfit or unlockable. That's an idea for later and isn't in the default look. The Blender track (`out/blender`) still has the old look; it was an evaluation and isn't used by the game.
 - **Verification:** `sh run.sh` gives 90 passed, 0 failed. No checks were added. The walk and walk3d goldens were regenerated because the art changed on purpose. Sheets: `reference/nico_v1_before.png`, `reference/nico_v2_likeness.png`, `reference/nico_v2_walk3d_sheet.png`.
+
+## Game v0: "Nico on the street" (2026-10-09)
+The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21 and pixi-filters 6.1.5. Every package version was released at least two weeks before it was installed. `game/.npmrc` sets `legacy-peer-deps`, because npm 10.9 crashed while resolving vitest's optional peers ("Cannot read properties of null (reading 'edgesOut')").
+- **Rendering:** the world is drawn on a WebGL canvas; DOM is used only for the HUD and the thumbstick. This replaces the DOM/SVG plan (see GAME_PLAN for why).
+- **Art pipeline:** `python3 src/export_game.py` rasterizes every leaf part of the rig at 2 px per unit **without** the sticker filter. It writes them to `game/public/art/nico/`, with `nico.json` giving each part's origin offset in draw order. It also dumps 59 sampled poses to `game/test/fixtures/poses.json`. It reuses `rig.Nico` through stand-ins for Scene and Timeline, so the game art can't drift from the SVG art.
+- **Rig port:** `game/src/rig/pose.ts` gives the ops per part. The ops compose as a CSS transform list, built into a single matrix per sprite rather than mapped to position/rotation/scale, because the arms are `t,r,t,r`. On screen, `NicoView` applies a live `OutlineFilter` (white) and `DropShadowFilter` (navy, 22%) to the whole body, so part seams don't show. Their size is set in screen px from the zoom.
+- **Static art** (buildings, trees, playground, cars) draws the white band and shadow as geometry, with no filters. It's cheap, and it stays crisp at any zoom.
+- **Decisions:**
+  - Landscape-first.
+  - The camera shows 800 world px of height, so Nico is about 1/6 of the screen.
+  - The thumbstick floats wherever the finger lands, anywhere on screen.
+  - WASD/arrow keys work on a PC.
+  - Facing: mostly horizontal travel gives the side view (flipped), down gives front, up gives back. There's a 1.25× hysteresis band so diagonals don't flicker.
+  - Walk speed is 240 px/s with 1.5× the rig's cadence. Feet slide a little at full speed; a run clip can fix that later.
+  - Cars follow lane loops with right-hand traffic. They keep a gap and stop when Nico stands in the zone ahead of them.
+  - The "+10 people" debug button adds Nico clones that wander, each with its own live filters. It's there to find the iPad's performance limit.
+- **Corrections:**
+  - The first car paths used Chaikin smoothing on the 4-corner loop. That converges to a B-spline, so cars cut every corner in a wide diagonal (visible in the first screenshot). Replaced with fixed-reach corner curves (`roundCorners`); the tests below cover it.
+  - The e2e car-stop check originally estimated a car's heading from two samples 150 ms apart. It was flaky at corners, so the game now exposes `inFrontOf(i, d)` and the check picks a car on a straight.
+- **Tests**
+  - `cd game && npm test` (Vitest): 73 tests.
+    - Pose parity with the Python rig, 62 tests. Mutations each went red: swing-foot lift 9→8 (24 failed), shoulder pivot y -42→-40 (21 failed), foot-planting sign flipped (16 failed).
+    - Opsmatrix composition.
+    - Car loops stay on the road, in lane on the straights, with no kinks. The old Chaikin path failed 4 of these.
+    - Facing and hysteresis, building collision with sliding, world bounds, thumbstick deadzone and saturation.
+  - `python verify/game_e2e.py [url]`: 20 checks in WebKit with an emulated iPad Pro 11 in landscape.
+    - No page errors; FPS counter running; Nico centred and about 1/6 of the screen tall.
+    - Dragging right, up, down and left gives the right movement and facing; walking stops when the finger lifts.
+    - The stick keeps steering with the finger over the HUD, and sliding over a button doesn't press it.
+    - A car stops for Nico in its lane and drives on when he leaves.
+    - +10 people adds ten walkers and Clear removes them.
+    - Mutation: disabling car braking for Nico went red.
+  - **Not proven by mutation:** removing `setPointerCapture` stayed green. WebKit already captures implicitly here (touch pointers do this on iPad too), so the explicit call is belt-and-braces and the check guards the behaviour, not the call.
+  - Run the e2e against the production build (`npm run build && npm run preview`, then `http://localhost:4173/`). Against the dev server, the first load after an edit can hit Vite's module reload ("Importing a module script failed").
+- **Measured:** 60 fps with 51 people in WebKit on the Mac. That says nothing about the iPad; the on-device FPS counter is the real test.
+- **Plan B** (not built, pending the iPad result): if the live outline is too slow, bake whole-body frames from the SVG scenes with the sticker included.
