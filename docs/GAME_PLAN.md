@@ -8,6 +8,13 @@ Status: draft for approval. It builds on `docs/GAMEPLAY_HANDOFF.md`. **Decided**
 - The first build is smaller than handoff §12: one hustle, one product and a first sale, playable on the iPad. After that it extends toward §12.
 - The first product is a **toy car**.
 
+## Built to change
+The handoff isn't a complete list, and it isn't fixed. Nico will change his mind as the game takes shape, and that's expected. So the code should make changes cheap:
+- **Content is data.** Products, parts, hustles, places, prices and text live in data files. A new product or a changed price is a data edit, not a code change.
+- **Minigames are plug-ins.** Each one is a separate module behind the same `start(ctx) → result` interface. You can add, swap or retire one without touching the others.
+- **Saves are versioned.** When the data changes, old saves are migrated, so changing direction never wipes his progress.
+- Every change of direction gets a line in `docs/CHANGES.md` saying what changed and why, so we can always see how we got here.
+
 ## Slice 0 scope (recommended)
 1. **The city as a tappable neighborhood map.** No free walking yet. It has four places: a storage yard, a parts supplier, Nico's garage workshop and a customer (a toy shop counter or a neighbor). Tapping a place shows Nico walking there (the rig's walk clip), then opens it.
 2. **Hustle: storage-unit flipping.** I chose it over cleaning because it involves decisions that suit a 12+ player, and because a unit can contain toy-car parts (wheels, a spring motor). That links the hustle to the product as handoff §4 proposes. The flow is: look through the door gap at visible clues → see the price and an honest "could be worth $X–$Y" range → bid or pass → open the unit → sort the items into Sell, Keep or Scrap. The first unit is guaranteed to make a profit (handoff §5: no hidden loss in the opening).
