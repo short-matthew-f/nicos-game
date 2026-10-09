@@ -29,9 +29,9 @@ Walk right on the far line (y=376) → turn to front → walk toward the camera 
 ### verify
 - `verify.py walk3d` adds 18 checks: loop seam; exactly one view showing at every 0.05s sample (hidden = scaleY 0; a flip legitimately passes through scaleX 0; sample instants within 1ms of a swap are excluded because the swap is a 1ms keyframe crossfade, and the swap check covers ±2ms); feet planted (lowest visible shoe within 7px of the character's ground point at every sample); ground point on the intended path (on the segment during a walk, exactly at the waypoint while standing; within 1px); back view shows no face (`.dface` elements have zero area whenever the back set shows); each of the 4 swaps: the expected views on each side, height change <3% and feet edge <2px; depth (taller after walking toward, back to size after walking away); front-view symmetry at the neutral stance (t=5.1, 8.0); filter regions.
 - First-run corrections: the linear-path check ignored the eased walk start (up to ~18px lag) → replaced with on-segment + waypoint checks; the feet window `[-7,+3]` flagged the planted forward foot (+3.1px) → symmetric ±7px per the spec; one-view check flagged a flip midpoint and an exact swap instant → fixed as described above.
-- Full run: **89 checks passed, 0 failed** (71 original + 18 walk3d).
+- Full run: **90 checks passed, 0 failed** (71 original + 19 walk3d). The 19th, added after review, asserts the `.dface` markers exist so the back-face check can't pass with nothing to guard.
 - `shot.py` now takes an output path and scale, labels frames, and resolves `out/` relative to itself.
-- New `verify/browsers.py`: cross-browser smoke test (see below).
+- New `verify/browsers.py`: cross-browser smoke test (see below). A browser that won't launch is reported and skipped; `BROWSERS=webkit` selects one.
 
 ### Mutation evidence (each break applied to a scratch copy of `src/`, built to a scratch OUT, `verify.py walk3d`)
 | Break | Result |
@@ -45,6 +45,7 @@ Walk right on the far line (y=376) → turn to front → walk toward the camera 
 | no depth scaling | RED: `walk3d depth scale wrong (heights 232, 231, 231)` |
 | front set never hidden | RED: `walk3d: exactly one view should show, at t=0.0s` + face |
 | view swaps at 60% of the turn | RED: `expected side -> front swap at t=4.7s ...` + swap pops (height 4.0%) |
+| `dface` marker dropped from walk3d (the face check would otherwise pass vacuously; guard added after review) | RED: `walk3d: only 0 face elements marked .dface (expected ...)` |
 | character filter region narrowed to x -40..60 | RED: `filter region #df clips content by 19px at t=13.75s` (a first, milder narrowing to -60..100 stayed green because it didn't actually clip; mutation strengthened, not the check) |
 
 ### Cross-browser (`verify/browsers.py`)

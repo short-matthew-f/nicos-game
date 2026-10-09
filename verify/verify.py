@@ -217,6 +217,9 @@ def test_walk3d(pg):
     load(pg, 'walk3d'); T = W3_T
     seek(pg, 0.0); a = img(pg); seek(pg, T - 0.001); b = img(pg)
     check(diff_frac(a, b) < 0.0005, 'walk3d loop seam: last frame differs from first frame')
+    seek(pg, 0.0); nf = w3_state(pg)['nface']
+    # the face check below guards elements marked .dface; make sure they exist (side 3 + front 5)
+    check(nf >= 8, f'walk3d: only {nf} face elements marked .dface (expected side eye/mouth/cheek + front 2 eyes, mouth, 2 cheeks)')
     bad_feet = bad_path = bad_face = bad_view = None; nback = 0
     for i in range(int(round(T / 0.05))):
         t = round(i * 0.05, 3); seek(pg, t); s = w3_state(pg)

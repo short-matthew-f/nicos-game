@@ -20,7 +20,9 @@ with sync_playwright() as p:
     for name in TIMES:
         ref, n0 = frames(p.chromium, name)
         for bn in os.environ.get('BROWSERS', 'firefox,webkit').split(','):
-            fr, n = frames(getattr(p, bn), name)
+            try: fr, n = frames(getattr(p, bn), name)
+            except Exception as e:
+                print(f'{name:8s} {bn:8s} could not launch: {str(e).splitlines()[0][:100]}'); continue
             diffs = []
             for a, b in zip(ref, fr):
                 d = ImageChops.difference(a, b).convert('L').point(lambda v: 255 if v > 40 else 0)
