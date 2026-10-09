@@ -54,3 +54,23 @@ Walk right on the far line (y=376) → turn to front → walk toward the camera 
 
 ### Known imperfections touched
 - The factory goldens show 0.11% difference on this machine with a byte-identical `factory.svg`, so it's environment (likely the TOY WORKS text font), not a change.
+
+## Track B: Blender evaluation (2026-10-09; built by a delegated sub-session, re-verified here)
+- Blender 5.2.1 headless, exactly `blender -b -P blender/build_nico.py -- --out out/blender` (~44s for 345 frames). `pip install bpy` not tried: Blender's Python is 3.13, the venv is 3.14. The doc assumed 4.x.
+- Look: Workbench engine, flat material colour, Standard view transform, transparent film; palette hex converted to linear and verified exact in the PNGs.
+- Sticker edge: **Pillow port of `Scene.filt`** (`blender/sticker_post.py`) on the frame alpha, lengths x1.3 to match the 2D scale.
+  - Rejected: **inverted hull** (the doc's lean). It drew white rings around eyes, mouth, collar and hairline, seams where arms cross the torso, and had no shadow. Evidence: `reference/blender_hull_rejected.png`.
+  - Rejected: **the compositor.** Blender 5 moved it to node groups, so the API would have been guesswork; the Pillow port is step-for-step and deterministic.
+- Rig: 13-bone armature, primitives only, 2-link leg IK. Clips: idle, walk (17 frames = 0.708s, since 0.7s isn't a whole number of frames at 24fps; walks in place), pickup, putdown, with the beats from `build_walk`.
+- Same cheat as 2D: a `face` bone turns the eye/mouth/cheek toward the camera in side and ¾ views, because a real profile puts the face on the silhouette edge.
+- Corrections:
+  - Hair is now two plane-cut caps (vertex-deleted sphere gave a staircase hairline, and a sloped cut covered the eye).
+  - Eyes are plain spheres (flattened ones vanished in profile).
+  - World-less Workbench writes alpha 0 even with opaque film, so the `film_opaque` mutation also adds a World to go red.
+- `verify/verify_blender.py`: **42 checks passed** (re-run here). Covers palette, transparent corners on all frames, outline width, size across views, feet planted, and the loop seam on bone matrices. Every check was mutation-tested (lit shader, AgX, wrong shirt, opaque film, outline r=2 / r=8, view scale, hip offset, loop shift → all red). The full table is in `docs/BLENDER_FINDINGS.md`.
+- Spec deviations in the checks, with reasons:
+  - Outline band 5–9px, not 5–8: the faithful filter at 1.3x measures 8–9px, as do the 2D goldens.
+  - Exact-palette pixels must be ≥88%: anti-aliased edges are 7–9% of a correct frame; lit renders score ~31%.
+  - Width is measured perpendicular to the edge: horizontal scans overstated it on curves.
+- `reference/blender_vs_2d.png` (made by `verify/compare_sheet.py`): walk side, toward, away and putdown. 2D frames are taken from the scenes, so the toward/away 2D figure is depth-scaled (larger) and the Blender figure is not.
+- `out/blender/` (37MB of PNG frames, the .blend and spritesheets) is regenerable and kept out of git (`.gitignore`).
