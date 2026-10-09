@@ -1,8 +1,9 @@
 import os
 OUT=os.environ.get('OUT', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out'))
-svgs={n:open(f'{OUT}/{n}.svg').read() for n in ('walk','taxi','factory')}
+svgs={n:open(f'{OUT}/{n}.svg').read() for n in ('walk','walk3d','taxi','factory')}
 cards=[
  ('walk','The Dreamer','Walks, turns around, sets a box down, then comes back for it'),
+ ('walk3d','Coming and Going','Walks across, turns to face you, comes closer, then turns and heads back'),
  ('taxi','City Taxi','Your first money-making ride, rolling through town'),
  ('factory','Toy Works','A helper arm packs the toy, then the box is taped, labelled and shipped'),
 ]

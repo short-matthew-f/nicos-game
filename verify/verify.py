@@ -7,7 +7,7 @@ nothing clipped by a filter region, loops are seamless).
 
 Usage:
   python verify/verify.py                 run everything
-  python verify/verify.py walk            one scene (walk | taxi | factory)
+  python verify/verify.py walk            one scene (walk | taxi | factory | walk3d)
   python verify/verify.py --update-golden regenerate reference/golden/*.png
 Env: OUT=<dir with the .svg files> (default ../out)
 """
@@ -182,8 +182,80 @@ def test_factory(pg):
         check(abs(l1 - 118) < 0.5 and abs(l2 - 112) < 0.5, f'arm links stretch at t={t}s ({l1:.1f}, {l2:.1f})')
     filter_regions_ok(pg, [i * 0.4 for i in range(41)])
 
+# ------------------------------------------------------------------ walk3d
+W3_T = 17.7
+W3_WALKS = [(0.2, 4.2, (180, 376), (560, 376)), (5.2, 7.8, (560, 376), (560, 442)),   # right, toward camera
+            (9.3, 11.9, (560, 442), (560, 376)), (12.8, 16.8, (560, 376), (180, 376))]  # away, back left
+W3_SWAPS = [(4.7, 'side', 'front'), (8.35, 'front', 'side'), (8.85, 'side', 'back'), (12.35, 'back', 'side')]
+W3_VIEWS = {'side': '.dfp', 'front': '.dvfr', 'back': '.dvbk'}
+W3_SHOES = '.dfs,.dbs,.dfvshl,.dfvshr,.dbvshl,.dbvshr'
+
+def w3_path_err(t, x, y):
+    """Distance from the intended ground path: on the straight segment during a walk
+    (eased speed, so position along it isn't pinned), exactly on the waypoint while standing."""
+    pos = W3_WALKS[0][2]
+    for t0, t1, a, b in W3_WALKS:
+        if t >= t1: pos = b
+        elif t > t0:
+            dx, dy = b[0] - a[0], b[1] - a[1]; L = math.hypot(dx, dy)
+            u = ((x - a[0]) * dx + (y - a[1]) * dy) / L ** 2
+            return math.hypot(x - a[0] - u * dx, y - a[1] - u * dy) + L * max(0, -u, u - 1)
+        else: break
+    return math.hypot(x - pos[0], y - pos[1])
+
+def w3_state(pg):
+    return pg.evaluate("""([views, shoes])=>{
+      const v={}; for(const [k,s] of Object.entries(views)){const m=new DOMMatrix(getComputedStyle(document.querySelector(s)).transform); v[k]=Math.abs(m.d)>1e-3}  // hidden = scale(0,0); a flip passes through scale(0,1)
+      const sh=[...document.querySelectorAll(shoes)].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0&&r.height>0);
+      const c=document.querySelector('.dc').getBoundingClientRect(); const m=new DOMMatrix(getComputedStyle(document.querySelector('.dc')).transform);
+      const face=[...document.querySelectorAll('.dface')].map(e=>{const r=e.getBoundingClientRect(); return r.width*r.height});
+      return {v, feet:Math.max(...sh.map(r=>r.bottom)), n:sh.length, h:c.height, gx:m.e, gy:m.f, face:Math.max(...face), nface:face.length}}""",
+      [W3_VIEWS, W3_SHOES])
+
+def test_walk3d(pg):
+    print('walk3d')
+    load(pg, 'walk3d'); T = W3_T
+    seek(pg, 0.0); a = img(pg); seek(pg, T - 0.001); b = img(pg)
+    check(diff_frac(a, b) < 0.0005, 'walk3d loop seam: last frame differs from first frame')
+    bad_feet = bad_path = bad_face = bad_view = None; nback = 0
+    for i in range(int(round(T / 0.05))):
+        t = round(i * 0.05, 3); seek(pg, t); s = w3_state(pg)
+        # (a swap instant itself is a 1ms crossfade of keyframes; the swap checks below cover it)
+        at_swap = any(abs(t - ts) < 0.001 for ts, _, _ in W3_SWAPS)
+        if sum(s['v'].values()) != 1 and not at_swap and bad_view is None: bad_view = (t, s['v'])
+        # feet planted: the lowest shoe sits on the character's ground point
+        # (a planted front foot is a few px ahead of it during toward/away walks)...
+        if abs(s['feet'] - s['gy']) > 7 and bad_feet is None: bad_feet = (t, s['feet'], s['gy'])
+        # ...and the ground point follows the intended path
+        e = w3_path_err(t, s['gx'], s['gy'])
+        if e > 1 and bad_path is None: bad_path = (t, s['gx'], s['gy'], e)
+        if s['v']['back']:
+            nback += 1
+            if s['face'] > 0 and bad_face is None: bad_face = (t, s['face'])
+    check(bad_view is None, f'walk3d: exactly one view should show, at t={bad_view and bad_view[0]}s: {bad_view and bad_view[1]}')
+    check(bad_feet is None, 'walk3d feet not on the ground at t=%ss (lowest shoe %.1f, ground %.1f)' % (bad_feet or (0, 0, 0)))
+    check(bad_path is None, 'walk3d off the path at t=%ss (at %.1f,%.1f, %.1fpx off)' % (bad_path or (0,) * 4))
+    check(nback > 20, f'walk3d: back view shown at only {nback} samples')
+    check(bad_face is None, 'walk3d: face visible while the back view shows at t=%ss (area %.1f)' % (bad_face or (0, 0)))
+    # view swaps don't pop: same height and feet line just before and after the swap
+    for ts, v0, v1 in W3_SWAPS:
+        seek(pg, ts - 0.002); a = w3_state(pg); seek(pg, ts + 0.002); b = w3_state(pg)
+        check(a['v'][v0] and b['v'][v1], f'walk3d: expected {v0} -> {v1} swap at t={ts}s, saw {a["v"]} -> {b["v"]}')
+        dh = abs(a['h'] - b['h']) / a['h']; df = abs(a['feet'] - b['feet'])
+        check(dh < 0.03 and df < 2, f'walk3d swap pops at t={ts}s (height {dh * 100:.1f}%, feet {df:.1f}px)')
+    # depth: bigger after walking toward the camera, back to size after walking away
+    seek(pg, 5.1); h0 = w3_state(pg)['h']; seek(pg, 8.0); h1 = w3_state(pg)['h']; seek(pg, 12.0); h2 = w3_state(pg)['h']
+    check(h1 / h0 > 1.15 and abs(h2 / h0 - 1) < 0.03, f'walk3d depth scale wrong (heights {h0:.0f}, {h1:.0f}, {h2:.0f})')
+    # front view at the neutral stance is symmetric: shoes mirror about the body centre
+    for t in (5.1, 8.0):
+        seek(pg, t); up = rect(pg, '.dfvup'); l, r = rect(pg, '.dfvshl'), rect(pg, '.dfvshr')
+        cx = up['x'] + up['w'] / 2; dl = cx - (l['x'] + l['w'] / 2); dr = (r['x'] + r['w'] / 2) - cx
+        check(abs(dl - dr) < 2 and dl > 3, f'walk3d front view not symmetric at t={t}s (shoe offsets {dl:.1f} / {dr:.1f})')
+    filter_regions_ok(pg, [i * 0.25 for i in range(int(T / 0.25))])
+
 # ------------------------------------------------------------------ golden frames
-GOLD_TIMES = {'walk': [0.5, 4.0, 5.2, 7.0, 12.8, 16.0], 'taxi': [0.2, 0.5], 'factory': [1.0, 4.4, 7.0, 10.0, 12.5, 14.5]}
+GOLD_TIMES = {'walk': [0.5, 4.0, 5.2, 7.0, 12.8, 16.0], 'taxi': [0.2, 0.5], 'factory': [1.0, 4.4, 7.0, 10.0, 12.5, 14.5],
+             'walk3d': [0.1, 2.0, 4.6, 6.5, 8.4, 10.6, 12.4, 14.0]}
 
 def golden(pg, names, update):
     for n in names:
@@ -199,14 +271,14 @@ def golden(pg, names, update):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    names = args or ['walk', 'taxi', 'factory']
+    names = args or ['walk', 'taxi', 'factory', 'walk3d']
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(viewport={'width': W, 'height': H})
         errs = []; pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
         pg.on('pageerror', lambda e: errs.append(str(e)))
         if '--update-golden' in sys.argv:
             os.makedirs(GOLD, exist_ok=True); golden(pg, names, True); print('golden frames updated'); return
-        for n in names: {'walk': test_walk, 'taxi': test_taxi, 'factory': test_factory}[n](pg)
+        for n in names: {'walk': test_walk, 'taxi': test_taxi, 'factory': test_factory, 'walk3d': test_walk3d}[n](pg)
         check(not errs, f'browser errors: {errs[:3]}')
         print('golden frames (informational)'); golden(pg, names, False)
     print(f'\n{PASSES} checks passed, {len(FAILS)} failed')

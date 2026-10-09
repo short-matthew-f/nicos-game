@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Rebuild everything, then verify. Usage: sh run.sh [walk|taxi|factory]
+# Rebuild everything, then verify. Usage: sh run.sh [walk|taxi|factory|walk3d]
 set -e
 cd "$(dirname "$0")"
 python3 src/gen.py
