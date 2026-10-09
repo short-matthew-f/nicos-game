@@ -38,6 +38,8 @@ export class NicoView {
     }
     this.outline = new OutlineFilter({ thickness: 4, color: 0xffffff, quality: 0.2 });
     this.shadow = new DropShadowFilter({ offset: { x: 4, y: 7 }, color: NAVY, alpha: SHADOW.alpha, blur: SHADOW.blur, quality: 3 });
+    // render the filters at the screen's resolution (Pixi's default is 1x: soft on Retina)
+    this.outline.resolution = this.shadow.resolution = 'inherit';
     this.root.filters = [this.outline, this.shadow];
   }
 
