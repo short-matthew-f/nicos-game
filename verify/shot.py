@@ -1,5 +1,5 @@
 import sys, os
-OUT=os.environ.get('OUT','out')
+OUT=os.environ.get('OUT', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out'))
 from playwright.sync_api import sync_playwright
 from PIL import Image
 name=sys.argv[1]; times=[float(x) for x in sys.argv[2].split(',')]

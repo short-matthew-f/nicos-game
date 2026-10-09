@@ -1,233 +1,11 @@
 #!/usr/bin/env python3
-import math, os
+import math, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from scene import OUT, Scene, sm, ramp, BG, NAVY, FONT
+import rig
+from rig import Timeline, Nico, walk, idle, turn, putdown, pickup, small_box
 
-OUT = os.environ.get('OUT', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out'))
-os.makedirs(OUT, exist_ok=True)
-
-# ---------- helpers ----------
-def sm(x):
-    x = max(0.0, min(1.0, x))
-    return x * x * (3 - 2 * x)
-
-def ramp(t, a, b):
-    return sm((t - a) / (b - a))
-
-def num(v):
-    s = f"{v:.2f}".rstrip('0').rstrip('.')
-    return '0' if s in ('-0', '') else s
-
-def ops_css(ops):
-    out = []
-    for o in ops:
-        if o[0] == 't': out.append(f"translate({num(o[1])}px,{num(o[2])}px)")
-        elif o[0] == 'r': out.append(f"rotate({num(o[1])}deg)")
-        elif o[0] == 's': out.append(f"scale({num(o[1])},{num(o[2])})")
-    return ' '.join(out)
-
-class Scene:
-    def __init__(s, pfx, T, w=800, h=460, dt=0.05):
-        s.pfx, s.T, s.w, s.h, s.dt = pfx, T, w, h, dt
-        s.tracks, s.defs, s.css = [], [], []
-
-    def A(s, name, fn, inner, filt=None, extras=()):
-        cls = s.pfx + name
-        s.tracks.append((cls, fn, extras))
-        f = f' filter="url(#{s.pfx}{filt})"' if filt else ''
-        return f'<g class="{cls}"{f}>{inner}</g>'
-
-    def filt(s, fid, x, y, w, h, r=5, blur=3, dx=5, dy=9, op=0.22, sd=6):
-        s.defs.append(f'''<filter id="{s.pfx}{fid}" filterUnits="userSpaceOnUse" x="{x}" y="{y}" width="{w}" height="{h}" color-interpolation-filters="sRGB">
-<feMorphology in="SourceAlpha" operator="dilate" radius="{r}" result="d1"/>
-<feGaussianBlur in="d1" stdDeviation="{blur}" result="d2"/>
-<feComponentTransfer in="d2" result="d3"><feFuncA type="linear" slope="6" intercept="-1.6"/></feComponentTransfer>
-<feFlood flood-color="#fff" result="wh"/>
-<feComposite in="wh" in2="d3" operator="in" result="ol"/>
-<feGaussianBlur in="d3" stdDeviation="{sd}" result="sb"/>
-<feOffset in="sb" dx="{dx}" dy="{dy}" result="so"/>
-<feColorMatrix in="so" type="matrix" values="0 0 0 0 0.17 0 0 0 0 0.25 0 0 0 0 0.33 0 0 0 {op} 0" result="sc"/>
-<feMerge><feMergeNode in="sc"/><feMergeNode in="ol"/><feMergeNode in="SourceGraphic"/></feMerge></filter>''')
-
-    def keyframes(s):
-        T, dt = s.T, s.dt
-        n = int(round(T / dt))
-        out = []
-        for cls, fn, extras in s.tracks:
-            times = sorted(set([round(i * dt, 4) for i in range(n + 1)] + [round(e, 4) for e in extras]))
-            vals = [ops_css(fn(t)) for t in times]
-            keys = []
-            for i, (t, v) in enumerate(zip(times, vals)):
-                if 0 < i < len(vals) - 1 and vals[i - 1] == v == vals[i + 1]:
-                    continue
-                keys.append(f"{t / T * 100:.4f}%{{transform:{v}}}")
-            out.append(f"@keyframes {cls}{{{''.join(keys)}}}")
-            out.append(f".{cls}{{animation:{cls} {T}s linear infinite;transform-origin:0 0}}")
-        return '\n'.join(out)
-
-    def svg(s, body, extra_css=''):
-        css = s.keyframes() + '\n' + extra_css
-        return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {s.w} {s.h}" width="{s.w}" height="{s.h}">'
-                f'<style>{css}</style><defs>{"".join(s.defs)}</defs>{body}</svg>')
-
-BG = '#E9EEF3'
-NAVY = '#2B3F55'
-FONT = "'DejaVu Sans',Verdana,Arial,sans-serif"
-
-# =====================================================================
-# SCENE 1 : Nico walks, turns, puts a box down, picks it up
-# =====================================================================
-def build_walk():
-    S = Scene('w', 19.0)
-    T = 19.0
-    G = 392
-    RAMP = 0.35
-    walks = [(0, 3.5, 120, 470), (5.5, 8.5, 470, 170), (9.2, 12.2, 170, 470), (14.7, 18.2, 470, 120)]
-    turns = [(5.0, 5.5, 1), (8.7, 9.2, -1), (14.2, 14.7, 1), (18.2, 18.7, -1)]
-    T_PUT_H, T_PICK_H = 4.2, 13.3
-    DC = 30.745
-    LEAN_C = 25.0
-    BOXL = (50.0, -12.0)
-
-    def Iseg(ts, te, t):
-        D = te - ts
-        u = min(max(t - ts, 0.0), D)
-        r = RAMP
-        if u < r: return u * u / (2 * r)
-        if u < D - r: return r / 2 + (u - r)
-        return (D - r) - (D - u) ** 2 / (2 * r)
-
-    def env(t):
-        for ts, te, _, _ in walks:
-            if ts <= t <= te: return min(1.0, (t - ts) / RAMP, (te - t) / RAMP)
-        return 0.0
-
-    def X(t):
-        x = 120
-        for ts, te, x0, x1 in walks:
-            if t >= te: x = x1
-            elif t >= ts: return x0 + (x1 - x0) * Iseg(ts, te, t) / (te - ts - RAMP)
-            else: return x
-        return x
-
-    def PH(t): return sum(Iseg(ts, te, t) for ts, te, _, _ in walks)
-
-    def S_(t):
-        s = 1
-        for ts, te, s0 in turns:
-            if t >= te: s = -s0
-            elif t >= ts: return s0 * math.cos(math.pi * sm((t - ts) / (te - ts)))
-            else: return s
-        return s
-
-    def c_(t): return ramp(t, 3.5, 4.1) - ramp(t, 4.3, 4.9) + ramp(t, 12.6, 13.2) - ramp(t, 13.3, 13.9)
-    def w_(t): return 1 - ramp(t, 4.2, 4.7) + ramp(t, 12.6, 13.2)
-    def amp(t): return min(1.0, 2.0 * env(t))
-    def an(t): return 28.0 * amp(t) * math.sin(2 * math.pi * PH(t) / 0.7)
-    def dw(t): return 29.0 * (1 - math.cos(math.radians(an(t))))
-    def dd(t): return DC * c_(t) + dw(t)
-    def lean(t): return LEAN_C * c_(t) + 3.0 * amp(t)
-    def armang(t, far):
-        free = (0.85 * an(t)) if far else (-0.85 * an(t))
-        return (1 - w_(t)) * free + w_(t) * (-56.0)
-    def carried(t): return 1.0 if (t < T_PUT_H or t >= T_PICK_H) else 0.0
-
-    def boxpos(t):
-        a = math.radians(lean(t)); px, py = BOXL
-        x = px * math.cos(a) - py * math.sin(a)
-        y = px * math.sin(a) + py * math.cos(a)
-        return x, -58 + dd(t) + y
-
-    # resting position of the dropped box (world)
-    a = math.radians(LEAN_C); px, py = BOXL
-    gx_off = px * math.cos(a) - py * math.sin(a)
-    GROUND_BOX_X = 470 + gx_off * 1.3
-
-    # ---- tracks ----
-    def f_char(t): return [('t', X(t), G), ('s', 1.3, 1.3)]
-    def f_flip(t): return [('s', S_(t), 1)]
-    def f_upper(t): return [('t', 0, -58 + dd(t)), ('r', lean(t))]
-    def f_arm(far):
-        return lambda t: [('t', 0, -58 + dd(t)), ('r', lean(t)), ('t', 2, -42), ('r', armang(t, far))]
-    def leg_params(t, far):
-        a_ = -an(t) if far else an(t)
-        cc = c_(t)
-        l = 58 - DC * cc
-        return a_, l
-    def f_leg(far):
-        def fn(t):
-            a_, l = leg_params(t, far)
-            sy = (l - 8) / 50.0
-            sx = 1 + 0.35 * c_(t)
-            return [('t', -3 if far else 3, -58 + dd(t)), ('r', a_), ('s', sx, sy)]
-        return fn
-    def f_shoe(far):
-        def fn(t):
-            a_, l = leg_params(t, far)
-            r = math.radians(a_)
-            hx = -3 if far else 3
-            return [('t', hx - l * math.sin(r), -58 + dd(t) + l * math.cos(r)), ('r', a_ * 0.4)]
-        return fn
-    def f_box(t):
-        x, y = boxpos(t)
-        return [('t', x, y), ('s', carried(t), carried(t))]
-
-    # ---- art ----
-    SK, SK2, HAIR = '#E8B48F', '#D6996F', '#6B4A35'
-    SH, SL, SL2 = '#5B8FD6', '#4F86D0', '#3F74BC'
-    PANT, PANT2, SHOE = '#5B78AA', '#4A6590', '#34495E'
-
-    def arm_art(far):
-        sk, sl = (SK2, SL2) if far else (SK, SL)
-        return (f'<rect x="-6" y="6" width="12" height="34" rx="6" fill="{sk}"/>'
-                f'<circle cx="0" cy="39" r="8" fill="{sk}"/>'
-                f'<rect x="-8.5" y="-7" width="17" height="24" rx="8.5" fill="{sl}"/>')
-    def leg_art(far):
-        return f'<rect x="-8.5" y="0" width="17" height="50" rx="7" fill="{PANT2 if far else PANT}"/>'
-    def shoe_art(far):
-        c = '#2C3E52' if far else SHOE
-        return (f'<rect x="-10" y="-13" width="31" height="13" rx="6.5" fill="{c}"/>'
-                f'<rect x="-8" y="-4" width="27" height="4" rx="2" fill="#E9EEF3"/>')
-    upper = (
-        '<rect x="-5" y="-62" width="15" height="16" rx="5" fill="#D6996F"/>'
-        f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{SH}"/>'
-        '<path d="M-5,-51 Q5,-38 16,-51" fill="none" stroke="#A9CCF2" stroke-width="4" stroke-linecap="round"/>'
-        '<rect x="3" y="-30" width="12" height="14" rx="3" fill="#3F78C6"/>'
-        '<rect x="5.5" y="-27.5" width="7" height="2" rx="1" fill="#6FA2E4"/>'
-        f'<circle cx="-21" cy="-84" r="6.5" fill="{SK2}"/>'
-        f'<circle cx="4" cy="-86" r="29" fill="{SK}"/>'
-        f'<circle cx="31" cy="-81" r="4" fill="{SK}"/>'
-        f'<path d="M-27,-82 C-36,-118 -4,-124 16,-117 C30,-113 38,-102 33,-92 C25,-101 15,-102 5,-100 C-8,-98 -17,-96 -21,-72 C-24,-74 -26,-78 -27,-82 Z" fill="{HAIR}"/>'
-        '<circle cx="17" cy="-84" r="3.4" fill="#3A2E2A"/>'
-        '<path d="M10,-70 Q18,-63 26,-71" fill="none" stroke="#A5583F" stroke-width="2.8" stroke-linecap="round"/>'
-        '<circle cx="9" cy="-73" r="4.5" fill="#F29A8A" opacity=".55"/>'
-    )
-    def small_box():
-        return ('<rect x="-20" y="-17" width="40" height="34" rx="5" fill="#E3A857"/>'
-                '<rect x="-20" y="-17" width="40" height="10" rx="5" fill="#F0C27C"/>'
-                '<rect x="-20" y="-12" width="40" height="5" fill="#F0C27C"/>'
-                '<rect x="-4.5" y="-17" width="9" height="34" fill="#FFE7A6"/>'
-                '<rect x="7" y="3" width="11" height="8" rx="1.5" fill="#fff"/>')
-
-    S.filt('f', -130, -230, 280, 270)
-    S.filt('g', -50, -60, 110, 120)
-
-    parts = (
-        S.A('ba', f_arm(True), arm_art(True)) +
-        S.A('bl', f_leg(True), leg_art(True)) +
-        S.A('bs', f_shoe(True), shoe_art(True)) +
-        S.A('fl', f_leg(False), leg_art(False)) +
-        S.A('fs', f_shoe(False), shoe_art(False)) +
-        S.A('up', f_upper, upper) +
-        S.A('bx', f_box, small_box(), extras=(T_PUT_H - 0.001, T_PICK_H - 0.001)) +
-        S.A('fa', f_arm(False), arm_art(False))
-    )
-    char = S.A('c', f_char, S.A('fp', f_flip, parts), filt='f')
-
-    # ground (dropped) box visibility track
-    def f_gbox(t):
-        v = 1.0 - carried(t)
-        return [('t', GROUND_BOX_X, G - 17 * 1.3), ('s', 1.3 * v, 1.3 * v)]
-    gbox = S.A('gb', f_gbox, small_box(), filt='g', extras=(T_PUT_H - 0.001, T_PICK_H - 0.001))
-
+def city_bg():
     bg = f'<rect width="800" height="460" fill="{BG}"/>'
     bg += '<g fill="#DDE5EE"><rect x="30" y="150" width="130" height="212" rx="12"/><rect x="180" y="95" width="110" height="267" rx="12"/><rect x="310" y="175" width="150" height="187" rx="12"/><rect x="480" y="120" width="120" height="242" rx="12"/><rect x="620" y="170" width="150" height="192" rx="12"/></g>'
     bg += '<g fill="#E9EEF3">'
@@ -239,6 +17,42 @@ def build_walk():
                 bg += f'<rect x="{gx:.0f}" y="{by_ + 22 + r_ * 46}" width="20" height="26" rx="5"/>'
     bg += '</g>'
     bg += '<rect y="362" width="800" height="98" fill="#D6DFE8"/><rect y="358" width="800" height="9" fill="#CCD6E1"/>'
+    return bg
+
+# =====================================================================
+# SCENE 1 : Nico walks, turns, puts a box down, picks it up
+# =====================================================================
+def build_walk():
+    S = Scene('w', 19.0)
+    G = 392
+    tl = Timeline(dict(x=120, y=G, face=1, hold=1, carry=1.0), [
+        (0, 3.5, walk, dict(to=(470, G))),
+        (3.5, 4.9, putdown, {}),
+        (5.0, 5.5, turn, dict(to='left')),
+        (5.5, 8.5, walk, dict(to=(170, G))),
+        (8.7, 9.2, turn, dict(to='right')),
+        (9.2, 12.2, walk, dict(to=(470, G))),
+        (12.6, 13.9, pickup, {}),
+        (14.2, 14.7, turn, dict(to='left')),
+        (14.7, 18.2, walk, dict(to=(120, G))),
+        (18.2, 18.7, turn, dict(to='right')),
+    ])
+    # resting position of the dropped box (world): where the carried box is at full crouch
+    a = math.radians(rig.LEAN_C); px, py = rig.BOXL
+    gx_off = px * math.cos(a) - py * math.sin(a)
+    GROUND_BOX_X = 470 + gx_off * 1.3
+
+    S.filt('f', -130, -230, 280, 270)
+    S.filt('g', -50, -60, 110, 120)
+    char = Nico(S, tl, prop=True).svg()
+
+    # ground (dropped) box visibility track
+    def f_gbox(t):
+        v = 1.0 - tl(t)['carry']
+        return [('t', GROUND_BOX_X, G - 17 * 1.3), ('s', 1.3 * v, 1.3 * v)]
+    gbox = S.A('gb', f_gbox, small_box(), filt='g', extras=tl.extras('carry'))
+
+    bg = city_bg()
     bg += f'<ellipse cx="{GROUND_BOX_X:.0f}" cy="{G}" rx="56" ry="10" fill="#C6D1DD"/>'
 
     body = bg + gbox + char
@@ -538,8 +352,43 @@ def build_factory():
     svg = S.svg(body)
     return svg, S
 
+# =====================================================================
+# SCENE 4 : Nico walks toward and away from the camera (front/back views)
+# =====================================================================
+WALK3D_BACK, WALK3D_FRONT = 376, 442   # ground lines (screen y) of the far and near walks
+
+def depth_scale(y):
+    """Perspective: scale grows linearly with ground y below a horizon at y=100;
+    1.3 (the walk scene's scale) at y=392. Far line 1.23, near line 1.52 (1.24x)."""
+    return 1.3 * (y - 100) / 292
+
+def build_walk3d():
+    T = 17.7
+    S = Scene('d', T)
+    B, F = WALK3D_BACK, WALK3D_FRONT
+    tl = Timeline(dict(x=180, y=B, face=1), [
+        (0.2, 4.2, walk, dict(to=(560, B))),
+        (4.4, 5.0, turn, dict(to='front')),
+        (5.0, 5.2, idle, dict(breathe=0.8)),
+        (5.2, 7.8, walk, dict(to=(560, F))),       # toward the camera
+        (8.1, 8.6, turn, dict(to='right')),        # turn around via profile:
+        (8.6, 9.1, turn, dict(to='back')),         #   front -> side -> back
+        (9.3, 11.9, walk, dict(to=(560, B))),      # away from the camera
+        (12.1, 12.6, turn, dict(to='left')),
+        (12.8, 16.8, walk, dict(to=(180, B))),     # back to the start (closes the loop)
+        (17.0, 17.5, turn, dict(to='right')),
+    ])
+    S.filt('f', -130, -230, 280, 270)
+    char = Nico(S, tl, views=('side', 'front', 'back'), scale_of=depth_scale, face_cls='dface').svg()
+    svg = S.svg(city_bg() + char)
+    return svg, S
+
+SCENES = (('walk', build_walk), ('taxi', build_taxi), ('factory', build_factory), ('walk3d', build_walk3d))
+
 if __name__ == '__main__':
-    for name, fn in (('walk', build_walk), ('taxi', build_taxi), ('factory', build_factory)):
+    only = sys.argv[1:]
+    for name, fn in SCENES:
+        if only and name not in only: continue
         svg, S = fn()
         open(f'{OUT}/{name}.svg', 'w').write(svg)
         print(name, len(svg) // 1024, 'KB')
