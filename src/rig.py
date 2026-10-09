@@ -115,18 +115,35 @@ def turn(st, u, dur, to):
 turn.swaps = lambda st, dur, to: () if st['view'] == 'side' and to in ('left', 'right') else (('view', dur / 2),)
 
 # ---------------------------------------------------------------- art
-SK, SK2, HAIR = '#E8B48F', '#D6996F', '#6B4A35'
-SH, SL, SL2 = '#5B8FD6', '#4F86D0', '#3F74BC'
-PANT, PANT2, SHOE, SHOE2 = '#5B78AA', '#4A6590', '#34495E', '#2C3E52'
-EYE, MOUTH, CHEEK = '#3A2E2A', '#A5583F', '#F29A8A'
-COLLAR, POCKET, POCKET_HI = '#A9CCF2', '#3F78C6', '#6FA2E4'
-HAIR_TOP = -119.56  # side hair bbox top (getBBox in Chromium); front/back hair must match
+# Nico's look follows photos of the real Nico (2026-10-09): long dark hair with a centre
+# part, tied in a low ponytail; fair skin, rosy cheeks, big grin; plaid flannel shirt;
+# dark jeans.
+SK, SK2, HAIR, HAIR_TIE = '#F1C6A6', '#DFA683', '#4A3326', '#F08A3C'
+PANT, PANT2, SHOE, SHOE2 = '#34466B', '#2A3957', '#5A6472', '#48515D'
+EYE, MOUTH, CHEEK = '#3A2E2A', '#A5583F', '#EE8A7C'
+BUTTON = '#D9CBB0'
+HAIR_TOP = -118.14  # side hair bbox top (getBBox in Chromium); front/back hair must match
+# flannel: forest-green ground, navy bands, a thin orange line (near / far-side shading)
+PLAID = dict(near=('#527259', '#36495F', '#2C3B4F', '#F0954A', '#3B5545'),
+             far=('#45614C', '#2E3F53', '#253244', '#CF7A38', '#324839'))
 
-def arm_art(far):
-    sk, sl = (SK2, SL2) if far else (SK, SL)
-    return (f'<rect x="-6" y="6" width="12" height="34" rx="6" fill="{sk}"/>'
-            f'<circle cx="0" cy="39" r="8" fill="{sk}"/>'
-            f'<rect x="-8.5" y="-7" width="17" height="24" rx="8.5" fill="{sl}"/>')
+def plaid_defs(pfx):
+    """Flat plaid as two userSpaceOnUse patterns, so the checks ride along with each
+    part's own transform. Ids carry the scene prefix (the page inlines every SVG)."""
+    out = []
+    for k, (g, band, both, line, _) in PLAID.items():
+        out.append(f'<pattern id="{pfx}pl{k}" width="16" height="16" patternUnits="userSpaceOnUse">'
+                   f'<rect width="16" height="16" fill="{g}"/>'
+                   f'<rect width="5" height="16" fill="{band}"/><rect width="16" height="5" fill="{band}"/>'
+                   f'<rect width="5" height="5" fill="{both}"/>'
+                   f'<rect x="10.5" width="1.6" height="16" fill="{line}"/><rect y="10.5" width="16" height="1.6" fill="{line}"/>'
+                   '</pattern>')
+    return ''.join(out)
+
+def arm_art(far, pfx):
+    # long flannel sleeve, hand at the end
+    return (f'<circle cx="0" cy="39" r="8" fill="{SK2 if far else SK}"/>'
+            f'<rect x="-8.5" y="-7" width="17" height="42" rx="8.5" fill="url(#{pfx}pl{"far" if far else "near"})"/>')
 
 def leg_art(far):
     return f'<rect x="-8.5" y="0" width="17" height="50" rx="7" fill="{PANT2 if far else PANT}"/>'
@@ -144,53 +161,59 @@ def shoe_art_front():
 def fc(face_cls):
     return f' class="{face_cls}"' if face_cls else ''
 
-def upper_side(face_cls=''):
+def upper_side(pfx, face_cls=''):
     f = fc(face_cls)
     return (
-        '<rect x="-5" y="-62" width="15" height="16" rx="5" fill="#D6996F"/>'
-        f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{SH}"/>'
-        '<path d="M-5,-51 Q5,-38 16,-51" fill="none" stroke="#A9CCF2" stroke-width="4" stroke-linecap="round"/>'
-        '<rect x="3" y="-30" width="12" height="14" rx="3" fill="#3F78C6"/>'
-        '<rect x="5.5" y="-27.5" width="7" height="2" rx="1" fill="#6FA2E4"/>'
-        f'<circle cx="-21" cy="-84" r="6.5" fill="{SK2}"/>'
+        # ponytail hangs down the back, behind the torso
+        f'<path d="M-24,-71 C-36,-60 -34,-40 -27,-27 C-22,-36 -18,-52 -15,-66 Z" fill="{HAIR}"/>'
+        f'<rect x="-5" y="-62" width="15" height="16" rx="5" fill="{SK2}"/>'
+        f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="url(#{pfx}plnear)"/>'
+        f'<path d="M4,-52 L17,-49 L10,-40 Z" fill="{PLAID["near"][4]}"/>'                       # collar point
+        f'<circle cx="12" cy="-32" r="1.8" fill="{BUTTON}"/><circle cx="13" cy="-18" r="1.8" fill="{BUTTON}"/>'
         f'<circle cx="4" cy="-86" r="29" fill="{SK}"/>'
         f'<circle cx="31" cy="-81" r="4" fill="{SK}"/>'
-        f'<path d="M-27,-82 C-36,-118 -4,-124 16,-117 C30,-113 38,-102 33,-92 C25,-101 15,-102 5,-100 C-8,-98 -17,-96 -21,-72 C-24,-74 -26,-78 -27,-82 Z" fill="{HAIR}"/>'
-        f'<circle{f} cx="17" cy="-84" r="3.4" fill="#3A2E2A"/>'
-        f'<path{f} d="M10,-70 Q18,-63 26,-71" fill="none" stroke="#A5583F" stroke-width="2.8" stroke-linecap="round"/>'
-        f'<circle{f} cx="9" cy="-73" r="4.5" fill="#F29A8A" opacity=".55"/>'
+        # long hair pulled back from the forehead, over the ear, gathered at the nape
+        f'<path d="M27,-103 C20,-123 -22,-125 -31,-98 C-36,-84 -31,-71 -21,-64 L-13,-68 '
+        f'C-16,-78 -13,-90 -3,-98 C7,-104 17,-103 27,-103 Z" fill="{HAIR}"/>'
+        f'<rect x="-28" y="-73" width="11" height="6" rx="3" fill="{HAIR_TIE}" transform="rotate(-20 -22 -70)"/>'
+        f'<circle{f} cx="17" cy="-85" r="3.6" fill="{EYE}"/>'
+        f'<path{f} d="M9,-71 Q18,-61 28,-71" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
+        f'<circle{f} cx="9" cy="-74" r="5" fill="{CHEEK}" opacity=".6"/>'
     )
 
-def _torso_front(back):
+def _torso_front(back, pfx):
     s = (f'<rect x="-18" y="-6" width="36" height="14" rx="6" fill="{PANT}"/>'      # seat of the pants
          f'<rect x="-7" y="-62" width="14" height="16" rx="5" fill="{SK2}"/>'       # neck
-         f'<rect x="-22" y="-52" width="44" height="54" rx="15" fill="{SH}"/>')
+         f'<rect x="-22" y="-52" width="44" height="54" rx="15" fill="url(#{pfx}plnear)"/>')
     if not back:
-        s += (f'<path d="M-11,-51 Q0,-38 11,-51" fill="none" stroke="{COLLAR}" stroke-width="4" stroke-linecap="round"/>'
-              f'<rect x="5" y="-30" width="12" height="14" rx="3" fill="{POCKET}"/>'
-              f'<rect x="7.5" y="-27.5" width="7" height="2" rx="1" fill="{POCKET_HI}"/>')
+        c = PLAID['near'][4]
+        s += (f'<path d="M-12,-52 L0,-46 L-6,-37 Z" fill="{c}"/><path d="M12,-52 L0,-46 L6,-37 Z" fill="{c}"/>'
+              + ''.join(f'<circle cx="0" cy="{y}" r="1.8" fill="{BUTTON}"/>' for y in (-36, -24, -12)))
+    else:
+        s += f'<path d="M-12,-52 Q0,-46 12,-52 L10,-48 Q0,-43 -10,-48 Z" fill="{PLAID["near"][4]}"/>'  # collar band
     return s
 
-def upper_front(face_cls=''):
+def upper_front(pfx, face_cls=''):
     f = fc(face_cls)
-    return (_torso_front(False) +
-        f'<circle cx="-29" cy="-83" r="6.5" fill="{SK}"/><circle cx="29" cy="-83" r="6.5" fill="{SK}"/>'
+    return (_torso_front(False, pfx) +
         f'<circle cx="0" cy="-86" r="29" fill="{SK}"/>'
-        # hair cap: crown at HAIR_TOP, side-swept fringe, short sideburns above the ears
-        f'<path d="M-30,-82 C-34,-108 -18,{HAIR_TOP} 0,{HAIR_TOP} C18,{HAIR_TOP} 34,-108 30,-82 '
-        f'C28,-92 24,-99 16,-101 C6,-96 -8,-95 -18,-100 C-24,-96 -27,-90 -30,-82 Z" fill="{HAIR}"/>'
-        f'<circle{f} cx="-10" cy="-84" r="3.4" fill="{EYE}"/><circle{f} cx="10" cy="-84" r="3.4" fill="{EYE}"/>'
-        f'<path{f} d="M-6,-71 Q0,-65 6,-71" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-        f'<circle{f} cx="-17" cy="-74" r="4.5" fill="{CHEEK}" opacity=".55"/><circle{f} cx="17" cy="-74" r="4.5" fill="{CHEEK}" opacity=".55"/>'
+        # centre part; hair falls past the ears to the jaw on both sides
+        f'<path d="M0,{HAIR_TOP} C20,{HAIR_TOP} 35,-104 32,-84 C32,-74 31,-65 27,-59 L21,-63 '
+        f'C22,-80 18,-96 0,-106 C-18,-96 -22,-80 -21,-63 L-27,-59 C-31,-65 -32,-74 -32,-84 '
+        f'C-35,-104 -20,{HAIR_TOP} 0,{HAIR_TOP} Z" fill="{HAIR}"/>'
+        f'<circle{f} cx="-9.5" cy="-85" r="3.6" fill="{EYE}"/><circle{f} cx="9.5" cy="-85" r="3.6" fill="{EYE}"/>'
+        f'<path{f} d="M-8,-72 Q0,-63 8,-72" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
+        f'<circle{f} cx="-14" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/><circle{f} cx="14" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/>'
     )
 
-def upper_back():
-    return (_torso_front(True) +
-        f'<circle cx="-29" cy="-83" r="6.5" fill="{SK2}"/><circle cx="29" cy="-83" r="6.5" fill="{SK2}"/>'
+def upper_back(pfx):
+    return (_torso_front(True, pfx) +
         f'<circle cx="0" cy="-86" r="29" fill="{SK}"/>'
-        # hair covers the whole head down to the nape
-        f'<path d="M-30,-82 C-34,-108 -18,{HAIR_TOP} 0,{HAIR_TOP} C18,{HAIR_TOP} 34,-108 30,-82 '
-        f'C30,-72 24,-63 12,-61 C4,-64 -4,-64 -12,-61 C-24,-63 -30,-72 -30,-82 Z" fill="{HAIR}"/>'
+        # hair covers the whole head; the ponytail hangs down the middle of the back
+        f'<path d="M-31,-82 C-34,-108 -18,{HAIR_TOP} 0,{HAIR_TOP} C18,{HAIR_TOP} 34,-108 31,-82 '
+        f'C31,-72 26,-63 14,-60 C5,-63 -5,-63 -14,-60 C-26,-63 -31,-72 -31,-82 Z" fill="{HAIR}"/>'
+        f'<path d="M-6,-64 C-10,-50 -8,-36 0,-24 C8,-36 10,-50 6,-64 Z" fill="{HAIR}"/>'
+        f'<rect x="-6" y="-66" width="12" height="6" rx="3" fill="{HAIR_TIE}"/>'
     )
 
 def small_box():
@@ -270,14 +293,14 @@ class Nico:
     def side_parts(s):
         S = s.S
         f_upper, f_arm, f_leg, f_shoe, f_box = s.side_tracks()
-        return (S.A('ba', f_arm(True), arm_art(True)) +
+        return (S.A('ba', f_arm(True), arm_art(True, S.pfx)) +
                 S.A('bl', f_leg(True), leg_art(True)) +
                 S.A('bs', f_shoe(True), shoe_art(True)) +
                 S.A('fl', f_leg(False), leg_art(False)) +
                 S.A('fs', f_shoe(False), shoe_art(False)) +
-                S.A('up', f_upper, upper_side(s.face_cls)) +
+                S.A('up', f_upper, upper_side(S.pfx, s.face_cls)) +
                 (S.A('bx', f_box, small_box(), extras=s.tl.extras('carry')) if s.prop else '') +
-                S.A('fa', f_arm(False), arm_art(False)))
+                S.A('fa', f_arm(False), arm_art(False, S.pfx)))
 
     # -- front / back view tracks --
     def fb_pose(s, st):
@@ -320,11 +343,11 @@ class Nico:
                 return [('t', i * s.AX + p['sway'], -100 + p['dd'] - st['breath']),
                         ('r', -i * (s.ARM_OUT + 3.0 * abs(a))), ('s', 1, 1 - 0.14 * abs(a))]
             return fn
-        upper = upper_front(s.face_cls) if view == 'front' else upper_back()
+        upper = upper_front(S.pfx, s.face_cls) if view == 'front' else upper_back(S.pfx)
         return (S.A(tag + 'legl', f_leg(-1), leg_art(False)) + S.A(tag + 'legr', f_leg(1), leg_art(False)) +
                 S.A(tag + 'shl', f_shoe(-1), shoe_art_front()) + S.A(tag + 'shr', f_shoe(1), shoe_art_front()) +
                 S.A(tag + 'up', f_upper, upper) +
-                S.A(tag + 'arml', f_arm(-1), arm_art(False)) + S.A(tag + 'armr', f_arm(1), arm_art(False)))
+                S.A(tag + 'arml', f_arm(-1), arm_art(False, S.pfx)) + S.A(tag + 'armr', f_arm(1), arm_art(False, S.pfx)))
 
     # -- assembly --
     def svg(s, filt='f'):
@@ -339,6 +362,7 @@ class Nico:
             return [('s', st['face'] * st['sq'], 1)]
         def f_view(v):
             return lambda t: [('s', tl(t)['sq'], 1)] if tl(t)['view'] == v else [('s', 0, 0)]
+        S.defs.append(plaid_defs(S.pfx))
         inner = S.A('fp', f_side, s.side_parts(), extras=vx)
         if 'front' in s.views: inner += S.A('vfr', f_view('front'), s.fb_parts('front'), extras=vx)
         if 'back' in s.views: inner += S.A('vbk', f_view('back'), s.fb_parts('back'), extras=vx)

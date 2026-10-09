@@ -75,3 +75,19 @@ Walk right on the far line (y=376) → turn to front → walk toward the camera 
   - Width is measured perpendicular to the edge: horizontal scans overstated it on curves.
 - `reference/blender_vs_2d.png` (made by `verify/compare_sheet.py`): walk side, toward, away and putdown. 2D frames are taken from the scenes, so the toward/away 2D figure is depth-scaled (larger) and the Blender figure is not.
 - `out/blender/` (37MB of PNG frames, the .blend and spritesheets) is regenerable and kept out of git (`.gitignore`).
+
+## Nico likeness pass (2026-10-09)
+Matthew sent three photos of Nico and asked for the character to look more like him. This is an intentional restyle of the character only. The sticker filter, proportions, rig and other scenes are unchanged.
+- **Hair:** long and dark brown (`#4A3326`, was `#6B4A35`), with a centre part and a low ponytail held by an orange tie.
+  - Side: hair is pulled back over the ear, and the ponytail hangs behind the torso.
+  - Front: hair falls to the jaw on both sides; the ears are covered.
+  - Back: the ponytail runs down the middle of the back.
+- **Face:** fairer skin (`#F1C6A6` / shade `#DFA683`), slightly larger eyes, rosier cheeks and a wider grin.
+- **Shirt:** a long-sleeve plaid flannel replaces the blue tee. It has a forest-green ground, navy bands and a thin orange line, with collar points and buttons, and no pocket. The plaid is a flat `userSpaceOnUse` `<pattern>` with the scene prefix (`{pfx}plnear` / `{pfx}plfar`), so the checks move with each part's transform and ids don't collide on the combined page. Far-side limbs use a darker variant, as before.
+- **Jeans** are darker (`#34466B` / `#2A3957`), and the shoes are grey sneakers.
+- `HAIR_TOP` was re-measured from the new side hair (-118.14). The front and back hair still match it, so view swaps keep the same height.
+- **Corrections:**
+  - The first plaid (6-unit navy bands, darker ground) read as near-black at game size, so the bands were cut to 5 units and the ground lightened.
+  - The hair tie sat behind the side hair and was invisible, so it is now drawn on top.
+- **Not done:** martial-arts belts (from the photos) as an outfit or unlockable. That's an idea for later and isn't in the default look. The Blender track (`out/blender`) still has the old look; it was an evaluation and isn't used by the game.
+- **Verification:** `sh run.sh` gives 90 passed, 0 failed. No checks were added. The walk and walk3d goldens were regenerated because the art changed on purpose. Sheets: `reference/nico_v1_before.png`, `reference/nico_v2_likeness.png`, `reference/nico_v2_walk3d_sheet.png`.
