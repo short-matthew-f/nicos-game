@@ -120,7 +120,7 @@ with sync_playwright() as p:
     check(g['money'] == 17 and g['boost'] > 30 and not pg.locator('#place').is_visible(), f"fries cost $3 and give a boost (${g['money']}, {g['boost']:.0f}s)")
     check(pg.locator('#money').inner_text() == '$17' and pg.locator('#boost').is_visible(), 'the HUD shows the new money and the boost')
     at('burger', 0, 90); pg.wait_for_timeout(100)
-    x0 = G()['nico']['x']; pg.keyboard.down('d'); pg.wait_for_timeout(1000); pg.keyboard.up('d'); fast = G()['nico']['x'] - x0
+    x0 = G()['nico']['x']; pg.keyboard.down('a'); pg.wait_for_timeout(1000); pg.keyboard.up('a'); fast = x0 - G()['nico']['x']
     check(fast > 240 * 1.2, f"boosted walking is faster ({fast:.0f} px in 1 s)")
     pg.evaluate('()=>window.__game.setMoney(2)'); at('burger'); pg.wait_for_timeout(250)
     pg.click('#action'); pg.wait_for_timeout(200)

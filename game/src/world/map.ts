@@ -49,7 +49,7 @@ export const BUILDINGS: Building[] = [
 
 /** Grass areas with something in them (drawn on the ground, not solid). */
 export const LOTS = [
-  { id: 'playground', x: 1090, y: 420, w: 580, d: 200, fill: '#EBD9A8' },  // sand
+  { id: 'playground', x: 1090, y: 420, w: 720, d: 200, fill: '#EBD9A8' },  // sand
   { id: 'park', x: 1040, y: 1200, w: 520, d: 360, fill: '#A9D18E' },
   { id: 'yard', x: 2460, y: 1860, w: 760, d: 520, fill: '#C9CED6' },        // storage-yard tarmac
 ];
@@ -57,11 +57,11 @@ export const LOTS = [
 /** Playground equipment on the sand lot (positions are the front-left foot of each). */
 // Sized against Nico (~132 px tall): the tower is a bit taller than him.
 export const SLIDE = { x: 1140, y: 560, w: 70, h: 175, top: 150, len: 240 };   // tower w x h, platform `top` above ground, chute reaches x + len
-export const SWINGS = { x: 1410, y: 570, w: 210, h: 175, seats: [62, 148] };   // seat centre x offsets
+export const SWINGS = { x: 1530, y: 570, w: 210, h: 175, seats: [62, 148] };   // seat centre x offsets
 export const SWING_BAR = SWINGS.y - SWINGS.h + 12, SWING_SEAT = SWINGS.y - 52;   // where the chains hang from, and the seat plank
 
 export const TREES: [number, number][] = [
-  [700, 300], [760, 520], [60, 700 - 160], [1000, 360], [1760, 380], [1960, 200], [2140, 460],
+  [700, 300], [760, 520], [60, 700 - 160], [1000, 360], [1880, 330], [1960, 200], [2140, 460],
   [2440, 520], [3200, 300], [3420, 520], [1100, 1150], [1600, 1300], [1450, 1480], [1960, 1150],
   [2080, 1460], [700, 1290], [540, 1500], [3200, 1200], [3400, 1450], [3050, 1480],
   [700, 2100], [620, 2450], [1000, 2350], [1500, 2400], [2000, 2300], [3350, 2450],
@@ -100,4 +100,13 @@ export function fireRoute(): [number, number][] {
 }
 
 export interface Rect { x: number; y: number; w: number; d: number }
-export const SOLIDS: Rect[] = BUILDINGS.map(b => ({ x: b.x, y: b.y, w: b.w, d: b.d }));
+/** What you bump into, walking or driving: buildings, tree trunks, and the feet of the
+ * playground equipment (the slide tower and chute end, the swing posts). */
+export const SOLIDS: Rect[] = [
+  ...BUILDINGS.map(b => ({ x: b.x, y: b.y, w: b.w, d: b.d })),
+  ...TREES.map(([x, y]) => ({ x: x - 15, y: y - 16, w: 30, d: 18 })),
+  { x: SLIDE.x, y: SLIDE.y - 26, w: SLIDE.w, d: 26 },
+  { x: SLIDE.x + SLIDE.len - 34, y: SLIDE.y - 22, w: 34, d: 22 },
+  { x: SWINGS.x, y: SWINGS.y - 20, w: 22, d: 20 },
+  { x: SWINGS.x + SWINGS.w - 22, y: SWINGS.y - 20, w: 22, d: 20 },
+];

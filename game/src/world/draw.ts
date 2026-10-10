@@ -99,19 +99,28 @@ export function drawTree(x: number, y: number): Container {
  * the bar and are separate layer items drawn just in front of the frame, so a swing can
  * move and Nico can sit between the frame and his seat's chains. */
 export function drawPlayground(): { items: Container[]; seats: Container[] } {
-  const slide = new Graphics();
+  // each piece gets its own white band and shadow (not one box round the whole thing),
+  // so the grass shows through the gaps when Nico walks behind it
+  const sticker = (g: Graphics, draw: (g: Graphics) => Graphics, fill: string) => {
+    draw(g).stroke({ width: BAND * 2, color: '#FFFFFF', join: 'round' });
+    draw(g).fill(fill);
+  };
   const { x: sx, y: sy, w: tw, h: th, top, len } = SLIDE;
-  stickerRect(slide, sx, sy - th, len, th, 10);
-  slide.roundRect(sx, sy - th, tw, th, 8).fill('#F9A826');                    // tower
+  const tower = (g: Graphics) => g.roundRect(sx, sy - th, tw, th, 8);
+  const chute = (g: Graphics) => g.poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy, sx + tw, sy - top + 30]);
+  const slideShadow = new Graphics(); chute(tower(slideShadow)).fill({ color: NAVY, alpha: SH.a }); slideShadow.position.set(SH.x, SH.y);
+  const slide = new Graphics();
+  sticker(slide, chute, '#5FAFA5');
+  slide.poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy - 14, sx + tw, sy - top + 6]).fill('#7CC6BC');
+  sticker(slide, tower, '#F9A826');
   for (let y = sy - th + 16; y < sy - 8; y += 26) slide.rect(sx + 9, y, tw - 18, 8).fill('#FFE29A');   // ladder rungs
-  slide.roundRect(sx - 4, sy - top - 8, tw + 8, 12, 5).fill('#D9822B')         // platform lip
-       .poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy, sx + tw, sy - top + 30]).fill('#5FAFA5')
-       .poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy - 14, sx + tw, sy - top + 6]).fill('#7CC6BC');
-  const swings = new Graphics();
+  slide.roundRect(sx - 4, sy - top - 8, tw + 8, 12, 5).fill('#D9822B');                                // platform lip
+
   const { x: wx, y: wy, w: ww, h: wh } = SWINGS;
-  stickerRect(swings, wx, wy - wh, ww, wh, 10);
-  swings.roundRect(wx, wy - wh, ww, 16, 8).fill('#D77B72')
-        .rect(wx + 6, wy - wh + 8, 12, wh - 8).fill('#D77B72').rect(wx + ww - 18, wy - wh + 8, 12, wh - 8).fill('#D77B72');
+  const frame = (g: Graphics) => g.roundRect(wx, wy - wh, ww, 16, 8).roundRect(wx + 6, wy - wh + 8, 12, wh - 8, 4).roundRect(wx + ww - 18, wy - wh + 8, 12, wh - 8, 4);
+  const swingShadow = new Graphics(); frame(swingShadow).fill({ color: NAVY, alpha: SH.a }); swingShadow.position.set(SH.x, SH.y);
+  const swings = new Graphics();
+  sticker(swings, frame, '#D77B72');
   const seats = SWINGS.seats.map(ox => {
     // drawn hanging from the bar, origin at the bar: scale.y swings it toward the camera
     const g = new Graphics();
@@ -122,8 +131,8 @@ export function drawPlayground(): { items: Container[]; seats: Container[] } {
     c.position.set(wx + ox, SWING_BAR); c.zIndex = wy + 2;
     return c;
   });
-  const a = new Container(); a.addChild(slide); a.zIndex = sy;
-  const b = new Container(); b.addChild(swings); b.zIndex = wy;
+  const a = new Container(); a.addChild(slideShadow, slide); a.zIndex = sy;
+  const b = new Container(); b.addChild(swingShadow, swings); b.zIndex = wy;
   return { items: [a, b, ...seats], seats };
 }
 

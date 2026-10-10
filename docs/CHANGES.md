@@ -193,3 +193,11 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - e2e, 50 checks: waits at first; drives out on the alarm; the toast; home within a minute.
   - Mutation: removing the truck's braking went red.
   - **Not proven:** the "don't yield to cars waiting for the truck" rule. A 4-minute simulation never deadlocked even without it (the truck was stuck at most 0.2 s), so it guards a jam that hasn't been seen.
+
+## 2026-10-09: Nico's feedback, part 1 (trees, playground)
+- **Trees are solid:** a trunk footprint for each tree is in `SOLIDS`, so you can't walk or drive through them.
+- **Walking behind the playground "felt wrong":** the slide and swing frame each sat on one white sticker box covering their whole bounding rectangle, so walking behind them meant vanishing behind an opaque white panel. Each piece (tower, chute, frame) now gets its own band and shadow. The tower, the chute end and the swing posts have solid footprints.
+- The swings moved 120 px further from the slide (Nico: space it out). The lot is wider, and a tree moved.
+- Fixed a Pixi v8 deprecation: the truck's lights were children of a Graphics.
+- The e2e now places Nico by named spots (`__game.spots`) instead of coordinates, ahead of the scale pass. The boost check walks left now, because a solid tree stands to the right.
+- **Tests:** Vitest 99 (a car can't drive through a tree), e2e 50.

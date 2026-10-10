@@ -7,7 +7,7 @@ import { NAVY } from './draw';
 
 export const TRUCK = { max: 260, acc: 200, brake: 600, len: 160, wid: 64, firstRun: 25, every: [70, 130] as [number, number] };
 
-function truckArt(): { body: Graphics; lights: [Graphics, Graphics] } {
+function truckArt(): { body: Container; lights: [Graphics, Graphics] } {
   const g = new Graphics();
   const L = TRUCK.len, W = TRUCK.wid, B = 7;
   g.roundRect(-L / 2 - B, -W / 2 - B, L + 2 * B, W + 2 * B, 14 + B).fill('#FFFFFF');
@@ -21,8 +21,8 @@ function truckArt(): { body: Graphics; lights: [Graphics, Graphics] } {
   g.rect(-L / 2 + 2, -W / 2 + 2, L - 4, 5).fill('#FFFFFF');                 // stripe
   const red = new Graphics().roundRect(L / 2 - 58, -W / 2 + 6, 10, W / 2 - 8, 3).fill('#FF4D4D');
   const blue = new Graphics().roundRect(L / 2 - 58, 2, 10, W / 2 - 8, 3).fill('#4DA3FF');
-  g.addChild(red, blue);
-  return { body: g, lights: [red, blue] };
+  const body = new Container(); body.addChild(g, red, blue);
+  return { body, lights: [red, blue] };
 }
 
 export type Blocker = [number, number, string?];   // a point to brake for, tagged by who it is
@@ -34,7 +34,7 @@ export class FireTruck {
   out = false;
   wait = TRUCK.firstRun;      // s until the next alarm
   private t = 0;
-  private body: Graphics; private shadow: Graphics; private lights: [Graphics, Graphics];
+  private body: Container; private shadow: Graphics; private lights: [Graphics, Graphics];
 
   constructor() {
     ({ body: this.body, lights: this.lights } = truckArt());

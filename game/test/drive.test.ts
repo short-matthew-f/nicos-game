@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { steer, moveCar, carFits, angleTo, CAR, type CarState } from '../src/drive';
-import { SOLIDS, WORLD, PARKED_CAR, DRIVEWAYS, ROADS_X, ROADS_Y } from '../src/world/map';
+import { SOLIDS, WORLD, PARKED_CAR, DRIVEWAYS, ROADS_X, ROADS_Y, TREES } from '../src/world/map';
 
 const run = (c: CarState, sx: number, sy: number, secs: number, solids = SOLIDS) => {
   for (let t = 0; t < secs; t += 1 / 60) { const h = c.h; steer(c, sx, sy, 1 / 60); moveCar(c, h, 1 / 60, solids, WORLD); }
@@ -45,6 +45,12 @@ describe('driving', () => {
     const c: CarState = { ...PARKED_CAR, speed: 0 };
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let k = 0; k < 120; k++) { run(c, rnd() * 2 - 1, rnd() * 2 - 1, 0.5); expect(carFits(c.x, c.y, c.h, SOLIDS, WORLD)).toBe(true); }
+  });
+  it("can't drive through a tree", () => {
+    const [tx, ty] = TREES[0];
+    expect(carFits(tx, ty - 5, 0, SOLIDS, WORLD)).toBe(false);
+    const c = run({ x: tx - 200, y: ty - 5, h: 0, speed: 0 }, 1, 0, 2);
+    expect(c.x).toBeLessThan(tx - 30);
   });
   it('the parked car starts on the home driveway, clear of buildings', () => {
     const d = DRIVEWAYS.find(r => r.id === 'home')!;
