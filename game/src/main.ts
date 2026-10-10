@@ -813,7 +813,7 @@ async function main() {
     }),
   ];
   // ---- people Nico knows, on their routines; walk up to one to say hi
-  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean }; trip: [number, number][]; met: [number, number] | null }
+  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean }; trip: [number, number][]; met: [number, number] | null; climb?: { b: typeof BUILDINGS[number]; t: number; dur: number } | null }
   const locals: Local[] = TOWNSFOLK.map(t => {
     const view = new PersonView(t.who);
     layer.addChild(view.root);
@@ -845,6 +845,7 @@ async function main() {
     jobWait[j.id] = j.cooldown; job = null;
   }
   function talkTo(l: Local) {
+    if (l.climb) { toast(`${l.t.name}: “${['Look at me! I\'m on the roof!', 'You can see the whole town from up here!', 'Shh, don\'t tell anyone I\'m up here!'][l.said++ % 3]}”`); return; }
     if (finishing(l.t.who)) { payJob(); return; }
     const w = wanted();
     if (w && job!.job.giver === l.t.who) { toast(`${l.t.name}: “Any luck finding ${item(w).label}? The storage units might have one.”`); return; }
@@ -897,7 +898,23 @@ async function main() {
     stepGait(l.st, 0, 0, dt, GAIT_SCALE * l.view.height);
     l.view.pose(l.w.x, l.w.y, l.st);
   }
+  /** Up a building's front wall, onto the roof, a wave, and back down (Primo climbs things). */
+  function stepClimb(l: Local, dt: number) {
+    const c = l.climb!, b = c.b, t = (c.t += dt), back = c.dur - t, k = Math.min(t, back);
+    stepRoute(l.t, l.w, dt);   // (ticks the stop's wait; it moves on when that's done)
+    const wall = l.w.y - (b.y + b.d - b.h) + 6, roof = b.d * 0.45, UP = 1.8, OVER = 0.5;
+    let lift: number, view: View = 'front', amp = 0, hold = 0;
+    if (k < UP) { lift = wall * smoothstep(k / UP); view = 'back'; amp = 1; }                 // hand over hand up the wall
+    else if (k < UP + OVER) { lift = wall + roof * (k - UP) / OVER; view = t < back ? 'back' : 'front'; amp = 0.6; }
+    else { lift = wall + roof; hold = 0.5 + 0.5 * Math.sin(t * 7); }                           // up top, waving
+    Object.assign(l.st, { view, face: 1, crouch: 0, hold, sit: 0, stride_y: 0 });
+    stepGait(l.st, amp * 140, 0, dt, GAIT_SCALE * l.view.height);
+    l.view.pose(l.w.x, l.w.y - lift, l.st); l.view.root.zIndex = b.y + b.d + 5;
+    if (l.w.wait <= 0 || back <= 0) { l.climb = null; Object.assign(l.st, { hold: 0 }); }
+  }
+  const smoothstep = (a: number) => { a = Math.max(0, Math.min(1, a)); return a * a * (3 - 2 * a); };
   function stepLocal(l: Local, dt: number) {
+    if (l.climb) { stepClimb(l, dt); return; }
     // someone Nico's doing a job for (or who has one to offer) waits for him when he's close,
     // instead of walking off; a job with a meeting place sends them there and back
     if (l.swingT < 0) {
@@ -918,6 +935,7 @@ async function main() {
       if (l.met || (mine && near < 320) || (offers(l.t.who) && near < 220)) { standFacing(l, mx, my, dt); return; }
     }
     const reached = stepRoute(l.t, l.w, dt);
+    if (reached?.climb) { const b = BUILDINGS.find(q => q.id === reached.climb); if (b) { l.climb = { b, t: 0, dur: reached.wait ?? 8 }; stepClimb(l, 0); return; } }
     if (reached?.swing !== undefined && !seatTaken[reached.swing]) { l.seat = reached.swing; seatTaken[l.seat] = l.t.who; l.swingT = 0; }
     if (l.swingT >= 0) {
       if (l.w.wait > 0) {
@@ -1291,7 +1309,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
-      townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, art: l.view.artLoaded() })),
+      townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, climbing: !!l.climb, art: l.view.artLoaded() })),
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },

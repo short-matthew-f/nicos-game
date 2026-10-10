@@ -712,3 +712,8 @@ The user: "a day and night cycle might be nice. The city could have some street 
 - **A little spooky:** pairs of eyes glint between the forest pines, blink, and fade away when Nico comes close. Fog drifts through the woods, and fireflies dance round the campground.
 - Night first tried headlights as hard-edged triangles on the car body: they were dimmed by the dark and looked cut out. They're now soft glows in the light layer. The forest's dark had a hard straight edge, so it's now four feathered layers.
 - e2e: night is full dark and still running, the clock turns, back to day. The away-sales check now uses a debug hook (`awayFor`) that runs the same catch-up as loading; a reload saved "now" over the test's "an hour ago" (205 checks).
+
+### Primo climbs buildings (2026-10-10)
+- From the user: "he often climbs on buildings. It would be funny to see him up on top of buildings sometimes."
+- Once a lap of his playground route (about once a minute), Primo stops beside Burger Barn and climbs up its front wall hand over hand, back to us. He steps up onto the roof and waves from up there for a few seconds, then climbs back down and runs off to the slide.
+- Say hi while he's up there: "Look at me! I'm on the roof!" A route stop with `climb: '<building id>'` does it for anyone, on any building.

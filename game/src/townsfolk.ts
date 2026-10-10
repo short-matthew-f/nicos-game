@@ -3,7 +3,7 @@
 import { ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, BUILDINGS, SWINGS, SLIDE, doorOf } from './world/map';
 import type { Who } from './rig/person';
 
-export interface Stop { x: number; y: number; wait?: number; swing?: number }   // swing: seat index to swing on
+export interface Stop { x: number; y: number; wait?: number; swing?: number; climb?: string }   // swing: seat index to swing on; climb: a building to climb up onto (and wave from the roof)
 export interface Townie { who: Who; name: string; speed: number; route: Stop[]; lines: string[] }
 
 const SW = ROAD_W / 2 + SIDEWALK / 2;   // sidewalk centre, from a road's centre line
@@ -37,6 +37,8 @@ export const TOWNSFOLK: Townie[] = [
     route: [
       { x: SWINGS.x + SWINGS.seats[1], y: SWINGS.y + 34, swing: 1, wait: 9 },
       { x: SLIDE.x + SLIDE.len + 50, y: SLIDE.y + 30, wait: 1.5 },
+      { x: SLIDE.x + SLIDE.len + 50, y: 1610 },
+      { x: 1820, y: 1700, wait: 11, climb: 'burger' },             // (Primo climbs things: up onto Burger Barn's roof)
       { x: SLIDE.x + SLIDE.len + 50, y: 1610 },
       { x: 2640, y: 1610 }, { x: 2640, y: 1770, wait: 3 },        // watch the fountain
       { x: 2880, y: 1770 }, { x: 2880, y: 1610 }, { x: SWINGS.x + SWINGS.w + 40, y: 1610 },
