@@ -17,9 +17,21 @@
     <div id="buttons">
       <button id="more" type="button">+10 people</button>
       <button id="fewer" type="button">Clear</button>
+      <button id="check-update" type="button" aria-label="Check for update">⟳</button>
     </div>
   </div>
   <div id="hint">Drag anywhere to walk · WASD / arrows on a keyboard</div>
+  <div id="toast" role="status"></div>
+  <div id="update" hidden>
+    <div class="card" role="dialog" aria-labelledby="update-title">
+      <h2 id="update-title">New version ready!</h2>
+      <p>An update to Nico's City has downloaded. Restart to play it.</p>
+      <div class="row">
+        <button id="update-later" type="button">Later</button>
+        <button id="update-restart" type="button" class="primary">Restart</button>
+      </div>
+    </div>
+  </div>
   <script type="module" src="./src/main.ts"></script>
 </body>
 </html>

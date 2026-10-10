@@ -4,6 +4,7 @@ import { Assets, Container, Matrix, Sprite, Texture } from 'pixi.js';
 import { DropShadowFilter, OutlineFilter } from 'pixi-filters';
 import { partOps, opsMatrix, mul, type PoseState, type View } from './pose';
 import { NAVY } from '../world/draw';
+import { BUILD_ID } from '../update';
 
 interface PartMeta { part: string; img: string; x: number; y: number; w: number; h: number }
 interface ArtMeta { res: number; views: Record<View, PartMeta[]> }
@@ -13,9 +14,11 @@ export const OUTLINE = 6;        // rig units, matches the SVG sticker band
 export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 
 let art: ArtMeta | null = null;
+// ?v= so a new deploy never mixes with cached art (Pages lets browsers cache files for 10 minutes)
+const v = `?v=${encodeURIComponent(BUILD_ID)}`;
 export async function loadNicoArt(base = './'): Promise<void> {
-  art = await (await fetch(`${base}art/nico/nico.json`)).json() as ArtMeta;
-  const urls = Object.values(art.views).flat().map(p => base + p.img);
+  art = await (await fetch(`${base}art/nico/nico.json${v}`)).json() as ArtMeta;
+  const urls = Object.values(art.views).flat().map(p => base + p.img + v);
   await Assets.load(urls);
 }
 
@@ -29,7 +32,7 @@ export class NicoView {
     for (const v of ['side', 'front', 'back'] as View[]) {
       const c = new Container();
       const parts = art.views[v].map(meta => {
-        const sprite = new Sprite(Texture.from(base + meta.img));
+        const sprite = new Sprite(Texture.from(base + meta.img + v));
         c.addChild(sprite);
         return { meta, sprite };
       });

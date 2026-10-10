@@ -128,3 +128,20 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Measured:** 60 fps with 51 people in WebKit on the Mac. That says nothing about the iPad; the on-device FPS counter is the real test.
 - **Plan B** (not built, pending the iPad result): if the live outline is too slow, bake whole-body frames from the SVG scenes with the sticker included.
 - **Correction, before the iPad test:** Pixi filters render at 1× by default (`Filter.defaultOptions.resolution: 1`), so on a Retina screen the live-outlined Nico was drawn soft and upscaled next to crisp buildings. Both filters now use `resolution = 'inherit'`, and the side-by-side crop is clearly sharper. The options type doesn't accept `'inherit'`, so it's set after construction.
+
+## 2026-10-09: GitHub Pages and the update pop-up
+- **Hosting:** https://short-matthew-f.github.io/nicos-game/. On every push to `main`, `.github/workflows/pages.yml` runs the Vitest suite, builds `game/` and deploys it. A failing test blocks the deploy.
+- **Update check:**
+  - The build id (the commit on CI) is compiled in as `__BUILD_ID__` and published as `version.json`.
+  - The game polls every 5 minutes, when the app comes back to the foreground, 3 s after load, and when the ⟳ button is tapped.
+  - On a new id, it fetches the new page and its script first, then shows "New version ready! Restart / Later".
+  - Restart goes to `./?v=<id>`: Pages lets browsers cache `index.html` for 10 minutes, so a plain reload could bring back the old page. A sessionStorage note stops it re-prompting for the build it just restarted into. Rig art URLs carry `?v=<build>` for the same reason.
+- **Rejected for now:** a service worker (vite-plugin-pwa prompt mode). It would also give offline play, but a stuck worker can pin an old build, which is the opposite of what was asked.
+- **Tests:**
+  - Vitest: `needsUpdate` and `assetUrls` (3 tests).
+  - `python verify/update_e2e.py [url]`: 11 checks.
+    - Up to date: no pop-up, and a toast says so.
+    - A faked newer `version.json` gives the pop-up. Later closes it, and it returns on the next check.
+    - Restart reloads the page and tidies the URL, with no re-prompt loop.
+  - Mutation: removing the restarted-into guard went red in both suites.
+  - **Not proven by mutation:** swapping `?v=` navigation for `location.reload()` stayed green. The local preview server doesn't cache HTML the way Pages does, so the cache-bust can't be tested here.

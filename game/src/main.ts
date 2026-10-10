@@ -6,6 +6,7 @@ import { loadNicoArt, NicoView } from './rig/nico';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, WALK_SPEED } from './player';
+import { startUpdates, BUILD_ID } from './update';
 
 const VIEW_H = 800;          // world px visible top to bottom (Nico ~ 1/6 of the screen)
 const AMP_RATE = 5;          // gait amplitude ramp (1/s)
@@ -47,6 +48,9 @@ async function main() {
     inFrontOf: (i: number, d: number) => { const c = cars[i], [x, y] = c.pos, h = c.loop.heading(c.s); nico.x = x + Math.cos(h) * d; nico.y = y + Math.sin(h) * d; },
   };
   (window as unknown as { __game: unknown }).__game = game;
+  const updater = startUpdates(() => { /* nothing to save yet */ });
+  document.getElementById('check-update')!.addEventListener('click', () => updater.check(true));
+  Object.assign(game, { build: BUILD_ID, checkUpdate: () => updater.check(true) });
   const input = new Input(host);
   let zoom = 1;
   const onResize = () => {
