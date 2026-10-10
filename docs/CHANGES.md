@@ -450,3 +450,12 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 
 ## 2026-10-10: wider swing set
 - Nico: the two swings were very close together. The frame is now 300 px wide (was 210) and the seats are 150 px apart (was 86), so Nico and Primo have a gap between them.
+
+## 2026-10-10: the clicking noise
+- **Nico:** "a strange clicking noise" that happened a lot.
+- **Cause, measured:** cars and townsfolk scatter the pigeon flocks all over town. That was 56 take-offs a minute while Nico stood at home, and every one played the flap sound (a short burst of noise) at full volume.
+- **Fix:**
+  - Only a flock within 600 px of Nico (or his car) makes a sound.
+  - Every noise burst now fades in over 6 ms, because a burst that starts at full volume clicks.
+- **Debugging aid:** `sfx` now counts plays per effect (`played`, shown as `__game.sounds`) for tests and for hunting the next noisy sound.
+- **e2e:** far-off scatters stay silent, and a flock Nico walks into flaps. Mutation-checked.

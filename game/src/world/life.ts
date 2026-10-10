@@ -22,8 +22,8 @@ interface Bird { home: [number, number]; x: number; y: number; vx: number; vy: n
 export class Pigeons {
   readonly views: Container[] = [];
   private birds: Bird[] = [];
-  /** Fires when a flock takes off (for a flap sound). */
-  onScatter: () => void = () => {};
+  /** Fires when a flock takes off (for a flap sound), with where it was. */
+  onScatter: (x: number, y: number) => void = () => {};
   constructor() {
     for (const [fx, fy] of FLOCKS) for (let i = 0; i < 4; i++) {
       const view = new Container(); view.addChild(pigeonArt());
@@ -33,7 +33,7 @@ export class Pigeons {
     }
   }
   update(dt: number, scarers: [number, number][]) {
-    let scattered = false;
+    let scattered: [number, number] | null = null;
     for (const b of this.birds) {
       b.t += dt;
       if (!b.flying && b.gone <= 0) {
@@ -41,7 +41,7 @@ export class Pigeons {
           const [sx, sy] = scarers.reduce((a, c) => (Math.hypot(c[0] - b.x, c[1] - b.y) < Math.hypot(a[0] - b.x, a[1] - b.y) ? c : a));
           const d = Math.hypot(b.x - sx, b.y - sy) || 1;
           b.flying = true; b.vx = (b.x - sx) / d * 260 + (Math.random() - 0.5) * 80; b.vy = (b.y - sy) / d * 120 - 60;
-          scattered = true;
+          scattered = [b.x, b.y];
         }
         // pecking: hop and bob a little
         b.view.position.set(b.x, b.y - Math.max(0, Math.sin(b.t * 5)) * 2);
@@ -59,7 +59,7 @@ export class Pigeons {
       }
       b.view.zIndex = b.y;
     }
-    if (scattered) this.onScatter();
+    if (scattered) this.onScatter(scattered[0], scattered[1]);
   }
 }
 

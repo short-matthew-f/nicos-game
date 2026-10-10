@@ -263,6 +263,15 @@ with sync_playwright() as p:
     pg.evaluate('()=>window.__game.place(1700, 600)'); pg.evaluate('()=>window.__game.place(1520, 700)'); pg.wait_for_timeout(250)
     check(G()['money'] == m0 + 1, 'the same coin can\'t be picked up twice')
     check(pg.locator('#mute').is_visible(), 'there is a sound on/off button')
+    # pigeons: traffic and townsfolk scatter flocks all over town; only ones near Nico flap out loud
+    pg.mouse.click(W * 0.5, H * 0.95)   # (a tap starts the audio)
+    away(); s0 = G(); pg.wait_for_timeout(8000); s1 = G()
+    check(s1['scatters'] > s0['scatters'] and s1['sounds'].get('flap', 0) == s0['sounds'].get('flap', 0),
+          f"far-off flocks scatter silently ({s1['scatters'] - s0['scatters']} take-offs, {s1['sounds'].get('flap', 0) - s0['sounds'].get('flap', 0)} flaps heard)")
+    f0 = G()['sounds'].get('flap', 0)
+    pg.evaluate('()=>window.__game.place(1700, 1700)'); pg.wait_for_timeout(100)
+    pg.evaluate('()=>window.__game.place(1700, 1820)'); pg.wait_for_timeout(300)   # walk right up to the flock at (1700, 1830)
+    check(G()['sounds'].get('flap', 0) > f0, 'a flock Nico scares flaps out loud')
     # the big map: tap the minimap to open it (it doesn't move Nico), tap again to close
     mm = G()['minimapAt']; x0 = G()['nico']['x']
     pg.mouse.click(mm['x'], mm['y']); pg.wait_for_timeout(300)

@@ -7,7 +7,7 @@ import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { FireScene } from './world/fire';
-import { Siren, sfx, audio } from './sound';
+import { Siren, sfx, audio, played } from './sound';
 import { Minimap } from './minimap';
 import { BallView, kick, nudge, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
@@ -86,7 +86,9 @@ async function main() {
   layer.addChild(ballView.root);
   let goalReset = 0; const score = { left: 0, right: 0 };
   const pigeons = new Pigeons(); for (const v of pigeons.views) layer.addChild(v);
-  pigeons.onScatter = () => sfx.flap();
+  // only flocks Nico can see make a sound: cars and people scatter them all over town
+  let scatters = 0;   // every flock take-off in town (for tests)
+  pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]; if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   const ducks = new Ducks();
@@ -684,6 +686,7 @@ async function main() {
       low, goLow: () => goLow(),
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,
       setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(biz.sold); persist(); },
+      sounds: { ...played }, scatters,
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,

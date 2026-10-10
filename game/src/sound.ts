@@ -45,7 +45,9 @@ class Audio {
     const n = Math.floor(c.sampleRate * len), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 2;
     const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    s.buffer = buf; f.type = 'lowpass'; f.frequency.value = freq; g.gain.value = vol;
+    // fade in over 6 ms: a burst that starts at full volume clicks
+    const t = c.currentTime;
+    s.buffer = buf; f.type = 'lowpass'; f.frequency.value = freq; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.006);
     s.connect(f); f.connect(g); g.connect(m); s.start();
   }
 }
@@ -53,7 +55,7 @@ class Audio {
 export const audio = new Audio();
 
 /** The little sound effects, by name. */
-export const sfx = {
+const effects = {
   kick: () => { audio.noise(0.09, 0.5, 900); audio.tone('sine', 160, 70, 0.1, 0.25); },
   coin: () => { audio.tone('square', 988, 988, 0.08, 0.06); audio.tone('square', 1319, 1319, 0.22, 0.06, 0.08); },
   goal: () => { [523, 659, 784, 1047].forEach((f, i) => audio.tone('triangle', f, f, 0.18, 0.12, i * 0.09)); },
@@ -73,6 +75,10 @@ export const sfx = {
   cheer: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => audio.tone('triangle', f, f, 0.22, 0.12, i * 0.08)); audio.noise(0.6, 0.08, 3000); },
   cash: (n = 3) => { for (let i = 0; i < Math.min(n, 8); i++) { audio.tone('square', 988, 988, 0.06, 0.04, i * 0.07); audio.tone('square', 1319, 1319, 0.12, 0.04, i * 0.07 + 0.05); } },
 };
+/** How many times each effect has played (for tests, and for hunting down a noisy one). */
+export const played: Record<string, number> = {};
+export const sfx = Object.fromEntries(Object.entries(effects).map(([k, f]) =>
+  [k, (...a: unknown[]) => { played[k] = (played[k] ?? 0) + 1; (f as (...a: unknown[]) => void)(...a); }])) as typeof effects;
 
 export class Siren {
   private osc: OscillatorNode | null = null;
