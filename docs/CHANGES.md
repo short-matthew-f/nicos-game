@@ -854,3 +854,7 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - the shed's parts bins;
   - the carved sign at home (NICO between two drawn stars, hearts or rockets).
 - **Emoji still in the world, from before:** the finds lying in a storage unit and on the shed shelves, and the Burger Barn tray. The minimap labels, and the buttons and messages, also use emoji.
+- **Yia-Yia's paintings, redrawn closer to her originals** (the user: "make the drawings look both in the style and a little more close to the originals"; the grass was poking outside the painting). Mocked up on a local page drawn by the game's own code first, then the user approved them: "Those are way better. Lock it in."
+  - `world/paintings.ts`; each painting is clipped to its canvas.
+  - **Grasses:** long, wavy, tapering ribbon blades (cubic curves) that arch over the pillar and droop. The gold is soft scattered mosaic dabs, with a dark leafy patch behind the grass. The pillar has a carved capital and a fish band.
+  - **Portrait:** the girl sits in a wide white gown, sleeves folded in her lap, with straight fair hair past her chin, a full fringe and big blue-green eyes, and a soft reflection on the teal floor.

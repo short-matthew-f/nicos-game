@@ -655,24 +655,3 @@ export function pizzelleArt(): Graphics {
   for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.circle(Math.cos(a) * 7, -12 + Math.sin(a) * 7, 3).stroke({ width: 1.5, color: '#C9974A' }); }
   return g;
 }
-/** Yia-Yia's own paintings, redrawn in the game's style from her real ones (the photos stay out of the repo):
- * long grasses round a carved stone pillar with a fish on it and one pink flower, on gold; and a portrait of a
- * fair-haired little girl wrapped in white, on deep green. w x h, from (0, 0). */
-export function yiayiaPainting(which: 0 | 1, w: number, h: number): Graphics {
-  const g = new Graphics();
-  if (which === 0) {
-    g.rect(0, 0, w, h).fill('#C9A848');
-    for (let i = 0; i < 60; i++) g.rect((i * 37) % w, (i * 53) % h, 6, 6).fill({ color: i % 3 ? '#E3C877' : '#8E9A4A', alpha: 0.7 });
-    g.rect(w * 0.45, h * 0.32, w * 0.36, h * 0.12).fill('#E9E4D8').rect(w * 0.48, h * 0.44, w * 0.3, h * 0.16).fill('#A8A4B4').rect(w * 0.47, h * 0.6, w * 0.32, h * 0.1).fill('#E9E4D8').rect(w * 0.5, h * 0.7, w * 0.26, h * 0.3).fill('#F4F1EA');
-    g.ellipse(w * 0.63, h * 0.52, w * 0.09, h * 0.035).fill('#3A3A40');   // the fish
-    for (let i = 0; i < 14; i++) { const x0 = (i / 14) * w, c = i % 2 ? '#3E6B2E' : '#55803A'; g.moveTo(x0, h).bezierCurveTo(x0 + w * 0.1, h * 0.5, x0 + w * 0.25, h * 0.3, x0 + w * (i % 3 ? 0.3 : -0.1), h * 0.1).stroke({ width: 3, color: c }); }
-    g.circle(w * 0.3, h * 0.38, w * 0.05).fill('#F2B8C6').circle(w * 0.3, h * 0.38, w * 0.015).fill('#C9708A');   // the pink flower
-  } else {
-    g.rect(0, 0, w, h * 0.62).fill('#5C6B3A').rect(0, h * 0.62, w, h * 0.38).fill('#3E6E66');
-    g.ellipse(w / 2, h * 0.62, w * 0.3, h * 0.2).fill('#F4F6F2').ellipse(w / 2, h * 0.72, w * 0.36, h * 0.1).fill('#DCEEF0');   // the white bundle
-    g.ellipse(w / 2, h * 0.3, w * 0.16, h * 0.12).fill('#E8D07A');                                                                  // fair hair
-    g.circle(w / 2, h * 0.33, w * 0.11).fill('#F2CDB4').rect(w * 0.39, h * 0.22, w * 0.22, h * 0.05).fill('#E8D07A');               // face, fringe
-    g.circle(w * 0.46, h * 0.33, w * 0.022).fill('#4F8FA0').circle(w * 0.54, h * 0.33, w * 0.022).fill('#4F8FA0').ellipse(w / 2, h * 0.39, w * 0.025, h * 0.012).fill('#D98A8A');
-  }
-  return g;
-}
