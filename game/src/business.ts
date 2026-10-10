@@ -3,7 +3,7 @@
 // item here is a one-line edit. The game only calls the small pure functions at the end.
 
 export type ItemKind = 'part' | 'find';
-export interface Item { id: string; label: string; kind: ItemKind; value: [number, number] }   // value: what it sells for, lo..hi
+export interface Item { id: string; label: string; kind: ItemKind; value: [number, number]; where?: 'beach' }   // value: what it sells for, lo..hi; where: only found there (not in storage units)
 
 export const ITEMS: Item[] = [
   // parts for the toy car (also sold at Parts & Tools)
@@ -27,6 +27,16 @@ export const ITEMS: Item[] = [
   { id: 'console', label: '🎮 Old game console', kind: 'find', value: [10, 22] },
   { id: 'clock', label: '⏰ Clock', kind: 'find', value: [2, 6] },
   { id: 'trophy', label: '🏆 Trophy', kind: 'find', value: [3, 9] },
+  // dug up on the beach with the metal detector
+  { id: 'bottle', label: '🍾 Old bottle', kind: 'find', value: [1, 3], where: 'beach' },
+  { id: 'oldkey', label: '🗝️ Old key', kind: 'find', value: [2, 6], where: 'beach' },
+  { id: 'watch', label: '⌚ Watch', kind: 'find', value: [5, 14], where: 'beach' },
+  { id: 'piratecoin', label: '🪙 Pirate coin', kind: 'find', value: [8, 20], where: 'beach' },
+  { id: 'ring', label: '💍 Gold ring', kind: 'find', value: [12, 30], where: 'beach' },
+];
+/** Tools Nico can buy at Parts & Tools for the activities round town. */
+export const TOOLS = [
+  { id: 'detector', label: '📡 Metal detector', price: 12, text: 'Beeps faster near buried treasure on the beach.' },
 ];
 export const item = (id: string) => ITEMS.find(i => i.id === id)!;
 
@@ -124,7 +134,7 @@ export function makeUnit(seed: number, name: string, must?: string): Unit {
   const r = rng(seed), pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
   const sz = pick(SIZES), n = sz.n[0] + Math.floor(r() * (sz.n[1] - sz.n[0] + 1));
   const roll = (it: Item) => ({ id: it.id, value: it.value[0] + Math.floor(r() * (it.value[1] - it.value[0] + 1)) });
-  const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find'))));
+  const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find' && !i.where))));
   if (must && !contents.some(c => c.id === must)) contents[contents.length - 1] = roll(item(must));   // (someone asked for one)
   const [lo, hi] = guess({ contents } as Unit, true);
   const price = Math.max(5, Math.round((lo + (hi - lo) * (0.25 + r() * 0.5)) * (0.7 + r() * 0.3)));
@@ -145,6 +155,12 @@ export function lineup(seed: number, firstTime: boolean, want?: string | null): 
   if (want) for (const u of units) if (u.contents.some(c => c.id === want)) u.peek = [want, ...u.peek.filter(p => p !== want)].slice(0, 2);
   return units;
 }
+/** A beach find dug up: its value, rolled now. */
+export function dugUp(b: Biz, id: string, r: () => number = Math.random): number {
+  const [lo, hi] = item(id).value, value = lo + Math.floor(r() * (hi - lo + 1));
+  b.finds.push({ id, value }); return value;
+}
+
 /** Hand over one of these (the cheapest one, if there are several kept): false if Nico has none. */
 export function take(b: Biz, id: string): boolean {
   if (item(id).kind === 'part') { if (!(b.items[id] > 0)) return false; add(b, id, -1); return true; }
@@ -178,8 +194,10 @@ export interface Biz {
   flips: number;                   // storage units bought, ever
   skills: string[];
   seed: number;                    // which auction lineup is up
+  tools: string[];                 // 'detector', ...
+  shells: Record<string, number>;  // shells collected, by kind
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1 });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, tools: [], shells: {} });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>

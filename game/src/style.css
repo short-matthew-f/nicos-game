@@ -84,6 +84,11 @@ html, body {
 #job[hidden] { display: none; }
 #goal { font-size: 16px; font-weight: 800; background: #E6F4FF; max-width: 46vw; box-shadow: 0 3px 0 rgba(43,63,85,.2); }
 #goal[hidden] { display: none; }
+#detector { font-size: 18px; display: flex; align-items: flex-end; gap: 3px; }
+#detector i { display: inline-block; width: 6px; border-radius: 2px; background: #C9D3DC; }
+#detector i.on { background: #3BB273; }
+#detector[hidden] { display: none; }
+#bag { font-size: 22px; min-width: 48px; }
 
 /* ---- the workshop screens (auction, unit, build, ramp) */
 .work .panel {

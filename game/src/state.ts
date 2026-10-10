@@ -75,6 +75,7 @@ function cleanBiz(raw: unknown): Biz {
   const finds = Array.isArray(b.finds) ? b.finds.filter(f => f && typeof f.id === 'string' && count(f.value) > 0).map(f => ({ id: f.id, value: count(f.value) })) : [];
   return {
     items, finds, workbench: b.workbench === true, designs: strs(b.designs), skills: strs(b.skills),
+    tools: strs(b.tools), shells: counts(b.shells),
     stock: counts(b.stock), sold: counts(b.sold), flips: count(b.flips), seed: count(b.seed) || f.seed,
   };
 }

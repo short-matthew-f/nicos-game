@@ -531,3 +531,19 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - the spacing was loosened so the forest is walkable;
   - the ocean strips were narrowed to 40 px so the steep east coast keeps its beach.
 - **Tests:** layout tests use the road segments, and check that animals stand on free ground, the sea is solid past the shallows (except the pier), and the beach is walkable. e2e: the sea stops Nico, the pier doesn't, animals exist and a deer runs off (135 checks). 60 fps on the Mac in every zone.
+
+## 2026-10-10: the beach: shells and a metal detector (Nico's idea)
+- **Shells** (`world/beach.ts`): 18 on the sand at a time, six kinds. Scallops are common; sand dollars and starfish are rare. Walk over one to pick it up ("🐚 A new kind: Starfish! (4 of 6 kinds)"). A new one washes up somewhere else 2½ minutes later. They're drawn at 1.5× so they're easy to spot.
+- **Metal detector:** a 🧰 tool at Parts & Tools for $12 (`TOOLS` in `business.ts`). On the sand, a 📡 meter appears and it beeps faster and higher as Nico nears one of the four buried treasures (range 520 px). Right on top of one, the action is **⛏️ Dig!**: he crouches and digs for a second.
+- **Treasure:** cash ($2–8), or a beach-only find for the shelf (an old bottle, old key, watch, pirate coin or gold ring). Beach finds are marked `where: 'beach'` and never turn up in storage units (tested). A hole is left behind and fades, and a new treasure is buried somewhere else.
+- **🎒 Backpack** (top bar): the shell collection (kinds found out of 6, and counts), the shelf, and your tools. Forest photos will go here too.
+- **Save:** `biz.tools` and `biz.shells` default to empty, so there's no version bump.
+- **Door fix found by the tests:** people now stop for Nico, and anyone standing at a door used to beat it for the action button. Now only someone waiting on a finished job outranks a door. Someone offering a job ties with it (the nearer wins), and "say hi" never blocks it. `Spot.priority` can be a function.
+- **Tests:**
+  - beeps get faster as Nico gets closer, and stop out of range;
+  - shells and treasure land on walkable beach;
+  - every shell kind turns up, the rare ones less often;
+  - treasure is cash or a beach find;
+  - storage units never contain beach finds;
+  - the priority rules.
+- **e2e:** buy the detector, a weak signal from far away, full signal and Dig on top, dig something up, go quiet off the sand, pick up a shell, the backpack lists it (142 checks).

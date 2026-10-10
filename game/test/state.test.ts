@@ -76,6 +76,15 @@ describe('spots', () => {
     expect(nearest([door, job], 0, 0)?.id).toBe('job');
     expect(nearest([door, job], -90, 0)?.id).toBe('door');   // the job spot is out of reach
   });
+  it('priority can change: a person just saying hi never blocks a door, one waiting on a finished job does', () => {
+    const door: Spot = { id: 'door', x: 0, y: 0, r: 100, label: 'Go in', run: () => {} };
+    let state = 'hi';
+    const person: Spot = { id: 'sam', x: 0, y: 10, r: 90, label: 'Say hi', run: () => {}, priority: () => (state === 'finish' ? 0.5 : state === 'offer' ? 0 : -0.1) };
+    expect(nearest([door, person], 0, 12)?.id).toBe('door');     // right next to Sam, but it's the door
+    state = 'offer'; expect(nearest([door, person], 0, 12)?.id).toBe('sam');   // a tie: the nearer one
+    expect(nearest([door, person], 0, -5)?.id).toBe('door');
+    state = 'finish'; expect(nearest([door, person], 0, -5)?.id).toBe('sam');
+  });
   it('skips spots that are switched off', () => {
     expect(nearest(spots, 60, 0)?.id).toBe('a');
   });

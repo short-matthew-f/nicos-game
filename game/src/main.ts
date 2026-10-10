@@ -26,9 +26,10 @@ import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { Animals } from './world/animals';
+import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
 import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
-import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns } from './business';
+import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -93,6 +94,11 @@ async function main() {
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   const animals = new Animals(); for (const a of animals.list) { a.view.cullable = true; layer.addChild(a.view); }
+  // the beach: shells to pick up, treasure to find with the metal detector
+  const shells = new Shells(); for (const v of shells.views) { v.cullable = true; layer.addChild(v); }
+  const treasure = new Treasure();
+  const holes: { view: { alpha: number; destroy(): void }; t: number }[] = [];
+  let beepIn = 0, signal = 0;   // s until the next beep; 0..5 bars
   const ducks = new Ducks();
   let quackIn = 2;
   for (const d of ducks.views) layer.addChild(d);
@@ -164,7 +170,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig'; t: number; from: [number, number]; seat: number } | null = null;
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
   function startSwing() {
@@ -300,6 +306,8 @@ async function main() {
     showCard('parts', p.title, biz.workbench ? `Your parts: ${partsLine()}.` : 'Wheels, axles, bodies and tools. A toy car needs a workbench to build it on.', [
       ...(!biz.workbench ? [{ label: '🛠️ Workbench', sub: `$${WORKBENCH.price}`, id: 'workbench', disabled: state.money < WORKBENCH.price,
         onClick: buy(WORKBENCH.price, () => { biz.workbench = true; toast('🛠️ Workbench bought! It\'s in your garage.'); }) }] : []),
+      ...TOOLS.filter(t => !biz.tools.includes(t.id)).map(t => ({ label: t.label, sub: `$${t.price}`, id: `tool:${t.id}`, disabled: state.money < t.price,
+        onClick: buy(t.price, () => { biz.tools.push(t.id); toast(`${t.label}! ${t.text}`); }) })),
       ...(biz.workbench ? ideas.filter(q => missing(biz, q.recipe).length).map(q => {
         const kit = missing(biz, q.recipe), cost = partsCost(Object.fromEntries(kit));
         return { label: `🧰 ${q.name[0].toUpperCase()}${q.name.slice(1)} kit`, sub: `$${cost} · ${needLine(q.recipe)}`, id: `kit:${q.id}`, disabled: state.money < cost,
@@ -310,7 +318,31 @@ async function main() {
     ]);
   }
   const goalEl = document.getElementById('goal')!;
+  function startDig() {
+    const n = treasure.nearest(nico.x, nico.y);
+    if (n.d > DETECT.dig) return;
+    mode = 'play'; play = { kind: 'dig', t: 0, from: [nico.x, nico.y], seat: n.i }; sfx.dig();
+  }
+  function dugTreasure(at: [number, number]) {
+    const i = treasure.nearest(at[0], at[1] + 50).i;
+    const got = treasure.dig(i);
+    const hole = holeArt(); hole.position.set(at[0] + 4, at[1] + 54); hole.zIndex = at[1] + 40; layer.addChild(hole); holes.push({ view: hole, t: 20 });
+    if (got.what === 'cash') { state.money += got.cash; showMoney(); sfx.coin(); toast(`📡 Dug up $${got.cash} in old coins!`); }
+    else { const v = dugUp(biz, got.what); sfx.sparkle(); toast(`📡 Dug up ${item(got.what).label}! (worth about $${v}: it's on your shelf)`); }
+    persist();
+  }
+  function showBag() {
+    const kinds = SHELL_KINDS.filter(k => biz.shells[k.id]);
+    const shellLine = kinds.length ? kinds.map(k => `${k.label} ×${biz.shells[k.id]}`).join(', ') : 'none yet: look along the beach!';
+    const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ') || 'nothing yet';
+    const tools = TOOLS.filter(t => biz.tools.includes(t.id)).map(t => t.label).join(', ') || 'none yet (Parts & Tools)';
+    showCard('bag', '🎒 Your backpack', `🐚 Shells (${kinds.length} of ${SHELL_KINDS.length} kinds): ${shellLine}.  🏠 On your shelf: ${shelf}.  🧰 Tools: ${tools}.`, [], 'Close');
+  }
+  document.getElementById('bag')!.addEventListener('click', showBag);
+  const detectorEl = document.getElementById('detector')!;
 
+  const digSpot: Spot = { id: 'dig', x: 0, y: 0, r: DETECT.dig, priority: 0.8, label: '⛏️ Dig!', run: startDig,
+    when: () => mode === 'walk' && biz.tools.includes('detector') };
   const spots: Spot[] = [
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
     { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
@@ -366,7 +398,9 @@ async function main() {
   }
   for (const l of locals) {
     spots.push({
-      id: l.t.who, x: 0, y: 0, r: 90, priority: 0.5,   // talking to someone beats the door they're standing at
+      // someone waiting to be told a job's done beats the door they're standing at; someone with a job to
+      // offer ties with it (the nearer wins); just saying hi never blocks a door
+      id: l.t.who, x: 0, y: 0, r: 90, priority: () => (finishing(l.t.who) ? 0.5 : offers(l.t.who) ? 0 : -0.1),
       label: () => finishing(l.t.who) ? `Finish job ✔` : offers(l.t.who) ? `Talk to ${l.t.name} ❗` : `Say hi to ${l.t.name}`,
       run: () => talkTo(l),
     });
@@ -382,7 +416,7 @@ async function main() {
       if (advanceJob(job)) payJob();
     },
   };
-  spots.push(jobSpot);
+  spots.push(jobSpot, digSpot);
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
   const jobEl = document.getElementById('job')!;
   jobEl.addEventListener('click', () => {
@@ -552,6 +586,10 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'dig') {
+        // crouched over the hole, scooping (a bob of the arms), then up with whatever's there
+        b = { x: play.from[0], y: play.from[1], view: 'front', face: 1, amp: 0.4, crouch: 1, hold: 0, sit: 0, z: play.from[1], sy: 1 };
+        if (play.t >= 1.1) { const at: [number, number] = [play.from[0], play.from[1] - 50]; stopPlay(); dugTreasure(at); }
       } else if (play.kind === 'bench') {
         // sitting on the bench, facing out: hips on the seat, legs dangling
         b = { x: play.from[0], y: play.from[1] - 2, view: 'front', face: 1, amp: 0, crouch: 1, hold: 0, sit: 0, z: play.from[1] + 1, sy: 1 };
@@ -632,6 +670,27 @@ async function main() {
     const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y], ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
     pigeons.update(dt, movers);
     const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : [[nico.x, nico.y]]);
+    // the beach: shells underfoot, the detector's beeps, old holes filling in
+    for (const k of shells.update(dt, mode === 'walk' ? [nico.x, nico.y] : null)) {
+      const first = !biz.shells[k]; biz.shells[k] = (biz.shells[k] ?? 0) + 1; persist(); sfx.shell();
+      const kinds = SHELL_KINDS.filter(q => biz.shells[q.id]).length, sh = SHELL_KINDS.find(q => q.id === k)!;
+      toast(`🐚 ${first ? 'A new kind: ' : ''}${sh.label}! (${kinds} of ${SHELL_KINDS.length} kinds)`);
+    }
+    for (const h of holes) { h.t -= dt; h.view.alpha = Math.min(1, h.t / 4); if (h.t <= 0) h.view.destroy(); }
+    holes.splice(0, holes.length, ...holes.filter(h => h.t > 0));
+    const detecting = mode === 'walk' && biz.tools.includes('detector') && onBeach(nico.x, nico.y);
+    if (detecting) {
+      const n = treasure.nearest(nico.x, nico.y), gap = beepGap(n.d);
+      digSpot.x = treasure.spots[n.i][0]; digSpot.y = treasure.spots[n.i][1];
+      signal = gap === null ? 0 : Math.max(1, Math.round(5 - 4 * (gap - DETECT.fastest) / (DETECT.slowest - DETECT.fastest)));
+      beepIn -= dt;
+      if (gap !== null && beepIn <= 0) { sfx.beep(signal); beepIn = gap; }
+    } else { signal = 0; digSpot.x = digSpot.y = -9999; }
+    detectorEl.hidden = !detecting;
+    if (detecting && detectorEl.dataset.signal !== String(signal)) {   // a little signal meter: five bars, lit up to the signal
+      detectorEl.dataset.signal = String(signal);
+      detectorEl.innerHTML = '📡 ' + [1, 2, 3, 4, 5].map(i => `<i class="${i <= signal ? 'on' : ''}" style="height:${6 + i * 3}px"></i>`).join('');
+    }
     if (got) { state.money += got * COIN.value; showMoney(); persist(); sfx.coin(); toast(`🪙 Found a coin! +$${got * COIN.value}`); }
     // quacks when Nico's near the pond; honks from cars he's been holding up
     const me: [number, number] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y];
@@ -734,6 +793,8 @@ async function main() {
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,
       setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(windowToys()); persist(); },
       animals: animals.list.map(a => ({ kind: a.kind, x: a.x, y: a.y, scared: a.scared > 0 })),
+      shells: shells.spots.filter(q => q.gone <= 0).map(q => ({ x: q.x, y: q.y, kind: q.kind })), buried: treasure.spots.map(([x, y]) => ({ x, y })), signal,
+      use: (id: string) => { spots.find(q => q.id === id)?.run(); },   // (tests: use a spot by name, whoever else is standing near it)
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,

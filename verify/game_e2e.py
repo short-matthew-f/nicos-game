@@ -174,7 +174,13 @@ with sync_playwright() as p:
         moved = max(moved, math.hypot(t1['james']['x'] - t0['james']['x'], t1['james']['y'] - t0['james']['y']))
         if moved > 50: break
     check(moved > 50, f'James is walking his route ({moved:.0f} px)')
-    jx, jy = t1['james']['x'], t1['james']['y']
+    # (meet him away from a door: right at one, the door gets the tap, not "say hi")
+    doors = [v for k, v in G()['spots'].items() if k in ('burger', 'school', 'hospital', 'home', 'garage', 'fire', 'parts', 'toys', 'storage', 'icecream')]
+    for _ in range(40):
+        j = next(t for t in G()['townsfolk'] if t['who'] == 'james')
+        if all(math.dist((j['x'], j['y']), (d['x'], d['y'])) > 220 for d in doors): break
+        pg.wait_for_timeout(500)
+    jx, jy = j['x'], j['y']
     pg.evaluate(f'()=>window.__game.place({jx + 40}, {jy + 10})'); pg.wait_for_timeout(150)
     check(G()['action'] == 'james' and 'James' in pg.locator('#action').inner_text(), 'next to James: Say hi')
     pg.click('#action'); pg.wait_for_timeout(150)
@@ -282,8 +288,8 @@ with sync_playwright() as p:
     pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], stock:{}, sold:{}, flips:0, skills:[], seed:1}); window.__game.setMoney(20)}")
     pg.wait_for_timeout(200)
     check(pg.locator('#goal').is_visible() and 'storage' in pg.locator('#goal').inner_text(), f"the goal chip points to the storage units ({pg.locator('#goal').inner_text()})")
-    def door(spot):
-        at(spot); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(250)
+    def door(spot):   # walk up to a door and go in (by name: a passer-by near the door would otherwise get the tap)
+        at(spot); pg.wait_for_timeout(150); pg.evaluate(f"()=>window.__game.use('{spot}')"); pg.wait_for_timeout(250)
     door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
     check(G()['work']['screen'] == 'auction' and pg.locator('#work .lot').count() == 1, 'the first auction has just the starter unit (no losing first buy)')
     pg.click('[data-buy=A]'); pg.wait_for_timeout(150)
@@ -418,6 +424,30 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>window.__game.place({deer['x'] - 120}, {deer['y']})"); pg.wait_for_timeout(700)
     d2 = next(a for a in G()['animals'] if a['kind'] == 'deer')
     check(math.dist((d2['x'], d2['y']), (deer['x'] - 120, deer['y'])) > math.dist((deer['x'], deer['y']), (deer['x'] - 120, deer['y'])) + 40, f"a deer runs off when Nico comes close ({deer['x']:.0f},{deer['y']:.0f} -> {d2['x']:.0f},{d2['y']:.0f})")
+    # the beach: buy a metal detector, follow the beeps, dig; pick up shells; the backpack
+    pg.evaluate("()=>{window.__game.setBiz({tools: [], shells: {}, finds: []}); window.__game.setMoney(50)}")
+    door('parts'); pg.click('[data-item="tool:detector"]'); pg.wait_for_timeout(200); pg.keyboard.press('Escape')
+    check('detector' in G()['biz']['tools'] and G()['money'] == 38, f"bought a metal detector for $12 ({G()['money']})")
+    bt = G()['buried'][0]
+    pg.evaluate(f"()=>window.__game.place({bt['x'] - 300}, {bt['y']})"); pg.wait_for_timeout(100)
+    if not G()['nico']['x'] or abs(G()['nico']['x'] - (bt['x'] - 300)) > 5: pg.evaluate(f"()=>window.__game.place({bt['x'] + 300}, {bt['y']})")
+    pg.wait_for_timeout(200)
+    b0 = G()['sounds'].get('beep', 0); s_far = G()['signal']; pg.wait_for_timeout(2500)
+    check(pg.locator('#detector').is_visible() and 1 <= s_far <= 3 and G()['sounds'].get('beep', 0) > b0, f"on the sand the detector beeps, a weak signal from 300 px ({s_far} bars)")
+    pg.evaluate(f"()=>window.__game.place({bt['x']}, {bt['y'] + 20})"); pg.wait_for_timeout(300)
+    check(G()['signal'] == 5 and G()['action'] == 'dig', f"right on top of it: full signal, and Dig! ({G()['signal']}, {G()['action']})")
+    m0, f0 = G()['money'], len(G()['biz']['finds'])
+    pg.click('#action'); pg.wait_for_timeout(1700)
+    gb = G()
+    check((gb['money'] > m0 or len(gb['biz']['finds']) == f0 + 1) and all(abs(b['x'] - bt['x']) > 1 for b in gb['buried']), f"dug up cash or a find, and that treasure is gone ({m0}->{gb['money']}, finds {f0}->{len(gb['biz']['finds'])})")
+    pg.evaluate('()=>window.__game.place(3300, 4400)'); pg.wait_for_timeout(300)
+    check(not pg.locator('#detector').is_visible(), 'off the sand, the detector goes quiet')
+    sh = G()['shells'][0]
+    pg.evaluate(f"()=>window.__game.place({sh['x']}, {sh['y'] + 10})"); pg.wait_for_timeout(300)
+    check(G()['biz']['shells'].get(sh['kind']) == 1, f"walking over a shell picks it up ({sh['kind']}: {G()['biz']['shells']})")
+    pg.click('#bag'); pg.wait_for_timeout(200)
+    check('backpack' in pg.locator('#place-title').inner_text() and '1 of 6' in pg.locator('#place-text').inner_text(), f"the backpack lists the shells ({pg.locator('#place-text').inner_text()[:80]})")
+    pg.keyboard.press('Escape')
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')
