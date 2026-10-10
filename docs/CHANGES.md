@@ -753,7 +753,7 @@ Nico wanted to go inside his house. The user asked "How can Nico sleep?"
 
 ### Nico's Bakery (2026-10-10)
 Nico: "he wants to be able to open a bakery."
-- **A $40 sticker** on the south-west block, between the houses and Parts & Tools. A bush moved out of its way, and it's on the minimap's big map too.
+- **A $40 sticker** on the south-west block, between the houses and Parts & Tools. A bush moved out of its way. It's on the minimap with 🧁.
 - **Inside:**
   - a candy-stripe wall and a checkerboard floor;
   - the oven and the mixing table;

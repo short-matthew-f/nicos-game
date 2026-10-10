@@ -1,7 +1,7 @@
 // A small map in the corner so the town is easy to find your way round: roads, lots and
 // buildings drawn once, plus live dots for Nico, his car, friends and the fire truck.
 import { Container, Graphics, Text } from 'pixi.js';
-import { WORLD, ROAD_SEGS, roadRect, BUILDINGS, LOTS, PINES, LAKE, POOL, PIER, SHED, SHOP } from './world/map';
+import { WORLD, ROAD_SEGS, roadRect, BUILDINGS, LOTS, PINES, LAKE, POOL, PIER, SHED, SHOP, BAKERY } from './world/map';
 import { sandPolygon, waterPolygon, ZONE_LABELS } from './world/zones';
 
 export interface Dot { x: number; y: number; color: string; r?: number; ring?: boolean }
@@ -24,17 +24,17 @@ export class Minimap {
     g.rect(POOL.x * s, POOL.y * s, POOL.w * s, POOL.d * s).fill('#4FC3E8');
     g.rect(PIER.x * s, PIER.y * s, PIER.w * s, PIER.d * s).fill('#C49A6C');
     for (const r of ROAD_SEGS) { const rd = roadRect(r); g.rect(rd.x * s, rd.y * s, rd.w * s, rd.d * s).fill('#7D8A98'); }
-    for (const b of [...BUILDINGS, SHED, SHOP]) g.roundRect(b.x * s, b.y * s, b.w * s, b.d * s, 2).fill(b.roof);   // (the shed and the beach shop too, bought or not: places to head for)
+    for (const b of [...BUILDINGS, SHED, SHOP, BAKERY]) g.roundRect(b.x * s, b.y * s, b.w * s, b.d * s, 2).fill(b.roof);   // (the shed and the beach shop too, bought or not: places to head for)
     this.view.addChild(g);
     // a few labels for the places you'll look for
-    for (const [id, label] of [['burger', '🍔'], ['fire', '🚒'], ['school', '🏫'], ['hospital', '🏥'], ['home', '🏠'], ['toys', '🧸'], ['icecream', '🍦'], ['parts', '🔧'], ['storage', '📦'], ['barn', '🐄'], ['poolhouse', '🏊'], ['cabin', '🌲'], ['bibs', '🐚']] as const) {
-      const b = [...BUILDINGS, SHOP].find(b => b.id === id); if (!b) continue;
+    for (const [id, label] of [['burger', '🍔'], ['fire', '🚒'], ['school', '🏫'], ['hospital', '🏥'], ['home', '🏠'], ['toys', '🧸'], ['icecream', '🍦'], ['parts', '🔧'], ['storage', '📦'], ['barn', '🐄'], ['poolhouse', '🏊'], ['cabin', '🌲'], ['bibs', '🐚'], ['bakery', '🧁']] as const) {
+      const b = [...BUILDINGS, SHOP, BAKERY].find(b => b.id === id); if (!b) continue;
       const t = new Text({ text: label, style: { fontSize: 13 } });
       t.anchor.set(0.5); t.position.set((b.x + b.w / 2) * s, (b.y + b.d / 2) * s);
       this.view.addChild(t);
     }
     // the big map names every place
-    if (labels) for (const b of [...BUILDINGS, SHED, SHOP]) if (b.label) {
+    if (labels) for (const b of [...BUILDINGS, SHED, SHOP, BAKERY]) if (b.label) {
       const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 13, fill: '#2B3F55', stroke: { color: '#FFFFFF', width: 4 } } });
       t.anchor.set(0.5, 0); t.position.set((b.x + b.w / 2) * s, (b.y + b.d) * s + 4);
       this.view.addChild(t);
