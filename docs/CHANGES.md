@@ -585,3 +585,7 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - He's now drawn up by the seat's height (`STOOL_SEAT`), sitting upright (no hunch).
   - Tables have a pedestal, with the top (`TABLE_TOP`, 62 px) a little above the stool seats (43 px). His tray sits on the tabletop.
   - Left as is: his legs point straight forward rather than bending at the knee. The rig's sitting pose has no knee bend, and it's shared with the slide.
+- **Bent knees** (user: "can we get his knees to bend?"). The rig's legs were single pieces rotating at the hip. Now a game-only `knee` amount (0..1) splits a side-view leg into a thigh (toward straight forward) and a shin (toward straight down), with the shoe on the end of the shin.
+  - The shin is a second sprite drawn with the leg's own art (`bk`/`fk`, cloned in `person.ts`), so no new art or Python change was needed.
+  - The shin parts only exist while knees are bent, so walking and the 97 Python parity poses are unchanged (tested).
+  - Used for sitting on the Burger Barn stools.

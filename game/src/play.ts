@@ -12,6 +12,7 @@ export interface Body {
   z: number;                       // draw order (in front of the equipment while on it)
   sy: number;                      // extra vertical scale (swinging toward the camera)
   dy?: number;                     // drawn this much lower than (x, y) without moving there (in the water)
+  knee?: number;                   // bend the knees (sitting on a stool)
 }
 
 const lerp = (a: number, b: number, u: number) => a + (b - a) * Math.max(0, Math.min(1, u));

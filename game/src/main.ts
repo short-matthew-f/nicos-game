@@ -197,7 +197,7 @@ async function main() {
     if (play.kind === 'swim') { waterSkin.visible = ring.visible = false; nico.view.root.mask = null; swimMask.clear(); floating = false; const [ox, oy] = climbOut(nico.x, nico.y); nico.x = ox; nico.y = oy; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
-    Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
+    Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, knee: 0, amp: 0 });
   }
   // the camera: aim with the stick, snap; the best photo of each animal goes in the album
   const viewfinder = document.getElementById('viewfinder')!, flashEl = viewfinder.querySelector('.flash') as HTMLElement;
@@ -721,7 +721,7 @@ async function main() {
       } else if (play.kind === 'eat') {
         // sitting at the table (back to us, facing it); with food, a few seconds' eating, then the boost
         // upright on the stool's seat (sitting drops the hips to the feet, so draw him up by the seat's height)
-        b = { x: play.from[0], y: play.from[1], dy: -STOOL_SEAT, view: 'side', face: 1, amp: 0, crouch: 0, hold: carrying ? 0.6 + 0.4 * Math.abs(Math.sin(play.t * 5)) : 0, sit: 1, z: play.from[1] + 20, sy: 1 };   // (in front of the table: sitting at it)
+        b = { x: play.from[0], y: play.from[1], dy: -STOOL_SEAT, knee: 1, view: 'side', face: 1, amp: 0, crouch: 0, hold: carrying ? 0.6 + 0.4 * Math.abs(Math.sin(play.t * 5)) : 0, sit: 1, z: play.from[1] + 20, sy: 1 };   // (in front of the table: sitting at it)
         if (carrying && play.t >= 3) {
           boost = Math.min(BOOST.max, boost + carrying.boost); sfx.coin();
           toast(`Yum! ${carrying.label}. You feel speedy! ⚡`); carrying = null; tableTray?.view.destroy(); tableTray = null;
@@ -763,7 +763,7 @@ async function main() {
       }
       if (play) {
         nico.x = b.x; nico.y = b.y;
-        Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, sit: b.sit, stride_y: 0 });
+        Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, sit: b.sit, knee: b.knee ?? 0, stride_y: 0 });
         stepGait(nico.st, b.amp * 150, 0, dt);   // (climbing the ladder: a steady step)
         nico.view.pose(nico.x, nico.y + (b.dy ?? 0), nico.st);   // (dy: drawn lower, not moved: sunk in the water)
         nico.view.root.zIndex = b.z;

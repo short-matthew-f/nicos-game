@@ -16,6 +16,7 @@ export interface PoseState {
   hold: number;      // 0..1 arms forward
   breath: number;    // idle chest rise (units)
   sit?: number;      // 0..1 sitting (game-only: not in the Python rig, so parity poses leave it out)
+  knee?: number;     // 0..1 side view: bend the knees (sitting on a stool): thigh forward, shin down (game-only too)
 }
 
 export const CYCLE = 0.7;
@@ -56,6 +57,24 @@ function sideOps(st: PoseState): Record<string, Op[]> {
     const a = legAn(far), r = a * RAD, hx = far ? -3 : 3;
     return [['t', hx - l * Math.sin(r), -58 + dd + l * Math.cos(r)], ['r', a * 0.4]];
   };
+  const knee = st.knee ?? 0;
+  if (knee > 0) {
+    // knees bent: the leg becomes a thigh (toward straight forward) and a shin (toward straight down),
+    // both drawn with the leg's art; the shoe goes on the end of the shin
+    const bent = (far: boolean): [Op[], Op[], Op[]] => {
+      const hx = far ? -3 : 3, hy = -58 + dd;
+      const ta = legAn(far) * (1 - knee) - 90 * knee, sa = ta * (1 - knee);
+      const lt = l * (1 - 0.5 * knee), ls = l - lt, tr = ta * RAD, sr = sa * RAD;
+      const kx = hx - lt * Math.sin(tr), ky = hy + lt * Math.cos(tr);
+      return [
+        [['t', hx, hy], ['r', ta], ['s', 1 + 0.35 * st.crouch, (lt + 6) / 50.0]],
+        [['t', kx, ky], ['r', sa], ['s', 1 + 0.35 * st.crouch, Math.max(0, ls - 8) / 50.0]],
+        [['t', kx - ls * Math.sin(sr), ky + ls * Math.cos(sr)], ['r', sa * 0.4]],
+      ];
+    };
+    const [bt, bk, bs] = bent(true), [ft, fk, fs] = bent(false);
+    return { ba: arm(true), bl: bt, bk, bs, fl: ft, fk, fs, up: [['t', 0, -58 + dd - st.breath], ['r', lean]], fa: arm(false) };
+  }
   return {
     ba: arm(true), bl: leg(true), bs: shoe(true), fl: leg(false), fs: shoe(false),
     up: [['t', 0, -58 + dd - st.breath], ['r', lean]], fa: arm(false),

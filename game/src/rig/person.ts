@@ -38,10 +38,16 @@ export class PersonView {
     this.art = art; this.height = art.height ?? 1;
     for (const v of VIEWS) {
       const c = new Container();
-      const parts = art.views[v].map(meta => {
+      const parts = art.views[v].flatMap(meta => {
         const sprite = new Sprite(Texture.from(base + meta.img + BUST));
         c.addChild(sprite);
-        return { meta, sprite };
+        const out = [{ meta, sprite }];
+        // side view: a second copy of each leg, for the shin when the knees bend (pose.ts 'bk'/'fk')
+        if (v === 'side' && (meta.part === 'bl' || meta.part === 'fl')) {
+          const shin = new Sprite(Texture.from(base + meta.img + BUST)); shin.visible = false; c.addChild(shin);
+          out.push({ meta: { ...meta, part: meta.part === 'bl' ? 'bk' : 'fk' }, sprite: shin });
+        }
+        return out;
       });
       this.views[v] = { c, parts };
       this.root.addChild(c);
@@ -73,6 +79,8 @@ export class PersonView {
     for (const v of VIEWS) this.views[v].c.visible = v === st.view;
     const ops = partOps(st);
     for (const { meta, sprite } of this.views[st.view].parts) {
+      sprite.visible = !!ops[meta.part];   // (the shins only exist while the knees are bent)
+      if (!sprite.visible) continue;
       // part transform, then place the image so its local origin lands on the part origin
       const m = mul(opsMatrix(ops[meta.part]), [1 / res, 0, 0, 1 / res, meta.x, meta.y]);
       sprite.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5]));
