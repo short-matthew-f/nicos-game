@@ -18,11 +18,11 @@ export const PLACES: Place[] = [
   { building: 'school', title: 'School', text: "School's out for the summer. The janitor waves at you from the hallway." },
   { building: 'hospital', title: 'Hospital', text: 'The nurse at the desk smiles. "Hope we don\'t see you in here for a while!"' },
   { building: 'home', title: "Nico's house", text: 'Home sweet home. Mom left a note: "Be back by dinner!"' },
-  { building: 'garage', title: 'Garage', text: "Your garage. There's room in here for a workbench one day." },
+  { building: 'garage', title: 'Garage', text: 'Your garage.' },   // (the workbench card is in main.ts)
   { building: 'fire', title: 'Fire Station', text: 'The firefighters are polishing the truck. When the alarm rings, it races out!' },
-  { building: 'parts', title: 'Parts & Tools', text: 'Wheels, motors, screws and tools: everything you need to build a toy car. You\'ll need more money first.' },
+  { building: 'parts', title: 'Parts & Tools', action: 'Shop', text: 'Wheels, axles, bodies and tools.' },
   { building: 'toys', title: 'Toy Shop', text: 'Shelves and shelves of toys. One day, yours could be on them.' },
-  { building: 'storage', title: 'Storage Units', text: "Rows of locked units. People say there's treasure inside. Auctions are coming soon." },
+  { building: 'storage', title: 'Storage Units', action: 'Auction', text: 'Storage unit auctions.' },
 ];
 
 /** Buy an item if there's enough money: the new money and boost, or null. */

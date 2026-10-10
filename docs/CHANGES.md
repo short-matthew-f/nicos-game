@@ -384,3 +384,66 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 ## 2026-10-09 (overnight): save v4
 - The town was re-laid out after save v3. An iPad left open overnight would restore Nico and his car at coordinates from the old layout (in the pond's sand, on the soccer field), and `freeAt` only rejects positions inside solids. v3 → v4 keeps the money and sends Nico back to his front door, with his car on the driveway. This is tested.
 - Also tonight: emoji on the food menus.
+
+## 2026-10-10: quest givers wait; Ava's ball
+- **Nico's report:** quest givers kept walking their routes, so jobs were hard to hand in. The soccer ball "disappeared" in the street: cars drove over it and hid it underneath.
+- **Waiting:** whoever Nico is doing a job for stands still, facing him, while he's within 320 px. Someone with a job to offer stops within 220 px.
+- **Meeting places (`Job.meet`):** Ava now walks down her street to the end of the field and waits there, so the ball never has to cross a road. She walks back when the job ends. She pays when the ball is within 170 px of her (was 130).
+- **The ball and traffic:** traffic and the fire truck push the ball out sideways (`nudge`). Rejected: a normal kick, because a car would shove the ball along the road in front of it. During Ava's job the ball also shows on the minimap.
+
+## 2026-10-10: v2, the business loop
+The UX handbook the user shared was read by four small agents. Its digest and the rules we applied are in `docs/UX_NOTES.md`.
+
+**The loop:**
+1. **Storage units:** an auction of three units. Each shows a peek inside, the price and a value guess.
+2. **Open the unit:** tap the boxes, or "Open them all". Choose Sell or Keep for each item.
+3. **Parts & Tools:** buy the workbench, then parts or a "car kit" with just the missing parts.
+4. **Garage workbench:** drag the parts onto the plan, axles first, then wheels, then the body.
+5. **Ramp test:** pick Low, Medium or High and let go.
+6. **Toy Shop:** sell the car. Sold cars appear in the shop window, marked "MADE BY NICO".
+
+After that, more cars are a three-tap quick build. The **Appraiser** skill unlocks on the third unit. A **goal chip** shows one next step at a time, with a star on the minimap, and steps aside while an odd job is on.
+
+**Defaults** (all one-line edits in `src/business.ts`):
+
+| Thing | Value |
+|---|---|
+| Starter unit | $10. Holds 4 wheels ($2 each), a teddy ($4) and a radio ($7). Shown in the first lineup, marked "Good first buy". Its guess is the close one. |
+| Workbench | $25 |
+| Wheel | $2 |
+| Axle | $3 |
+| Body | $5 |
+| Toy car recipe | 2 axles, 4 wheels, 1 body |
+| Toy car sale | $40 for the first one, $30 after that (parts cost $19) |
+| Ramp | Low falls short. Medium and High pass. |
+| Appraiser | Unlocks at 3 units. Exact guesses, and finds sell for 20% more. |
+
+**Random units** are seeded, so a lineup doesn't change when the screen reopens. The price is set around the guess. Across 400 seeds the average outcome is a profit, and between 5% and 40% of units lose money; the tests check that range.
+
+**Save v5** adds `biz`: parts, kept finds (each with its own value), workbench, designs, cars, sold, flips, skills, seed. v4 saves keep their positions; only the business starts fresh. A broken `biz` is cleaned up field by field.
+
+**Feel rules from the handbook:**
+- Buying a unit takes two taps.
+- Everything in a unit belongs to Nico the moment he buys it, so leaving halfway through sorting loses nothing.
+- Parts are used up only when the ramp test passes, or when a quick build finishes.
+- A picked-up part rides 46 units above the finger. It snaps within 80 units of a slot and stays snapped until it's 100 away.
+- A wrong drop slides the part back and says why.
+- Rare finds (worth $10 or more) get a longer reveal, a sparkle sound and a gold ring.
+- There are new sounds for the lift, snap, boing, door, cheer and cash.
+
+**Bugs found while building:**
+- In WebKit, `setPointerCapture` on SVG groups was unreliable, so a dragged part stuck in mid-air. Move and up are now handled on the window, with one drag at a time.
+- The two-tap Buy guard started at `armed = 0`, so in the first 3 seconds after the page loaded, one tap bought. It now starts at -Infinity.
+- A CSS class clash (`.unit`) styled the unit screen like an auction card.
+
+**Tests:**
+- `test/business.test.ts` covers the economy. The first unit is a profit even when the wheels are kept. The workbench and parts are reachable with three jobs plus the coins. A car sells for more than its parts. Guesses always contain the real value. Items, the goal steps, skills, and buying and selling are all covered.
+- The state tests cover v4→v5 and a broken business.
+- e2e (`verify/game_e2e.py`) plays the whole loop:
+  - the mis-tap guard;
+  - leaving mid-build;
+  - a wrong drop;
+  - a failed and then a passed ramp test;
+  - the sale and the quick build;
+  - Appraiser;
+  - a reload keeping everything.

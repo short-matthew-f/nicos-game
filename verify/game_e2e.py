@@ -248,11 +248,13 @@ with sync_playwright() as p:
     pg.wait_for_timeout(3000)
     check(who_at('ava')[1] < a0[1] - 50 or who_at('ava')[0] < a0[0] - 50, f"then she heads back to her walk ({who_at('ava')})")
     # a car driving into the ball pushes it off to the side, instead of hiding it underneath
-    c = max(G()['cars'], key=lambda c: c['speed']); h = c['heading']; fx, fy = math.cos(h), math.sin(h)
-    bx, by = c['pos'][0] + fx * 260, c['pos'][1] + fy * 260
-    pg.evaluate(f"()=>window.__game.placeBall({bx}, {by})")
-    pg.wait_for_timeout(2500)
-    bb = G()['ball']; side = abs(-(bb['x'] - bx) * fy + (bb['y'] - by) * fx)
+    for _try in range(3):   # (a car can be held up at a corner: give it a few goes)
+        c = max(G()['cars'], key=lambda c: c['speed']); h = c['heading']; fx, fy = math.cos(h), math.sin(h)
+        bx, by = c['pos'][0] + fx * 260, c['pos'][1] + fy * 260
+        pg.evaluate(f"()=>window.__game.placeBall({bx}, {by})")
+        pg.wait_for_timeout(2500)
+        bb = G()['ball']; side = abs(-(bb['x'] - bx) * fy + (bb['y'] - by) * fx)
+        if side > 80: break
     check(side > 80, f"traffic nudges the ball off its lane ({side:.0f} px sideways)")
     # hidden coins: walk over one for $1; it's gone until it respawns
     c0, m0 = G()['coins'], G()['money']
@@ -267,6 +269,80 @@ with sync_playwright() as p:
     check(G()['bigMap'] and abs(G()['nico']['x'] - x0) < 1, 'tapping the minimap opens the big map without moving Nico')
     pg.mouse.click(W * 0.6, H * 0.5); pg.wait_for_timeout(200)
     check(not G()['bigMap'], 'a tap closes it')
+    # ---- v2: the business loop, start to finish
+    pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], cars:0, sold:0, flips:0, skills:[], seed:1}); window.__game.setMoney(20)}")
+    pg.wait_for_timeout(200)
+    check(pg.locator('#goal').is_visible() and 'storage' in pg.locator('#goal').inner_text(), f"the goal chip points to the storage units ({pg.locator('#goal').inner_text()})")
+    def door(spot):
+        at(spot); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(250)
+    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
+    check(G()['work']['screen'] == 'auction' and pg.locator('#work .lot').count() == 3, 'the storage units show an auction of three units')
+    pg.click('[data-buy=A]'); pg.wait_for_timeout(150)
+    check(G()['money'] == 20 and G()['work']['screen'] == 'auction', 'one tap on Buy only asks (money is safe from a mis-tap)')
+    pg.click('[data-buy=A]'); pg.wait_for_timeout(300)
+    gb = G()
+    check(gb['work']['screen'] == 'unit' and gb['money'] == 10 and gb['biz']['flips'] == 1 and gb['biz']['items'].get('wheel') == 4, f"a second tap buys it: -$10, and everything inside is already Nico's ({gb['money']}, {gb['biz']})")
+    pg.wait_for_timeout(700); pg.click('#work .actions button'); pg.wait_for_timeout(1500)
+    check(pg.locator('#work .find.open').count() == 6, 'Open them all reveals every box')
+    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    gb = G()
+    check(gb['money'] == 21 and gb['biz']['finds'] == [] and gb['biz']['items'].get('wheel') == 4 and gb['work']['screen'] is None, f"sold the finds, kept the wheels: a profit on the first unit ({gb['money']}, {gb['biz']})")
+    pg.evaluate("()=>window.__game.setMoney(40)")
+    door('parts'); pg.click('[data-item=workbench]'); pg.wait_for_timeout(250)
+    check(G()['biz']['workbench'] and G()['money'] == 15 and G()['inside'] == 'parts', 'bought a workbench ($25); the shop stays open for more')
+    pg.click('[data-item=kit]'); pg.wait_for_timeout(250)
+    gb = G()
+    check(gb['money'] == 4 and gb['biz']['items'] == {'wheel': 4, 'axle': 2, 'body': 1}, f"the car kit fills in just the missing parts ({gb['money']}, {gb['biz']['items']})")
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+    check('workbench' in pg.locator('#goal').inner_text(), f"the goal now: build it at the workbench ({pg.locator('#goal').inner_text()})")
+    def center(sel):
+        bb = pg.locator(sel).first.bounding_box(); return bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2
+    def place_part(part, slot):
+        x0, y0 = center(f'#work g.part[data-part={part}]:not(.placed)'); x1, y1 = center(f'#work g.slot[data-slot={slot}]')
+        pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move((x0 + x1) / 2, (y0 + y1) / 2, steps=5)
+        pg.mouse.move(x1, y1 + 40, steps=5); pg.mouse.up(); pg.wait_for_timeout(200)
+    door('garage'); pg.click('[data-item=build]'); pg.wait_for_timeout(300)
+    place_part('axle', 'axle0')
+    check(G()['work']['filled'] == ['axle0'], 'dragging an axle onto its spot snaps it in')
+    pg.click('#work .close'); pg.wait_for_timeout(200)
+    check(G()['work']['screen'] is None and G()['biz']['items'] == {'wheel': 4, 'axle': 2, 'body': 1}, 'leaving halfway through a build uses up nothing')
+    door('garage'); pg.click('[data-item=build]'); pg.wait_for_timeout(300)
+    place_part('wheel', 'wheel0')
+    check(G()['work']['filled'] == [] and 'axle' in pg.locator('#work .sub').inner_text(), 'a wheel before its axle slides back, and says why')
+    for part, slot in [('axle', 'axle0'), ('axle', 'axle1'), ('wheel', 'wheel0'), ('wheel', 'wheel1'), ('wheel', 'wheel2'), ('wheel', 'wheel3'), ('body', 'body')]:
+        place_part(part, slot)
+    check(len(G()['work']['filled']) == 7 and pg.locator('#work .actions button.primary').is_enabled(), f"every part on: the ramp test unlocks ({G()['work']['filled']})")
+    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    pg.click('[data-height="1"]'); pg.click('[data-go]'); pg.wait_for_timeout(2300)
+    check(G()['work']['lastRun'] == {'height': 1, 'passed': False} and G()['biz']['cars'] == 0 and pg.locator('[data-go]').is_enabled(), 'the low ramp falls short: nothing lost, try again')
+    pg.click('[data-height="2"]'); pg.click('[data-go]'); pg.wait_for_timeout(2300)
+    check(G()['work']['lastRun'] == {'height': 2, 'passed': True}, 'a higher ramp: it rolls past the flag')
+    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    gb = G()['biz']
+    check(gb['designs'] == ['car'] and gb['cars'] == 1 and gb['items'] == {}, f"the design is done, one toy car made, parts used ({gb})")
+    door('toys'); m0 = G()['money']; pg.click('[data-item=sellcar]'); pg.wait_for_timeout(300)
+    gb = G()
+    check(gb['money'] == m0 + 40 and gb['biz']['sold'] == 1 and gb['biz']['cars'] == 0, f"the Toy Shop buys the first car for $40 ({m0} -> {gb['money']})")
+    check(not pg.locator('#goal').is_visible(), 'loop done: the goal chip steps aside')
+    pg.evaluate("()=>window.__game.setBiz({items:{wheel:4, axle:2, body:1}})")
+    door('garage'); pg.click('[data-item=quick]'); pg.wait_for_timeout(300)
+    for _ in range(3): pg.click('#work [data-step]'); pg.wait_for_timeout(250)
+    gb = G()['biz']
+    check(gb['cars'] == 1 and gb['items'] == {}, f"repeat builds are three taps ({gb})")
+    pg.click('#work [data-step]'); pg.wait_for_timeout(200)
+    check(G()['work']['screen'] is None, 'Done closes it')
+    # the Appraiser skill: earned on the third unit
+    pg.evaluate("()=>{window.__game.setBiz({flips:2}); window.__game.setMoney(200)}")
+    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
+    pg.click('[data-buy=B]'); pg.click('[data-buy=B]'); pg.wait_for_timeout(900)
+    pg.click('#work .actions button'); pg.wait_for_timeout(2600); pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    check('appraiser' in G()['biz']['skills'] and 'Appraiser' in pg.locator('#place-title').inner_text(), 'the third unit earns the Appraiser skill (with a card saying so)')
+    pg.keyboard.press('Escape')
+    # it's all saved
+    pg.evaluate("()=>window.dispatchEvent(new Event('pagehide'))")
+    pg.reload(); pg.wait_for_function('window.__game && window.__game.biz', timeout=15000); pg.wait_for_timeout(500)
+    gb = G()['biz']
+    check(gb['sold'] == 1 and gb['designs'] == ['car'] and gb['cars'] == 1 and 'appraiser' in gb['skills'], f"the business survives a reload ({gb})")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')

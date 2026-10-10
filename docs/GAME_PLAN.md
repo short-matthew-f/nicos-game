@@ -35,11 +35,13 @@ This is the thinnest version that tests the two biggest risks: **control feel** 
 - **More life:** the school bus with its stops, pigeons, cloud shadows, hidden coins, a soccer field with goals, sounds with a mute button, rooftop landmarks, and a minimap plus a big map.
 - **Nico's feedback, all done:** 8-direction facing (3/4 views for everyone), a mid-size town with tall buildings, solid trees, the playground behind-walk fix, sitting poses.
 
-### v2: the business loop
-- Storage-unit flipping as the first hustle. The first unit is guaranteed to make a profit, and price and value ranges are shown before the player buys.
-- Buy a workbench, then build the toy car prototype: drag the parts into place, then test it on a ramp.
-- Sell the first car, then a shorter routine for repeat builds.
-- The first unlockable skill, such as Appraiser.
+### v2: the business loop (built 2026-10-10)
+- **Storage units:** an auction of three, each with a peek inside, the price and a value guess. The first unit is guaranteed to make a profit. Two taps to buy. Open the boxes, then choose Sell or Keep for each.
+- **Building:** buy a workbench and parts at Parts & Tools. Build the toy car by dragging parts onto a plan, then test it on a ramp (Low falls short; Medium and High pass).
+- **Selling:** sell the car at the Toy Shop ($40 for the first, then $30). Sold cars appear in its window. After the first, building another is three quick taps.
+- **Appraiser:** the first skill, unlocked on the third unit.
+- **Goal chip:** shows one step at a time, with a minimap star.
+- Prices and rules are in `src/business.ts`, and the UX rules are in `docs/UX_NOTES.md`.
 
 Then workers, conveyors and more hustles (handoff §12 onward).
 
@@ -66,6 +68,7 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - How deep factory planning goes (§13.5).
 
 ## Waiting on
+- Nico playing v2. Use the playtest list at the end of `docs/UX_NOTES.md`.
 - The iPad report: frame rate (lite mode switches on by itself below 45 fps), how the stick feels, and Nico's reactions to the overnight build.
 
 ## Idea parking lot (wanted, not scheduled)

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { migrate, load, save, fresh, START_MONEY, VERSION } from '../src/state';
+import { freshBiz } from '../src/business';
 import { nearest, type Spot } from '../src/interact';
 
 const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; };
@@ -11,8 +12,9 @@ describe('save', () => {
   });
   it('round-trips', () => {
     const s = mem();
-    save({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true }, s);
-    expect(load(s)).toEqual({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true });
+    const biz = { ...freshBiz(), items: { wheel: 4 }, finds: [{ id: 'radio', value: 7 }], workbench: true, designs: ['car'], cars: 2, sold: 1, flips: 3, skills: ['appraiser'], seed: 9 };
+    save({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true, biz }, s);
+    expect(load(s)).toEqual({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true, biz });
   });
   it('survives junk instead of crashing or wiping into nonsense', () => {
     expect(migrate('x')).toEqual(fresh());
@@ -23,15 +25,23 @@ describe('save', () => {
   });
   it('a v1 save (smaller town) keeps its money but not its positions', () => {
     expect(migrate({ v: 1, money: 11, nico: { x: 5, y: 6 }, car: { x: 1, y: 2, h: 0 }, driving: true }))
-      .toEqual({ v: VERSION, money: 11, nico: null, car: null, driving: false });
+      .toEqual({ v: VERSION, money: 11, nico: null, car: null, driving: false, biz: freshBiz() });
   });
   it('a v2 save (1.6x town) keeps its money but not its positions', () => {
     expect(migrate({ v: 2, money: 9, nico: { x: 5, y: 6 }, car: null, driving: false }))
-      .toEqual({ v: VERSION, money: 9, nico: null, car: null, driving: false });
+      .toEqual({ v: VERSION, money: 9, nico: null, car: null, driving: false, biz: freshBiz() });
   });
   it('a v3 save (before the re-layout) keeps its money but not its positions', () => {
     expect(migrate({ v: 3, money: 31, nico: { x: 2200, y: 3200 }, car: { x: 1, y: 2, h: 0 }, driving: true }))
-      .toEqual({ v: VERSION, money: 31, nico: null, car: null, driving: false });
+      .toEqual({ v: VERSION, money: 31, nico: null, car: null, driving: false, biz: freshBiz() });
+  });
+  it('a v4 save keeps its money and positions, and starts the business fresh', () => {
+    expect(migrate({ v: 4, money: 12, nico: { x: 5, y: 6 }, car: { x: 1, y: 2, h: 0.5 }, driving: false }))
+      .toEqual({ v: VERSION, money: 12, nico: { x: 5, y: 6 }, car: { x: 1, y: 2, h: 0.5 }, driving: false, biz: freshBiz() });
+  });
+  it('a broken business in the save is cleaned up, not trusted', () => {
+    const b = migrate({ v: VERSION, money: 1, biz: { items: { wheel: 3, axle: -2, body: 'x', radio: 1.7 }, finds: [{ id: 'teddy', value: 3 }, { id: 4 }, null, { id: 'clock', value: -1 }], workbench: 'yes', designs: ['car', 5], cars: -1, flips: NaN } }).biz;
+    expect(b).toEqual({ ...freshBiz(), items: { wheel: 3, radio: 1 }, finds: [{ id: 'teddy', value: 3 }], designs: ['car'] });
   });
   it('a save from a newer game version is not misread', () => {
     expect(migrate({ v: VERSION + 1, money: 999 })).toEqual(fresh());

@@ -62,6 +62,16 @@ export const sfx = {
   tap: () => audio.tone('sine', 660, 880, 0.06, 0.06),
   splash: () => audio.noise(0.3, 0.25, 2400),
   flap: () => { audio.noise(0.18, 0.18, 3200); audio.noise(0.14, 0.12, 2600); },
+  // the workshop
+  pop: () => { audio.tone('sine', 300, 900, 0.09, 0.12); audio.noise(0.05, 0.12, 4000); },            // a box opens
+  sparkle: () => { [1319, 1568, 1976, 2637].forEach((f, i) => audio.tone('triangle', f, f, 0.16, 0.06, i * 0.06)); },   // a rare find
+  lift: () => audio.tone('sine', 520, 700, 0.05, 0.05),                                                   // picked up a part
+  snap: () => { audio.noise(0.04, 0.35, 5000); audio.tone('square', 1200, 900, 0.04, 0.04); },           // a part clicks in
+  boing: () => audio.tone('sine', 420, 140, 0.32, 0.12),                                                  // wrong spot / fell short
+  roll: () => audio.noise(1.4, 0.06, 500),                                                                // wheels on the ramp
+  door: () => { audio.noise(0.7, 0.12, 900); audio.tone('sawtooth', 90, 140, 0.6, 0.02); },              // roll-up door
+  cheer: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => audio.tone('triangle', f, f, 0.22, 0.12, i * 0.08)); audio.noise(0.6, 0.08, 3000); },
+  cash: (n = 3) => { for (let i = 0; i < Math.min(n, 8); i++) { audio.tone('square', 988, 988, 0.06, 0.04, i * 0.07); audio.tone('square', 1319, 1319, 0.12, 0.04, i * 0.07 + 0.05); } },
 };
 
 export class Siren {

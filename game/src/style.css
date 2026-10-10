@@ -82,4 +82,63 @@ html, body {
 }
 #job { border: 0; font: inherit; font-size: 16px; font-weight: 800; color: var(--navy); background: #FFF4DA; pointer-events: auto; touch-action: manipulation; max-width: 46vw; text-align: left; box-shadow: 0 3px 0 rgba(43,63,85,.2); }
 #job[hidden] { display: none; }
+#goal { font-size: 16px; font-weight: 800; background: #E6F4FF; max-width: 46vw; box-shadow: 0 3px 0 rgba(43,63,85,.2); }
+#goal[hidden] { display: none; }
+
+/* ---- the workshop screens (auction, unit, build, ramp) */
+.work .panel {
+  background: #fff; border-radius: 22px; padding: 16px 20px 16px; width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 24px);
+  overflow: auto; box-shadow: 0 8px 0 rgba(43,63,85,.25); text-align: center;
+}
+.work .top { display: flex; align-items: center; justify-content: center; position: relative; }
+.work h2 { margin: 0; font-size: 26px; }
+.work .close { min-width: 0; padding: 0; position: absolute; right: -4px; top: -4px; width: 48px; height: 48px; border: 0; border-radius: 24px; background: #E9EEF3; font: inherit; font-size: 22px; font-weight: 800; color: var(--navy); touch-action: manipulation; }
+.work .sub { margin: 6px 0 12px; font-weight: 700; line-height: 1.35; min-height: 1.35em; }
+.work .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.work button { min-height: 52px; min-width: 120px; padding: 0 20px; border: 0; border-radius: 14px; font: inherit; font-size: 19px; font-weight: 800; background: #E9EEF3; color: var(--navy); box-shadow: 0 3px 0 rgba(43,63,85,.25); touch-action: manipulation; }
+.work button.primary { background: #F9A826; }
+.work button:disabled { opacity: .45; }
+.work button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(43,63,85,.25); }
+.stage.auction { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.lot { background: #FFF4DA; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.lot .door { height: 120px; border-radius: 10px; background: repeating-linear-gradient(#E3A857 0 14px, #C98E3E 14px 17px); display: flex; align-items: flex-end; justify-content: center; position: relative; overflow: hidden; }
+.lot .door::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: #2C3440; }
+.lot .peek { position: relative; z-index: 1; font-size: 26px; padding-bottom: 2px; letter-spacing: 2px; }
+.lot .uname { font-weight: 800; font-size: 18px; }
+.lot .guess { font-weight: 700; color: #2E7D4F; }
+.lot .tag { font-weight: 800; color: #B5651D; }
+.lot button { min-width: 0; padding: 0 8px; font-size: 17px; }
+.lot button.sure { background: #E0453A; color: #fff; }
+.stage.unit { position: relative; min-height: 220px; }
+.rolldoor { position: absolute; inset: 0; z-index: 2; border-radius: 14px; background: repeating-linear-gradient(#E3A857 0 18px, #C98E3E 18px 22px); transition: transform .6s cubic-bezier(.5,0,.6,1); transform-origin: top; pointer-events: none; }
+.rolldoor.up { transform: scaleY(0); }
+.stage.unit { padding: 0; }
+.finds { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; padding: 8px; background: #2C3440; border-radius: 14px; }
+.work .find { min-height: 120px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #FFF4DA; font-size: 15px; transition: transform .15s; }
+.work .find.box { background: #D9A066; }
+.find .big { font-size: 40px; line-height: 1.1; }
+.find .nm { font-weight: 800; }
+.find .val { color: #2E7D4F; font-weight: 800; }
+.find .choice { font-size: 14px; font-weight: 800; background: #fff; border-radius: 8px; padding: 2px 8px; }
+.work .find.keep { background: #E6F4FF; }
+.work .find.opening { transform: scale(1.12) rotate(-3deg); }
+.work .find.rare { box-shadow: 0 0 0 4px #F9C846, 0 3px 0 rgba(43,63,85,.25); }
+.blueprint, .rampview { width: 100%; max-height: calc(100vh - 230px); touch-action: none; display: block; }
+.blueprint .slot { opacity: .2; transition: opacity .2s; }
+.blueprint .slot.ready { opacity: 1; }
+.blueprint .slot.want { opacity: 1; animation: pulse .8s ease-in-out infinite alternate; }
+.blueprint .slot.done { opacity: 0; }
+@keyframes pulse { from { filter: none; } to { filter: drop-shadow(0 0 6px #F9A826); } }
+.blueprint .part { cursor: grab; transition: transform .12s ease-out; }
+.blueprint .part.held { transition: none; filter: drop-shadow(0 10px 6px rgba(43,63,85,.35)); cursor: grabbing; }
+.blueprint .part.back { transition: transform .25s ease-in-out; }
+.blueprint .part.drop { transition: transform .22s cubic-bezier(.3,1.6,.6,1); }
+.rampview .flag.wave { animation: wave .5s ease-in-out 3; transform-box: fill-box; transform-origin: left bottom; }
+@keyframes wave { 50% { transform: rotate(-8deg) scale(1.1); } }
+.rampview .wobble { animation: wobble .6s; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes wobble { 25% { transform: rotate(-6deg); } 50% { transform: rotate(5deg); } 75% { transform: rotate(-3deg); } }
+.picks { display: flex; gap: 6px; background: #E9EEF3; border-radius: 16px; padding: 4px; }
+.work .picks button { min-width: 0; box-shadow: none; background: transparent; }
+.work .picks button.on { background: #fff; box-shadow: 0 2px 0 rgba(43,63,85,.2); }
+@media (max-width: 640px) { .stage.auction { grid-template-columns: 1fr; } .lot .door { height: 70px; } }
 #buttons button[hidden] { display: none; }
