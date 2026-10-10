@@ -5,7 +5,7 @@ extensions.add(CullerPlugin);
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, doorOf } from './world/map';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
-import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock } from './unlocks';
+import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { FireScene } from './world/fire';
@@ -25,7 +25,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS } from './world/rooms';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -411,7 +411,10 @@ async function main() {
       });
     } };
   // ---- inside the shed: equipment outlines, the workbench
-  const shedArt: Record<string, () => Container> = { workbench: workbenchArt };
+  const shedArt: Record<string, () => Container> = {
+    workbench: workbenchArt, bins: binsArt, paint: paintArt,
+    shelves: () => shelvesArt([...biz.finds.map(f => item(f.id).label.split(' ')[0]), ...SHELL_KINDS.filter(k => biz.shells[k.id]).map(() => '🐚')]),
+  };
   function enterShed() {
     const { view, layer: rl } = drawShedRoom(), outlines: Record<string, Container> = {};
     for (const u of UNLOCKS.filter(q => q.room === 'shed')) {
@@ -430,9 +433,15 @@ async function main() {
       ...UNLOCKS.filter(u => u.room === 'shed' && SHED_SLOTS[u.id] && (isUnlocked(biz, u.id) || canUnlock(biz, u.id))).map(u => {
         const sl = SHED_SLOTS[u.id];
         return { id: u.id, x: sl.x + sl.w / 2, y: sl.y + sl.d + 50, r: 130,
-          label: isUnlocked(biz, u.id) ? (u.id === 'workbench' ? '🛠️ Use the workbench' : u.label) : `✨ ${u.label} · $${u.price}`,
+          label: isUnlocked(biz, u.id) ? ({ workbench: '🛠️ Use the workbench', bins: '🧰 Order parts', shelves: '🗄️ Look at your shelves', paint: '🎨 Paint station' }[u.id] ?? u.label) : `✨ ${u.label} · $${u.price}`,
           run: () => {
-            if (isUnlocked(biz, u.id)) { if (u.id === 'workbench') workbenchCard(); return; }
+            if (isUnlocked(biz, u.id)) {
+              if (u.id === 'workbench') workbenchCard();
+              if (u.id === 'bins') showParts(PLACES.find(p => p.building === 'parts')!);
+              if (u.id === 'shelves') { const n = biz.finds.length; showCard('shelves', '🗄️ Your shelves', n ? `${n} thing${n === 1 ? '' : 's'} you've kept, worth about $${shelfValue(biz)}. (The storage office will buy them.) ${SHELL_KINDS.filter(k => biz.shells[k.id]).length} kinds of shell too.` : 'Empty for now: things you keep from storage units and the beach go here.', [], 'Close'); }
+              if (u.id === 'paint') showCard('paint', '🎨 Paint station', `Every toy you build gets a shiny coat of paint: painted toys sell for $${PAINT_BONUS} more.`, [], 'Nice');
+              return;
+            }
             unlockCard(u.id, () => {
               if (room?.kind !== 'shed') return;
               room.outlines?.[u.id]?.destroy({ children: true });
@@ -440,6 +449,7 @@ async function main() {
               slapIn(a, sl.x + sl.w / 2, sl.y + sl.d, { x: sl.x - 10, y: sl.y - sl.h - 10, w: sl.w + 20, h: sl.h + sl.d + 20 });
               room.solids.push({ x: sl.x, y: sl.y, w: sl.w, d: sl.d });
               if (nico.y < sl.y + sl.d + 20 && nico.y > sl.y - 10) nico.y = sl.y + sl.d + 40;   // (step back out of its way)
+              for (const [id, o] of Object.entries(room.outlines ?? {})) if (!o.destroyed) o.visible = canUnlock(biz, id);   // (the bench opens up more spots)
             });
           } };
       }),

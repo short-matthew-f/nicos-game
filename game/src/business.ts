@@ -1,4 +1,4 @@
-import { unlockOf } from './unlocks';
+import { unlockOf, PAINT_BONUS } from './unlocks';
 
 // The business loop (v2): flip storage units for money and parts, buy a workbench, build
 // the toy car, test it, sell it. Data first, like places.ts and jobs.ts: every price and
@@ -295,7 +295,7 @@ export function sellOne(b: Biz, id: string, value: number): number {
 }
 export const shelfValue = (b: Biz) => b.finds.reduce((s, f) => s + sellPrice(f.value, b.skills.includes('appraiser')), 0);
 
-export const priceOf = (b: Biz, pid: string) => (!b.sold[pid] ? product(pid).sale.first : product(pid).sale.repeat);
+export const priceOf = (b: Biz, pid: string) => (!b.sold[pid] ? product(pid).sale.first : product(pid).sale.repeat) + (b.unlocked.includes('paint') ? PAINT_BONUS : 0);   // (painted toys sell for more)
 export const carPrice = (b: Biz) => priceOf(b, 'car');
 /** Everything sold, all products. */
 export const soldAll = (b: Biz) => Object.values(b.sold).reduce((t, n) => t + n, 0);

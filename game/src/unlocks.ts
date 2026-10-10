@@ -12,6 +12,9 @@ export interface Unlock {
 export const UNLOCKS: Unlock[] = [
   { id: 'shed', label: '🏚️ Work shed', price: 15, room: 'world', text: 'Your own work shed, right next to your house. Put tools and equipment in it to make things.' },
   { id: 'workbench', label: '🛠️ Workbench', price: 15, room: 'shed', after: 'shed', text: 'A sturdy bench to build things on: toy cars, robots, and more.' },
+  { id: 'shelves', label: '🗄️ Shelves', price: 10, room: 'shed', after: 'shed', text: 'Show off everything you\'ve kept: storage finds, beach treasure, and more.' },
+  { id: 'bins', label: '🧰 Parts bins', price: 15, room: 'shed', after: 'workbench', text: 'Order parts right here in your shed: no trip to Parts & Tools.' },
+  { id: 'paint', label: '🎨 Paint station', price: 20, room: 'shed', after: 'workbench', text: 'Give every toy you build a shiny coat of paint: painted toys sell for $5 more.' },
 ];
 export const unlockOf = (id: string) => UNLOCKS.find(u => u.id === id)!;
 export const isUnlocked = (b: Biz, id: string) => b.unlocked.includes(id);
@@ -28,3 +31,4 @@ export function unlock(b: Biz, id: string, money: number): boolean {
 export function migrateUnlocks(b: Biz) {
   if (b.workbench) for (const id of ['shed', 'workbench']) if (!b.unlocked.includes(id)) b.unlocked.push(id);
 }
+export const PAINT_BONUS = 5;   // $ more for a painted toy

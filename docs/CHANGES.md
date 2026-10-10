@@ -648,3 +648,12 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - layout: nothing in the shed's space or doorway (mutation-checked: without the filter a lamp blocks the door).
 - **e2e (180):** the outline and its price, walk-through until bought, buy, then solid and "Go in"; inside, the bench outline, buy, use; the build flows now go through the shed. Mutation-checked: when the shed isn't made solid, a check fails.
 - **Not yet:** the shed isn't on the minimap; the minimap is drawn once at start-up.
+
+## 2026-10-10: the rest of the shed (part 2), and a waist-high bench
+- **New stickers inside the shed** (each a dashed outline with a price until bought):
+  - **🗄️ Shelves** ($10, needs the shed): everything Nico has kept sits on the boards, storage finds and a 🐚 for each kind of shell. Tap for the count and what it's worth.
+  - **🧰 Parts bins** ($15, needs the workbench): order parts from the shed. It opens the Parts & Tools card.
+  - **🎨 Paint station** ($20, needs the workbench): painted toys sell for **$5 more** (`PAINT_BONUS`, in `priceOf`).
+- Buying the workbench shows the bins and paint outlines straight away, not on the next visit.
+- **The user:** "the workbench is a lot taller than Nico." It was drawn 200 px tall against Nico's 132. Benches are now drawn from the floor up: legs to about his waist (`BENCH = 64` px), then the top seen from above. The paint station was redrawn the same way.
+- **Tests:** equipment order and a place for each; the paint bonus. e2e: buy all three, the bins open parts, the shelves count your finds, a painted car sells for $35 (186 checks).

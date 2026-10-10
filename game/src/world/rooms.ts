@@ -202,7 +202,10 @@ export const SHED_ROOM = { w: 1200, h: 820, wall: 230 };
 export const SHED_EXIT: [number, number] = [SHED_ROOM.w / 2, SHED_ROOM.h - 30];
 /** Where each piece of equipment stands: its footprint (x, y, w, d) and how tall it's drawn (h). */
 export const SHED_SLOTS: Record<string, { x: number; y: number; w: number; d: number; h: number }> = {
-  workbench: { x: 420, y: 400, w: 360, d: 90, h: 110 },
+  workbench: { x: 420, y: 430, w: 360, d: 50, h: 60 },   // (waist-high on Nico: he's ~132 px tall)
+  shelves: { x: 70, y: 262, w: 300, d: 36, h: 210 },
+  bins: { x: 80, y: 600, w: 230, d: 70, h: 80 },
+  paint: { x: 880, y: 480, w: 200, d: 50, h: 70 },
 };
 export function drawShedRoom(): { view: Container; layer: Container } {
   const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
@@ -218,20 +221,65 @@ export function drawShedRoom(): { view: Container; layer: Container } {
   view.addChild(g, layer);
   return { view, layer };
 }
-/** The workbench: a thick wooden top on legs, a vise, a few tools hanging off the back. */
+/** Benches are drawn from the floor up: legs to about Nico's waist (BENCH px), then the top's surface
+ * seen from above. (The first workbench was 200 px tall: taller than Nico.) */
+export const BENCH = 64;
+/** The workbench: a wooden top on legs, a shelf underneath, a vise and a few tools on top. */
 export function workbenchArt(): Container {
-  const s = SHED_SLOTS.workbench, c = new Container(), g = new Graphics(), top = s.y - s.h;
-  g.ellipse(s.x + s.w / 2 + 10, s.y + s.d - 4, s.w / 2 + 10, 16).fill({ color: NAVY, alpha: 0.18 });
-  // the sticker edge round each piece (the top, the legs, the shelf), not one box round the lot
-  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, 42 + 2 * BAND, 10).fill('#FFFFFF');
-  for (const lx of [s.x + 16, s.x + s.w - 36]) g.roundRect(lx - BAND, top + 30, 20 + 2 * BAND, s.h + s.d - 34 + BAND, 6).fill('#FFFFFF');
-  g.roundRect(s.x + 30 - BAND, top + 60 - BAND, s.w - 60 + 2 * BAND, 14 + 2 * BAND, 6).fill('#FFFFFF');
-  for (const lx of [s.x + 16, s.x + s.w - 36]) g.roundRect(lx, top + 30, 20, s.h + s.d - 34, 4).fill('#7A5236');
-  g.roundRect(s.x, top, s.w, 40, 8).fill('#D9A066').rect(s.x, top + 34, s.w, 8).fill('#B9895A');
-  g.roundRect(s.x + 30, top + 60, s.w - 60, 14, 4).fill('#B9895A');   // a shelf underneath
-  g.roundRect(s.x + s.w - 80, top - 22, 50, 24, 4).fill('#5B78AA').rect(s.x + s.w - 60, top - 34, 10, 14).fill('#9AA6B2');   // the vise
-  g.roundRect(s.x + 40, top - 14, 70, 12, 4).fill('#E5484D').rect(s.x + 108, top - 12, 26, 8).fill('#9AA6B2');               // a hammer
-  g.roundRect(s.x + 160, top - 10, 60, 8, 3).fill('#2F7FD8');                                                                // a screwdriver
-  c.addChild(g); c.zIndex = s.y + s.d;
+  const s = SHED_SLOTS.workbench, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - BENCH, depth = 34;
+  g.ellipse(s.x + s.w / 2 + 10, F - 2, s.w / 2 + 10, 12).fill({ color: NAVY, alpha: 0.18 });
+  const legs = [s.x + 14, s.x + s.w - 32];
+  for (const lx of legs) g.roundRect(lx - BAND, front, 18 + 2 * BAND, BENCH + BAND, 5).fill('#FFFFFF');
+  g.roundRect(s.x + 26 - BAND, F - 24 - BAND, s.w - 52 + 2 * BAND, 10 + 2 * BAND, 5).fill('#FFFFFF');
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + 12 + 2 * BAND, 9).fill('#FFFFFF');
+  for (const lx of legs) g.roundRect(lx, front, 18, BENCH, 4).fill('#7A5236');
+  g.roundRect(s.x + 26, F - 24, s.w - 52, 10, 4).fill('#B9895A');                   // a shelf low down
+  g.roundRect(s.x, front - depth, s.w, depth, 8).fill('#E3AE74').rect(s.x, front - 2, s.w, 12).fill('#B9895A');   // the top, and its front edge
+  g.roundRect(s.x + s.w - 76, front - depth - 14, 46, 22, 4).fill('#5B78AA').rect(s.x + s.w - 58, front - depth - 24, 10, 12).fill('#9AA6B2');   // the vise
+  g.roundRect(s.x + 40, front - depth + 8, 70, 11, 4).fill('#E5484D').rect(s.x + 108, front - depth + 10, 24, 7).fill('#9AA6B2');               // a hammer
+  g.roundRect(s.x + 160, front - depth + 12, 56, 7, 3).fill('#2F7FD8');                                                                          // a screwdriver
+  c.addChild(g); c.zIndex = F;
   return c;
+}
+
+/** Tall wooden shelves against the wall; `things` (emoji) sit along the boards. */
+export function shelvesArt(things: string[]): Container {
+  const s = SHED_SLOTS.shelves, c = new Container(), g = new Graphics(), top = s.y - s.h;
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + s.d + 2 * BAND, 8).fill('#FFFFFF').roundRect(s.x, top, s.w, s.h + s.d, 6).fill('#8A5A3B');
+  const boards = [top + 60, top + 130, top + 200];
+  for (const by of boards) g.rect(s.x + 8, by, s.w - 16, 10).fill('#D9A066');
+  g.rect(s.x + 8, top + 8, s.w - 16, s.h + s.d - 16).fill({ color: '#000000', alpha: 0.12 });
+  c.addChild(g);
+  things.slice(0, 18).forEach((e, i) => {
+    const t = new Text({ text: e, style: { fontSize: 30 } }); t.anchor.set(0.5, 1);
+    t.position.set(s.x + 30 + (i % 6) * 48, boards[Math.floor(i / 6)] + 2); c.addChild(t);
+  });
+  c.zIndex = s.y + s.d; return c;
+}
+/** A row of coloured bins, each with a part showing over the rim. */
+export function binsArt(): Container {
+  const s = SHED_SLOTS.bins, c = new Container(), g = new Graphics(), top = s.y - s.h + s.d;
+  g.ellipse(s.x + s.w / 2 + 8, s.y + s.d - 2, s.w / 2 + 6, 12).fill({ color: NAVY, alpha: 0.18 });
+  const cols = ['#E5484D', '#2F7FD8', '#F9C846', '#3BB273'], bw = s.w / 4;
+  cols.forEach((col, i) => {
+    const x = s.x + i * bw;
+    g.roundRect(x + 2 - BAND, top - BAND, bw - 4 + 2 * BAND, s.h + 2 * BAND, 8).fill('#FFFFFF').roundRect(x + 2, top, bw - 4, s.h, 6).fill(col).rect(x + 2, top + 8, bw - 4, 6).fill({ color: '#FFFFFF', alpha: 0.35 });
+  });
+  c.addChild(g);
+  ['🛞', '⚙️', '🔋', '🥢'].forEach((e, i) => { const t = new Text({ text: e, style: { fontSize: 28 } }); t.anchor.set(0.5); t.position.set(s.x + i * bw + bw / 2, top + 4); c.addChild(t); });
+  c.zIndex = s.y + s.d; return c;
+}
+/** A paint station: a waist-high table of paint cans (a brush in each), with splats on the front. */
+export function paintArt(): Container {
+  const s = SHED_SLOTS.paint, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - BENCH, depth = 30;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + BENCH + 2 * BAND, 8).fill('#FFFFFF');
+  g.roundRect(s.x, front, s.w, BENCH, 6).fill('#9AA6B2').roundRect(s.x, front - depth, s.w, depth + 4, 6).fill('#C9D3DC');
+  ['#E5484D', '#2F7FD8', '#F9C846', '#3BB273'].forEach((col, i) => {
+    const x = s.x + 18 + i * 44, y = front - depth + 2;
+    g.roundRect(x - BAND, y - 30 - BAND, 30 + 2 * BAND, 34 + 2 * BAND, 6).fill('#FFFFFF').roundRect(x, y - 30, 30, 34, 5).fill('#E9EEF3').rect(x, y - 30, 30, 10).fill(col);
+    g.moveTo(x + 15, y - 30).lineTo(x + 20, y - 46).stroke({ width: 4, color: '#8A5A3B' });   // a brush
+  });
+  for (let i = 0; i < 5; i++) g.circle(s.x + 28 + i * 36, front + 26 + (i % 2) * 10, 7).fill(['#E5484D', '#2F7FD8', '#F9C846', '#3BB273', '#F06A8A'][i]);   // splats
+  c.addChild(g); c.zIndex = F; return c;
 }

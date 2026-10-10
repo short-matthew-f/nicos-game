@@ -4,7 +4,8 @@ import {
   makeUnit, guess, sellOne, doorState, doorUnit, buyDoor, decide, tickDoors, HALL, DOOR_NAMES, shelfValue, goalPlace, worth, sellPrice, freshBiz, has, missing, add, use, unlocks, carPrice, nextGoal,
 } from '../src/business';
 import { START_MONEY, migrate, VERSION } from '../src/state';
-import { unlockOf, unlock, canUnlock, isUnlocked, UNLOCKS } from '../src/unlocks';
+import { unlockOf, unlock, canUnlock, isUnlocked, UNLOCKS, PAINT_BONUS } from '../src/unlocks';
+import { SHED_SLOTS } from '../src/world/rooms';
 import { PRODUCTS, product, unlockedProducts, partsCost, priceOf, runProgram, ROBOT_LEVEL, type Move } from '../src/business';
 import { PLANS } from '../src/plans';
 import { photoStars } from '../src/business';
@@ -251,5 +252,17 @@ describe('unlocks (bought and stuck onto the world)', () => {
     const b = migrate(old).biz;
     expect(isUnlocked(b, 'shed')).toBe(true); expect(isUnlocked(b, 'workbench')).toBe(true);
     expect(migrate({ v: VERSION, money: 5, biz: { ...freshBiz(), unlocked: ['shed', 42] } }).biz.unlocked).toEqual(['shed']);
+  });
+  it("shed equipment comes in order (shelves with the shed; bins and paint once there's a bench), each has a place", () => {
+    const b = freshBiz(); unlock(b, 'shed', 99);
+    expect(canUnlock(b, 'shelves')).toBe(true); expect(canUnlock(b, 'paint')).toBe(false); expect(canUnlock(b, 'bins')).toBe(false);
+    unlock(b, 'workbench', 99); expect(canUnlock(b, 'paint')).toBe(true); expect(canUnlock(b, 'bins')).toBe(true);
+    for (const u of UNLOCKS) if (u.room === 'shed') expect(SHED_SLOTS[u.id], u.id).toBeDefined();
+  });
+  it('the paint station makes every toy sell for more', () => {
+    const b = freshBiz(), before = priceOf(b, 'car');
+    unlock(b, 'shed', 99); unlock(b, 'workbench', 99); unlock(b, 'paint', 99);
+    expect(priceOf(b, 'car')).toBe(before + PAINT_BONUS);
+    b.sold.robot = 1; expect(priceOf(b, 'robot')).toBe(product('robot').sale.repeat + PAINT_BONUS);
   });
 });

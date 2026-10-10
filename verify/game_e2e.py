@@ -565,6 +565,23 @@ with sync_playwright() as p:
     check(G()['play'] == 'swim', 'or just jump in from the deck')
     gs = drag(0, 90, 2500); pg.click('#action'); pg.wait_for_timeout(250)
     check(G()['mode'] == 'walk', 'and climb back out')
+    # the rest of the shed: shelves, parts bins, paint station, each a sticker outline to buy
+    pg.evaluate("()=>{window.__game.setBiz({finds:[{id:'radio', value:7}, {id:'teddy', value:3}]}); window.__game.setMoney(100)}")
+    door('shed'); pg.wait_for_timeout(300)
+    for sid, price in [('shelves', 10), ('bins', 15), ('paint', 20)]:
+        room_at(sid); lab = pg.locator('#action').inner_text()
+        if f'${price}' not in lab: check(False, f"{sid} outline shows its price ({lab})"); continue
+        m0 = G()['money']; pg.click('#action'); pg.wait_for_timeout(150); pg.click('#place-menu button[data-item=unlock]'); pg.wait_for_timeout(700)
+        check(sid in G()['unlocked'] and G()['money'] == m0 - price, f"bought the {sid} (${price})")
+    room_at('bins'); pg.click('#action'); pg.wait_for_timeout(200)
+    check(pg.locator('#place-title').inner_text() == 'Parts & Tools' and pg.locator('#place-menu button[data-item="part:wheel"]').count() == 1, 'the parts bins: order parts from the shed')
+    pg.keyboard.press('Escape'); room_at('shelves'); pg.click('#action'); pg.wait_for_timeout(200)
+    check('2 things' in pg.locator('#place-text').inner_text(), f"the shelves show what you've kept ({pg.locator('#place-text').inner_text()[:60]})")
+    pg.keyboard.press('Escape')
+    pg.evaluate("()=>window.__game.setBiz({stock:{car:1}, sold:{car:3}})")
+    door('toys'); sub = pg.locator('[data-item="sell:car"] .price').inner_text()
+    check(sub == '$35', f"painted toy cars sell for $5 more ({sub})")
+    pg.keyboard.press('Escape'); pg.evaluate("()=>window.__game.exitRooms()")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')
