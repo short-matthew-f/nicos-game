@@ -240,3 +240,11 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - Vitest 104: each route avoids anything solid and never runs along a road; each route completes and loops.
   - e2e 56: both in town with art loaded, James moves, Say hi and his line, Primo gets on a swing, Nico takes the other seat.
   - Mutation: ignoring seat occupancy went red.
+
+## 2026-10-09: never stuck inside a building; phone top bar
+- Matthew got stuck on the Toy Shop card on his iPhone. It couldn't be reproduced in emulated iPhone WebKit, where Leave works. Fixes:
+  - A tap anywhere outside the card now closes it.
+  - Leave also closes on `pointerup`, in case a touch never becomes a click.
+  - The e2e checks closing by a tap outside the card.
+- On screens narrower than 640 px (phones in portrait), the top bar shows only money and ⟳. The fps/people chip and the +10/Clear test buttons wrapped into a mess there.
+- **Diagonal views mock-up** (`src/mock_diag.py`, for sign-off): following Nico's note, the 3/4 front ponytail now hangs behind his head and neck instead of over his shoulder.

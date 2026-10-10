@@ -76,3 +76,7 @@ html, body {
 .menu button .price { font-size: 16px; color: #2E7D4F; }
 .menu button .more { font-size: 13px; font-weight: 700; opacity: .75; }
 .menu button:disabled { opacity: .45; }
+/* phones: keep the top bar to money and the update button */
+@media (max-width: 640px) {
+  #stats, #more, #fewer { display: none; }
+}

@@ -40,17 +40,18 @@ def torso_q(back):
     return s
 
 def upper_q_front():
-    return (torso_q(False) +
-        # ponytail peeking out behind the near shoulder
-        f'<path d="M-24,-68 C-33,-56 -32,-40 -26,-28 C-21,-38 -18,-52 -16,-64 Z" fill="{HAIR}"/>' +
+    # the ponytail hangs from the back of his head, so it is drawn first, behind his body:
+    # only a little shows, past the far side of his neck and shoulder
+    return (f'<path d="M-17,-72 C-23,-62 -22,-48 -17,-38 C-13,-48 -11,-60 -10,-68 Z" fill="{HAIR}"/>'
+        f'<rect x="-23" y="-73" width="10" height="6" rx="3" fill="{HAIR_TIE}" transform="rotate(-30 -18 -70)"/>' +
+        torso_q(False) +
         f'<circle cx="2" cy="-86" r="29" fill="{SK}"/>'
-        f'<circle cx="-25" cy="-81" r="4.5" fill="{SK2}"/>'          # near ear, mostly under the hair
-        # part sits right of centre; the hair covers more of the head on the left (the side
-        # turning toward us) and sweeps back to the ponytail at the nape
+        # hair: part right of centre; on the right it falls to the jaw beside his face, on
+        # the left it is pulled back over the ear to the tie at the nape (like the side view)
         f'<path d="M10,{T} C28,{T} 36,-102 32,-84 C32,-76 30,-68 27,-63 L22,-66 '
-        f'C24,-80 21,-95 10,-104 C-2,-97 -10,-90 -14,-80 C-16,-74 -17,-68 -16,-63 '
-        f'L-24,-61 C-31,-68 -34,-80 -32,-92 C-28,-108 -12,{T} 10,{T} Z" fill="{HAIR}"/>'
-        f'<rect x="-27" y="-67" width="11" height="6" rx="3" fill="{HAIR_TIE}" transform="rotate(-25 -21 -64)"/>'
+        f'C24,-80 21,-95 10,-104 C0,-99 -8,-96 -14,-92 C-20,-88 -22,-80 -21,-72 '
+        f'L-25,-67 C-31,-73 -34,-84 -32,-94 C-28,-108 -12,{T} 10,{T} Z" fill="{HAIR}"/>'
+        f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{SK2}"/>'   # near ear, in front of the pulled-back hair
         # face turned right: near eye round, far eye a little narrower
         f'<circle cx="0" cy="-85" r="3.6" fill="{EYE}"/><ellipse cx="17" cy="-85" rx="3" ry="3.6" fill="{EYE}"/>'
         f'<path d="M1,-72 Q9,-63 17,-72" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'

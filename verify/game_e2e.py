@@ -128,6 +128,8 @@ with sync_playwright() as p:
     check(pg.locator('#place-menu button[data-item="burger"]').is_disabled(), "can't buy a $5 burger with $2")
     pg.click('#place-close'); pg.wait_for_timeout(150)
     check(not pg.locator('#place').is_visible() and G()['money'] == 2, 'Leave closes it, money unchanged')
+    pg.click('#action'); pg.wait_for_timeout(150); pg.mouse.click(12, H - 12); pg.wait_for_timeout(150)
+    check(not pg.locator('#place').is_visible(), 'a tap outside the card closes it too (never stuck inside)')
     at('school'); pg.wait_for_timeout(250)
     check(G()['action'] == 'school', 'the school door has something to say too')
     # playground: slide all the way down, and swing until the stick says stop

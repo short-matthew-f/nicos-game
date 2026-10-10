@@ -138,7 +138,12 @@ async function main() {
     placeEl.hidden = false;
   }
   function closePlace() { placeEl.hidden = true; openPlace = null; }
-  document.getElementById('place-close')!.addEventListener('click', closePlace);
+  // close on Leave, or on a tap anywhere outside the card (never get stuck in a building).
+  // pointerup as well as click: some touches on iOS never produce a click.
+  const leave = document.getElementById('place-close')!;
+  leave.addEventListener('click', closePlace);
+  leave.addEventListener('pointerup', closePlace);
+  placeEl.addEventListener('pointerdown', e => { if (e.target === placeEl) closePlace(); });
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && openPlace) closePlace(); });
 
   const spots: Spot[] = [
