@@ -12,7 +12,7 @@ html, body {
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) 0 calc(env(safe-area-inset-left) + 12px);
 }
-#stats { background: rgba(255,255,255,.85); border-radius: 12px; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
 #buttons { display: flex; gap: 8px; pointer-events: auto; }
 #buttons button, #check-update {
   min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; font: inherit; font-weight: 800;
@@ -57,3 +57,15 @@ html, body {
 .card button.primary { background: #F9A826; }
 .card button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(43,63,85,.25); }
 #check-update { font-size: 22px; min-width: 48px; }
+#left { display: flex; gap: 8px; align-items: flex-start; }
+.chip { background: rgba(255,255,255,.85); border-radius: 12px; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#money { font-size: 22px; font-weight: 800; padding: 6px 14px; color: #2E7D4F; }
+#stats { font-size: 13px; opacity: .8; }
+#action {
+  position: fixed; right: calc(env(safe-area-inset-right) + 28px); bottom: calc(env(safe-area-inset-bottom) + 28px);
+  min-width: 120px; min-height: 120px; padding: 0 22px; border: 0; border-radius: 60px; font: inherit; font-size: 22px; font-weight: 800;
+  background: #F9A826; color: var(--navy); border: 6px solid #fff; box-shadow: 0 6px 0 rgba(43,63,85,.3);
+  touch-action: manipulation; pointer-events: auto;
+}
+#action[hidden] { display: none; }
+#action:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(43,63,85,.3); }

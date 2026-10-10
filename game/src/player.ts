@@ -27,6 +27,11 @@ export function moveCircle(x: number, y: number, dx: number, dy: number, solids:
   return [nx, ny];
 }
 
+/** Can Nico stand at (x, y)? */
+export function freeAt(x: number, y: number, solids: Rect[], bounds: { w: number; h: number }, r = RADIUS): boolean {
+  return x >= r && y >= r && x <= bounds.w - r && y <= bounds.h - r && !solids.some(s => hits(x, y, r, s));
+}
+
 function hits(x: number, y: number, r: number, s: Rect): boolean {
   return x > s.x - r && x < s.x + s.w + r && y > s.y - r && y < s.y + s.d + r;
 }

@@ -2,7 +2,7 @@
 // navy shadow offset down-right. Static things draw the band as geometry (cheap);
 // only characters use the live outline filter.
 import { Container, Graphics, Text } from 'pixi.js';
-import { BUILDINGS, LOTS, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
+import { BUILDINGS, DRIVEWAYS, LOTS, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
 
 export const NAVY = 0x2B3F55;
 const BAND = 7, SH = { x: 6, y: 10, a: 0.18 };
@@ -18,6 +18,7 @@ export function drawGround(): Graphics {
   const g = new Graphics();
   g.rect(0, 0, WORLD.w, WORLD.h).fill(GRASS);
   for (const l of LOTS) g.roundRect(l.x, l.y, l.w, l.d, 18).fill(l.fill);
+  for (const r of DRIVEWAYS) g.rect(r.x, r.y, r.w, r.d).fill(KERB);
   const half = ROAD_W / 2;
   // sidewalks, then roads on top
   for (const y of ROADS_Y) g.rect(0, y - half - SIDEWALK, WORLD.w, ROAD_W + 2 * SIDEWALK).fill(WALK);

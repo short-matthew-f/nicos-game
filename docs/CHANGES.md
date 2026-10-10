@@ -146,3 +146,19 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - Mutation: removing the restarted-into guard went red in both suites.
   - **Not proven by mutation:** swapping `?v=` navigation for `location.reload()` stayed green. The local preview server doesn't cache HTML the way Pages does, so the cache-bust can't be tested here.
 - **Correction:** the commit that added `?v=` to the rig art reused the name `v`, which the sprite loop already used for the view. Sprites loaded `…png` + `side` and drew nothing, and the e2e stayed green because Pixi's empty texture still has bounds. The cache-bust is now `BUST`, and the e2e checks that every part's image actually loaded. That check went red with a deliberately bad URL.
+
+## 2026-10-09: v1 slice 1 (driving, the action button, money and save)
+- **Decisions:**
+  - **Driving, Sneaky Sasquatch style:** push the stick toward where you want to go and the car turns toward it at up to 3 rad/s. Speed follows how far the stick is pushed (top speed 430 px/s, 1.8× walking). Sharp turns slow it; a turn of more than 90° crawls round. Releasing the stick coasts to a stop. A stopped car can still turn, so it can't get stuck.
+  - **Collisions:** the car is three circles along its length, tested against buildings, the world edge and traffic. A turn into a wall is undone, and a move into one slides along whichever axis is still open.
+  - **Nico's car:** red with a white stripe, so it stands out from traffic. It starts on a new driveway at his garage. Traffic brakes for any part of it, so leaving it in a lane jams the road. That's realistic, and it's kept.
+  - The camera eases out from 800 to 1050 px while driving and looks ahead of the car.
+  - **One action button for everything:** spots in the world (`interact.ts`) offer an action within reach. The car offers Get in, and while driving Get out appears once the car is nearly stopped. Get out tries the driver's side, then the other side, the front and the back. E, Space or Enter work on a keyboard.
+  - **Money and save:** money is shown in the HUD, starting at $20 (a data constant). The save (`state.ts`) is versioned in localStorage and written every 5 s, on hide or pagehide, on getting in or out, and before an update restart. It holds money, Nico's spot, the car's spot and whether he's driving. Junk or newer-version saves load as fresh. A saved spot that's now inside a building (the map changed) falls back to the default.
+- **Tests:**
+  - Vitest, now 90 tests.
+    - Driving: short-way turning, turning round from a stop, speed follows the stick and is capped, coasting, wall stop and slide, never inside a building after 60 s of random steering, and the parked spot fits.
+    - Save: round-trip, junk, and newer versions. Spots: nearest, switched off.
+  - e2e, now 31 checks: Get in appears, stick-right drives right, no Get out at speed, stick-down turns down, the camera pulls back, release stops and offers Get out, Get out lands beside the car, traffic stops behind the parked car, and a reload restores Nico's spot.
+  - Mutations, all red: steering sign flipped (3 unit tests and 1 e2e), traffic ignoring Nico's car (e2e), and save disabled (e2e).
+- **Correction to the mutation method:** `npm run build` type-checks first, so a mutation that leaves an unused import fails the build, and the e2e then quietly tests the previous `dist/`. Two mutations looked green for that reason. Mutation runs now build with `npx vite build` and check for "built".

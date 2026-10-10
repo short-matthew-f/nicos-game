@@ -56,7 +56,7 @@ export const LOTS = [
 export const TREES: [number, number][] = [
   [700, 300], [760, 520], [60, 700 - 160], [1000, 360], [1760, 380], [1960, 200], [2140, 460],
   [2440, 520], [3200, 300], [3420, 520], [1100, 1150], [1600, 1300], [1450, 1480], [1960, 1150],
-  [2080, 1460], [700, 1200], [540, 1500], [3200, 1200], [3400, 1450], [3050, 1480],
+  [2080, 1460], [700, 1290], [540, 1500], [3200, 1200], [3400, 1450], [3050, 1480],
   [700, 2100], [620, 2450], [1000, 2350], [1500, 2400], [2000, 2300], [3350, 2450],
 ];
 
@@ -67,6 +67,20 @@ export function carLoops(): [number, number][][] {
   const inner: [number, number][] = [[x0 + LANE, y0 + LANE], [x1 - LANE, y0 + LANE], [x1 - LANE, y1 - LANE], [x0 + LANE, y1 - LANE]];
   const outer: [number, number][] = [[x0 - LANE, y0 - LANE], [x0 - LANE, y1 + LANE], [x1 + LANE, y1 + LANE], [x1 + LANE, y0 - LANE]];
   return [inner, outer];
+}
+
+/** Paved aprons from a building to the road (drawn on the ground, not solid). */
+export const DRIVEWAYS = [
+  { id: 'home', x: 420, y: 1064, w: ROADS_X[0] - ROAD_W / 2 - SIDEWALK - 420, d: 130 },
+  { id: 'fire', x: ROADS_X[1] + ROAD_W / 2 + SIDEWALK, y: 1084, w: 2940 - (ROADS_X[1] + ROAD_W / 2 + SIDEWALK), d: 130 },
+];
+
+/** Where Nico's car waits at the start: on the home driveway, nose to the road. */
+export const PARKED_CAR = { x: 560, y: 1130, h: 0 };
+
+/** The spot in front of a building's door, where its action button appears. */
+export function doorOf(b: Building): [number, number] {
+  return [b.x + b.w / 2, b.y + b.d + 26];
 }
 
 export interface Rect { x: number; y: number; w: number; d: number }
