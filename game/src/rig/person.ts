@@ -8,7 +8,7 @@ import { BUILD_ID } from '../update';
 
 interface PartMeta { part: string; img: string; x: number; y: number; w: number; h: number }
 interface ArtMeta { res: number; height?: number; views: Record<View, PartMeta[]> }
-export type Who = 'nico' | 'james' | 'primo';
+export type Who = string;   // a folder in art/: 'nico', 'james', 'primo', townspeople...
 
 export const RIG_SCALE = 0.75;   // world px per rig unit (Nico ~ 132 px tall)
 export const OUTLINE = 6;        // rig units, matches the SVG sticker band

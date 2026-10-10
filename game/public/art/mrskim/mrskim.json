@@ -1,0 +1,296 @@
+{
+ "res": 2,
+ "height": 1.22,
+ "views": {
+  "side": [
+   {
+    "part": "ba",
+    "img": "art/mrskim/side_ba.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "bl",
+    "img": "art/mrskim/side_bl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "bs",
+    "img": "art/mrskim/side_bs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "fl",
+    "img": "art/mrskim/side_fl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "fs",
+    "img": "art/mrskim/side_fs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/mrskim/side_up.png",
+    "x": -40,
+    "y": -122,
+    "w": 79,
+    "h": 127
+   },
+   {
+    "part": "fa",
+    "img": "art/mrskim/side_fa.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "front": [
+   {
+    "part": "legl",
+    "img": "art/mrskim/front_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/mrskim/front_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/mrskim/front_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/mrskim/front_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/mrskim/front_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 76,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/mrskim/front_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/mrskim/front_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "back": [
+   {
+    "part": "legl",
+    "img": "art/mrskim/back_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/mrskim/back_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/mrskim/back_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/mrskim/back_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/mrskim/back_up.png",
+    "x": -37,
+    "y": -122,
+    "w": 74,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/mrskim/back_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/mrskim/back_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qfront": [
+   {
+    "part": "armf",
+    "img": "art/mrskim/qfront_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/mrskim/qfront_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/mrskim/qfront_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/mrskim/qfront_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/mrskim/qfront_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/mrskim/qfront_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 75,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/mrskim/qfront_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qback": [
+   {
+    "part": "armf",
+    "img": "art/mrskim/qback_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/mrskim/qback_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/mrskim/qback_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/mrskim/qback_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/mrskim/qback_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/mrskim/qback_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 68,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/mrskim/qback_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ]
+ }
+}

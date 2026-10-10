@@ -163,7 +163,7 @@ with sync_playwright() as p:
     check(back, f"it finishes its lap and goes home within a minute ({G()['truck']})")
     # James and Primo walk their routines; walk up to say hi; Primo's swing is taken
     t0 = {t['who']: t for t in G()['townsfolk']}
-    check(set(t0) == {'james', 'primo'} and all(t['art'] for t in t0.values()), f"James and Primo are in town with their own art ({list(t0)})")
+    check({'james', 'primo'} <= set(t0) and len(t0) >= 8 and all(t['art'] for t in t0.values()), f"James, Primo and the townspeople are in town with their own art ({list(t0)})")
     moved = 0   # (he may be stopped in at Burger Barn for a few seconds)
     for _ in range(16):
         pg.wait_for_timeout(500); t1 = {t['who']: t for t in G()['townsfolk']}

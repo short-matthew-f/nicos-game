@@ -49,7 +49,7 @@ export const BUILDINGS: Building[] = [
   // south: shops (the soccer field is behind them); south-east: storage; south-west: houses
   { id: 'parts', label: 'PARTS & TOOLS', x: 1430, y: 2760, w: 480, d: 230, h: 288, wall: '#9FB7C9', roof: '#34495E', trim: '#F9A826', kind: 'shop' },
   { id: 'toys', label: 'TOY SHOP', x: 2060, y: 2760, w: 430, d: 230, h: 288, wall: '#F7C8D0', roof: '#5FAFA5', trim: '#FFFFFF', kind: 'shop' },
-  { id: 'storage', label: 'STORAGE', x: 3400, y: 2720, w: 810, d: 203, h: 240, wall: '#E3A857', roof: '#7A8794', trim: '#34495E', kind: 'shop' },
+  { id: 'storage', label: 'STORAGE', x: 3400, y: 2720, w: 810, d: 203, h: 240, wall: '#E3A857', roof: '#7A8794', trim: '#FFE29A', kind: 'shop' },
   house('h5', 60, 2700, '#BFE0DA', '#D77B72'),
   house('h6', 400, 2700, '#F7E3C4', '#3E8F8A'),
   house('h7', 230, 3170, '#F2D6A2', '#5B78AA'),
@@ -89,7 +89,7 @@ export const TREES: [number, number][] = [
   [950, 1250], [60, 1180], [800, 2050], [980, 1960], [560, 2080],          // west
   [1400, 1230], [1905, 1330], [1480, 2060], [1800, 1960], [2900, 2080],    // middle
   [4720, 1240], [4760, 1900], [4120, 2050], [3300, 2060],                  // east
-  [2700, 2600], [2900, 2900], [1400, 3000],                                // south
+  [2700, 2600], [2900, 2900],                                              // south
   [4480, 2600], [4720, 3020], [4500, 3440], [3300, 2560],                  // south-east
   [900, 2600], [700, 3330], [960, 3150], [80, 3440],                       // south-west
 ];
@@ -126,7 +126,8 @@ export const PROPS: Prop[] = [
 function streetProps(): Prop[] {
   const out: Prop[] = [];
   const off = ROAD_W / 2 + SIDEWALK + 14;
-  for (const ry of ROADS_Y) for (let x = 180; x < WORLD.w; x += 420) for (const sg of [-1, 1]) out.push({ kind: 'lamp', x, y: ry + sg * off + (sg < 0 ? 0 : 18) });
+  // (north side of the east-west roads only: a lamp south of a road would draw up across it)
+  for (const ry of ROADS_Y) for (let x = 180; x < WORLD.w; x += 420) out.push({ kind: 'lamp', x, y: ry - off });
   for (const rx of ROADS_X) for (let y = 220; y < WORLD.h; y += 460) for (const sg of [-1, 1]) out.push({ kind: 'lamp', x: rx + sg * off, y });
   for (const rx of ROADS_X) for (const ry of ROADS_Y) out.push({ kind: 'hydrant', x: rx + off + 10, y: ry + off + 40 });
   return out;
@@ -193,9 +194,12 @@ const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.
 const drawnRect = (b: Building): Rect => ({ x: b.x - 10, y: b.y - b.h - 10, w: b.w + 20, d: b.d + b.h + 50 });
 const roadBand = ROAD_W / 2 + SIDEWALK;
 const busy: Rect[] = [...BUILDINGS.map(drawnRect), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
-  ...ROADS_X.map(x => ({ x: x - roadBand, y: 0, w: roadBand * 2, d: WORLD.h })), ...ROADS_Y.map(y => ({ x: 0, y: y - roadBand, w: WORLD.w, d: roadBand * 2 }))];
+  ...ROADS_X.map(x => ({ x: x - roadBand, y: 0, w: roadBand * 2, d: WORLD.h })), ...ROADS_Y.map(y => ({ x: 0, y: y - roadBand, w: WORLD.w, d: roadBand * 2 })),
+  // keep a clear lane from each door down toward the street
+  ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; })];
 for (const p of streetProps()) {
   const r = propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 };
+  if (PROPS.some(q => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < 160)) continue;   // no doubled-up lamps at corners
   if (!busy.some(b => hit(b, r)) && r.x > 10 && r.x + r.w < WORLD.w - 10 && r.y > 10 && r.y + r.d < WORLD.h - 10) PROPS.push(p);
 }
 

@@ -1,0 +1,296 @@
+{
+ "res": 2,
+ "height": 1.0,
+ "views": {
+  "side": [
+   {
+    "part": "ba",
+    "img": "art/leo/side_ba.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "bl",
+    "img": "art/leo/side_bl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "bs",
+    "img": "art/leo/side_bs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "fl",
+    "img": "art/leo/side_fl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "fs",
+    "img": "art/leo/side_fs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/leo/side_up.png",
+    "x": -36,
+    "y": -121,
+    "w": 75,
+    "h": 126
+   },
+   {
+    "part": "fa",
+    "img": "art/leo/side_fa.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "front": [
+   {
+    "part": "legl",
+    "img": "art/leo/front_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/leo/front_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/leo/front_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/leo/front_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/leo/front_up.png",
+    "x": -35,
+    "y": -122,
+    "w": 70,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/leo/front_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/leo/front_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "back": [
+   {
+    "part": "legl",
+    "img": "art/leo/back_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/leo/back_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/leo/back_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/leo/back_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/leo/back_up.png",
+    "x": -35,
+    "y": -122,
+    "w": 70,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/leo/back_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/leo/back_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qfront": [
+   {
+    "part": "armf",
+    "img": "art/leo/qfront_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/leo/qfront_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/leo/qfront_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/leo/qfront_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/leo/qfront_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/leo/qfront_up.png",
+    "x": -37,
+    "y": -122,
+    "w": 71,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/leo/qfront_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qback": [
+   {
+    "part": "armf",
+    "img": "art/leo/qback_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/leo/qback_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/leo/qback_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/leo/qback_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/leo/qback_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/leo/qback_up.png",
+    "x": -37,
+    "y": -122,
+    "w": 67,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/leo/qback_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ]
+ }
+}

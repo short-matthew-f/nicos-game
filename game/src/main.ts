@@ -1,4 +1,7 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, CullerPlugin, extensions } from 'pixi.js';
+
+// skip drawing (and filtering) anything off screen: most of the town, most of the time
+extensions.add(CullerPlugin);
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
@@ -40,7 +43,7 @@ async function main() {
   const resolution = Math.min(window.devicePixelRatio || 1, 2);
   await app.init({ resizeTo: host, background: '#B9DA9C', antialias: true, resolution, autoDensity: true, preference: 'webgl' });
   host.appendChild(app.canvas);
-  await loadArt(['nico', 'james', 'primo']);
+  await loadArt(['nico', ...TOWNSFOLK.map(t => t.who)]);
 
   const world = new Container();
   const layer = new Container(); layer.sortableChildren = true;
@@ -234,6 +237,7 @@ async function main() {
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };
   (window as unknown as { __game: unknown }).__game = game;
+  for (const c of layer.children) c.cullable = true;   // everything placed so far
   const updater = startUpdates(persist);
   document.getElementById('check-update')!.addEventListener('click', () => updater.check(true));
   Object.assign(game, { build: BUILD_ID, checkUpdate: () => updater.check(true) });
@@ -268,6 +272,7 @@ async function main() {
       if (horiz) { w.x = 100 + Math.random() * (WORLD.w - 200); w.y = ROADS_Y[Math.random() < 0.5 ? 0 : 1] + (Math.random() < 0.5 ? -98 : 98); }
       else { w.y = 100 + Math.random() * (WORLD.h - 200); w.x = ROADS_X[Math.random() < 0.5 ? 0 : 1] + (Math.random() < 0.5 ? -98 : 98); }
       view.setZoom(zoom, resolution);
+      view.root.cullable = true;
       layer.addChild(view.root);
       walkers.push(w);
     }

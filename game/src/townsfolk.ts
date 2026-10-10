@@ -4,7 +4,7 @@ import { ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, BUILDINGS, SWINGS, SLIDE, doorOf } 
 import type { Who } from './rig/person';
 
 export interface Stop { x: number; y: number; wait?: number; swing?: number }   // swing: seat index to swing on
-export interface Townie { who: Exclude<Who, 'nico'>; name: string; speed: number; route: Stop[]; lines: string[] }
+export interface Townie { who: Who; name: string; speed: number; route: Stop[]; lines: string[] }
 
 const SW = ROAD_W / 2 + SIDEWALK / 2;   // sidewalk centre, from a road's centre line
 const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
@@ -34,6 +34,27 @@ export const TOWNSFOLK: Townie[] = [
     lines: ['Nico! Come swing with me!', 'I can go SO high.', "Bet you can't catch me!", 'Can we get ice cream?', 'There are ducks in the pond!'],
   },
 ];
+
+// ---- townspeople (made up): walk the sidewalks and stop in at places. Each route stays on
+// its own block's sidewalks (no road crossings) and reaches doors from the side they face.
+const N0 = y0 - SW, S0 = y0 + SW, N1 = y1 - SW, S1 = y1 + SW, W0 = x0 - SW, E0 = x0 + SW, W1 = x1 - SW, E1 = x1 + SW;
+const school = door('school'), hospital = door('hospital'), icecream = door('icecream'), parts = door('parts'), toys = door('toys');
+const hi = ['Hi Nico!', 'Nice day, isn\'t it?', 'Have you tried the ice cream shop?', 'Watch out for the fire truck!', 'Goal! ...oh, wrong game.'];
+TOWNSFOLK.push(
+  { who: 'maya', name: 'Maya', speed: 140, lines: ['Hi Nico! School starts again soon.', 'I fed the ducks bread yesterday.', ...hi.slice(1, 3)],
+    route: [{ x: E0, y: 60 }, { x: E0, y: N0 }, { x: school[0], y: N0 }, { x: school[0], y: school[1], wait: 5 }, { x: school[0], y: N0 }, { x: W1, y: N0 }, { x: W1, y: 60, wait: 2 }, { x: W1, y: N0 }, { x: E0, y: N0 }] },
+  { who: 'leo', name: 'Leo', speed: 150, lines: ['Yo Nico!', 'The sundae is way better than the cone.', ...hi.slice(3)],
+    route: [{ x: E1, y: N1 }, { x: icecream[0], y: N1 }, { x: icecream[0], y: icecream[1], wait: 6 }, { x: icecream[0], y: N1 }, { x: 4780, y: N1 },
+            { x: E1, y: N1 }, { x: E1, y: S0 }, { x: 4780, y: S0, wait: 1 }, { x: E1, y: S0 }] },
+  { who: 'mrskim', name: 'Mrs. Kim', speed: 105, lines: ['Hello, dear!', 'Your garden looks lovely this year.', 'Mind the road, now.', 'In my day we had one bus and no traffic lights!'],
+    route: [{ x: 60, y: S0 }, { x: W0, y: S0, wait: 2 }, { x: W0, y: N1 }, { x: 60, y: N1, wait: 3 }, { x: W0, y: N1 }, { x: W0, y: S0 }] },
+  { who: 'sam', name: 'Sam', speed: 160, lines: ['Have you been in the toy shop? So cool.', 'I want to build a go-kart.', ...hi.slice(0, 2)],
+    route: [{ x: E0, y: S1 }, { x: E0, y: parts[1] }, { x: parts[0], y: parts[1], wait: 4 }, { x: toys[0], y: toys[1], wait: 6 }, { x: W1, y: toys[1] }, { x: W1, y: S1 }] },
+  { who: 'ava', name: 'Ava', speed: 135, lines: ['Hiya!', 'I lost my soccer ball. Have you seen it?', ...hi.slice(2, 4)],
+    route: [{ x: 60, y: S1 }, { x: W0, y: S1 }, { x: W0, y: 3460, wait: 2 }, { x: W0, y: S1 }] },
+  { who: 'mrbrooks', name: 'Mr. Brooks', speed: 115, lines: ['Morning, Nico.', 'Busy day at the hospital.', 'Tell your folks I said hello.', 'That fire truck is fast, eh?'],
+    route: [{ x: E1, y: 60 }, { x: E1, y: N0 }, { x: hospital[0], y: N0 }, { x: hospital[0], y: hospital[1], wait: 6 }, { x: hospital[0], y: N0 }, { x: 4780, y: N0, wait: 1 }, { x: E1, y: N0 }] },
+);
 
 /** Where someone is along their route: walking toward stop i, or waiting at it. */
 export interface Walk { i: number; x: number; y: number; wait: number; vx: number; vy: number }

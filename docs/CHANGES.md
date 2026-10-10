@@ -295,3 +295,18 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Ducks** (`world/ducks.ts`): three mallards paddle slow loops round the pond, bobbing, and face the way they swim.
 - **Benches:** walk up and tap "Sit". He sits facing out; "Stand up" or the stick gets him up.
 - **Tests:** Vitest 158 (kick direction and strength, out of reach, rolls to a stop, wall bounce, scores between the posts but not wide). e2e 66 (kick, dribble into the goal and score, Sit, Stand up offered, the stick stands him up).
+
+## 2026-10-09 (overnight): townspeople
+- **Six made-up townspeople** (`people.py` looks; `townsfolk.ts` routes). They have a spread of skin tones, hair and clothes, and three of them are grown-ups at about 1.2× Nico's height.
+  - Maya: the school.
+  - Leo: the ice cream shop.
+  - Mrs. Kim: the sidewalks by Nico's house.
+  - Sam: the parts and toy shops.
+  - Ava: the south-west houses.
+  - Mr. Brooks: the hospital.
+
+  Each walks their own block's sidewalks, with no road crossings, stops in at doors from the side the door faces, and has a few things to say when Nico says hi. The route tests cover all of them. Townspeople can kick the soccer ball if they walk into it.
+- **Off-screen culling** (Pixi `CullerPlugin`, `cullable` on everything in the world): characters, cars and props off screen aren't drawn or filtered, which matters with 9 live-outlined people.
+- **Streetlamps:** only on the north side of the east-west roads (a lamp south of a road drew up across it, as if it stood in the road), 120 px tall instead of 150, and no doubled lamps at corners. Door lanes are kept clear of lamps; this was caught by Maya's and Leo's route tests at the school and ice cream doors.
+- The STORAGE sign was navy on navy, so its trim is now cream.
+- **Tests:** Vitest 170, e2e 66.

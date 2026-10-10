@@ -173,9 +173,9 @@ export function drawProp(p: Prop): Container {
   switch (p.kind) {
     case 'lamp':
       sh(14, 5);
-      g.roundRect(x - 5 - BAND / 2, y - 150, 10 + BAND, 152, 5).fill('#FFFFFF').roundRect(x - 5, y - 148, 10, 148, 4).fill('#34495E');
-      g.roundRect(x - 18, y - 168, 36, 24, 10).fill('#FFFFFF').roundRect(x - 14, y - 164, 28, 18, 8).fill('#34495E')
-       .roundRect(x - 10, y - 152, 20, 8, 3).fill('#FFE9A8');
+      g.roundRect(x - 5 - BAND / 2, y - 120, 10 + BAND, 122, 5).fill('#FFFFFF').roundRect(x - 5, y - 118, 10, 118, 4).fill('#34495E');
+      g.roundRect(x - 18, y - 138, 36, 24, 10).fill('#FFFFFF').roundRect(x - 14, y - 134, 28, 18, 8).fill('#34495E')
+       .roundRect(x - 10, y - 122, 20, 8, 3).fill('#FFE9A8');
       break;
     case 'hydrant':
       sh(14, 5);

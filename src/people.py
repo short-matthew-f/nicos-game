@@ -200,6 +200,25 @@ LOOKS = {
                   shirt='#2456C8', shirt2='#1C45A6', sleeve='#2456C8', trim='#FFFFFF',
                   pants='#A39B78', pants2='#8E8766', shoe='#3A3D44', shoe2='#30333A', height=0.86,
                   camo=('#A39B78', '#6E6A4C', '#8C6F5E', '#C9C0A0')),
+    # townspeople (made up, not real people): a spread of skin tones, hair and clothes
+    'maya': Look('maya', skin='#C68B62', skin2='#B07650', hair='#2A1E18', hl='#4A362A', style='shaggy', top='tee',
+                 shirt='#F07B5F', shirt2='#D9654B', sleeve='#F07B5F', trim='#FFFFFF',
+                 pants='#4A6FA5', pants2='#3E5F8E', shoe='#E9EEF3', shoe2='#C9D0D8', height=0.95),
+    'leo': Look('leo', skin='#8D5A3B', skin2='#7A4C31', hair='#1E1612', style='short', top='hoodie',
+                shirt='#3E8F5A', shirt2='#33774A', sleeve='#3E8F5A', trim='#E9EEF3',
+                pants='#5A6472', pants2='#4B545F', shoe='#2F343C', shoe2='#272B32', height=1.0),
+    'mrskim': Look('mrskim', skin='#F1C6A6', skin2='#DFA683', hair='#C9C9C9', hl='#E6E6E6', style='shaggy', top='hoodie',
+                   shirt='#7B5BA6', shirt2='#684C8F', sleeve='#7B5BA6', trim='#F4F6F8',
+                   pants='#C9B48A', pants2='#B39E76', shoe='#6B4E3A', shoe2='#5A4131', height=1.22),
+    'sam': Look('sam', skin='#F3CFB3', skin2='#E2B497', hair='#C46A2C', style='short', top='tee',
+                shirt='#F2C14E', shirt2='#D9A93A', sleeve='#F2C14E', trim='#FFFFFF',
+                pants='#34466B', pants2='#2A3957', shoe='#E5484D', shoe2='#C2353A', height=0.9),
+    'ava': Look('ava', skin='#A86F4B', skin2='#94603F', hair='#3B2618', hl='#5C3E28', style='shaggy', top='tee',
+                shirt='#2FA4A0', shirt2='#278A87', sleeve='#2FA4A0', trim='#FFFFFF',
+                pants='#E8E1D3', pants2='#D3CBBB', shoe='#5B8FD6', shoe2='#4A79B8', height=0.92),
+    'mrbrooks': Look('mrbrooks', skin='#7A4A2E', skin2='#673D25', hair='#1A1411', style='short', top='hoodie',
+                     shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
+                     pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
 }
 
 @contextmanager
