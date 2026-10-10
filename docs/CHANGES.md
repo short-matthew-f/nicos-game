@@ -347,3 +347,16 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Spot priorities:** James waiting at Burger Barn's door, or Mr. Brooks at the hospital's, lost the tie to the door's "Go in". So you couldn't say hi, and Mr. Brooks couldn't pay for the package job. The e2e caught both once the fire call made the run longer. Order now: job step (1) > swing (0.6, even with Primo on the other one) > people (0.5) > doors and everything else (0).
 - The +10 people / Clear stress-test buttons only show with `?debug` in the address (the e2e uses it). The frame-rate counter stays, for the iPad report.
 - **Tests:** Vitest 177. e2e 77: a building is on fire with a toast, the truck stops there and sprays, then goes home.
+
+## 2026-10-09 (overnight): rooftop landmarks
+- Buildings were plain boxes, so each now has a landmark on its roof, readable even from the overview:
+  - a giant burger on Burger Barn;
+  - a giant cone on the ice cream shop;
+  - a teddy bear on the toy shop;
+  - a gear on Parts & Tools;
+  - a red cross on the hospital;
+  - the alarm bell on the fire station;
+  - a flag waving over the school;
+  - chimneys on the houses.
+- Storage units have a row of numbered orange roll-up doors (with the office door kept), and the garage has one big roll-up door for the car.
+- Vitest 177, e2e 77.

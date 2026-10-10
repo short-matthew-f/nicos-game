@@ -82,19 +82,27 @@ export function drawBuilding(b: Building): Container {
   const doorX = b.x + b.w / 2 - doorW / 2;
   const n = Math.max(1, Math.floor((b.w - 80) / 130));
   const rows = b.h > 200 ? 2 : 1, rowH = (b.h - 20) / rows;
-  for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) {
+  if (b.id === 'storage') rollUpDoors(g, b, front);
+  else if (b.id === 'garage') {   // one big roll-up door for the car
+    const w = b.w * 0.62, x = b.x + (b.w - w) / 2, y = front + 34, h = b.h - 34;
+    g.roundRect(x - 6, y - 6, w + 12, h + 6, 6).fill('#FFFFFF').roundRect(x, y, w, h, 4).fill('#B8C3CF');
+    for (let k = y + 14; k < y + h - 4; k += 16) g.rect(x, k, w, 3).fill('#9AA3B0');
+  }
+  else for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) {
     const cx = b.x + (b.w / (n + 1)) * (i + 1), wy = front + 26 + r * rowH;
     const byDoor = Math.abs(cx - (doorX + doorW / 2)) < 80 && r === rows - 1;
     if (byDoor || b.bays?.some(x => Math.abs(cx - x) < 120) && r === rows - 1) continue;
     g.roundRect(cx - 34, wy, 68, 52, 6).fill(frame).roundRect(cx - 28, wy + 6, 56, 40, 4).fill(winC)
      .rect(cx - 1.5, wy + 6, 3, 40).fill(frame);
   }
-  g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 8).fill(shade(b.wall, 0.62))
+  if (b.id !== 'garage') g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 8).fill(shade(b.wall, 0.62))
    .circle(doorX + doorW - 14, b.y + b.d - doorH / 2, 4).fill(shade(b.wall, 0.4));
   for (const x of b.bays ?? []) {   // open vehicle bays, dark inside
     g.roundRect(x - 78, front + 30, 156, b.h - 30, 6).fill(frame).roundRect(x - 70, front + 38, 140, b.h - 38, 4).fill('#2C3440');
   }
   c.addChild(g);
+  const deco = roofDeco(b);
+  if (deco) c.addChild(deco);
   if (b.label) {
     const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 30, fill: '#2B3F55', letterSpacing: 1.5 } });
     t.anchor.set(0.5);
@@ -108,6 +116,82 @@ export function drawBuilding(b: Building): Container {
 }
 
 /** A tree about twice Nico's height. (x, y) is the foot of the trunk. */
+/** Storage units: a row of numbered roll-up doors along the front. */
+function rollUpDoors(g: Graphics, b: Building, front: number) {
+  const n = Math.floor((b.w - 40) / 120), w = (b.w - 40) / n;
+  for (let i = 0; i < n; i++) {
+    const x = b.x + 20 + i * w + 8, y = front + 30, h = b.h - 30;
+    if (Math.abs(x + (w - 16) / 2 - (b.x + b.w / 2)) < 50) continue;   // the office door
+    g.roundRect(x, y, w - 16, h, 4).fill('#F4F6F8').roundRect(x + 4, y + 4, w - 24, h - 4, 3).fill('#F28C38');
+    for (let k = y + 16; k < y + h - 4; k += 14) g.rect(x + 4, k, w - 24, 3).fill('#D9732A');
+    g.roundRect(x + (w - 16) / 2 - 16, y + 10, 32, 22, 4).fill('#FFFFFF');
+  }
+}
+
+/** Landmarks on the roofs so places are easy to spot from a distance. Drawn in roof space:
+ * the roof's top-left is (b.x, b.y - b.h), its size b.w x b.d. */
+function roofDeco(b: Building): Container | null {
+  const g = new Graphics(), cx = b.x + b.w / 2, top = b.y - b.h, cy = top + b.d * 0.42;
+  const W = '#FFFFFF';
+  switch (b.id) {
+    case 'burger': {   // a giant burger
+      g.ellipse(cx, cy + 34, 92, 22).fill({ color: NAVY, alpha: 0.18 });
+      g.roundRect(cx - 86, cy - 48, 172, 104, 50).fill(W);
+      g.ellipse(cx, cy - 12, 78, 36).fill('#E3A12F').ellipse(cx, cy - 20, 70, 24).fill('#F0B84C');      // top bun
+      for (const [dx, dy] of [[-30, -32], [0, -38], [28, -30], [-12, -24], [16, -22]]) g.ellipse(cx + dx, cy + dy, 5, 3).fill('#FFF1C6');   // seeds
+      g.poly([cx - 80, cy + 6, cx - 60, cy + 18, cx - 40, cy + 6, cx - 20, cy + 18, cx, cy + 6, cx + 20, cy + 18, cx + 40, cy + 6, cx + 60, cy + 18, cx + 80, cy + 6, cx + 80, cy + 2, cx - 80, cy + 2]).fill('#6FBF5A');   // lettuce
+      g.roundRect(cx - 76, cy + 12, 152, 18, 9).fill('#8A4B2A');                                        // patty
+      g.roundRect(cx - 74, cy + 30, 148, 18, 9).fill('#E3A12F');                                        // bottom bun
+      break;
+    }
+    case 'icecream': {   // a giant cone
+      g.roundRect(cx - 52, cy - 86, 104, 160, 40).fill(W);
+      g.poly([cx - 34, cy - 10, cx, cy + 66, cx + 34, cy - 10]).fill('#E3A857');
+      for (let k = 0; k < 4; k++) g.rect(cx - 26 + k * 16, cy - 8, 2, 40 - k * 6).fill('#C98A3E');
+      g.circle(cx, cy - 26, 30).fill('#FFB3C7').circle(cx - 14, cy - 50, 22).fill('#B8F0D8').circle(cx + 14, cy - 50, 22).fill('#FFF1C6')
+       .circle(cx + 2, cy - 74, 8).fill('#E5484D');                                                     // cherry
+      break;
+    }
+    case 'toys': {   // a teddy bear
+      g.circle(cx, cy - 6, 52).fill(W).circle(cx - 32, cy - 44, 20).fill(W).circle(cx + 32, cy - 44, 20).fill(W);
+      g.circle(cx - 32, cy - 44, 14).fill('#B07A4A').circle(cx + 32, cy - 44, 14).fill('#B07A4A').circle(cx, cy - 6, 44).fill('#C48A55')
+       .ellipse(cx, cy + 8, 18, 13).fill('#E9C7A0').circle(cx, cy + 2, 5).fill(NAVY).circle(cx - 15, cy - 16, 4).fill(NAVY).circle(cx + 15, cy - 16, 4).fill(NAVY)
+       .rect(cx - 22, cy + 30, 44, 10).fill('#E5484D');
+      break;
+    }
+    case 'parts': {   // a gear
+      const r = 40;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.roundRect(cx + Math.cos(a) * r - 12, cy + Math.sin(a) * r * 0.8 - 12, 24, 24, 4).fill(W); }
+      g.ellipse(cx, cy, r + 6, (r + 6) * 0.8).fill(W);
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.roundRect(cx + Math.cos(a) * r - 8, cy + Math.sin(a) * r * 0.8 - 8, 16, 16, 3).fill('#9AA3B0'); }
+      g.ellipse(cx, cy, r, r * 0.8).fill('#9AA3B0').ellipse(cx, cy, 14, 11).fill('#34495E');
+      break;
+    }
+    case 'school': {   // a flagpole with a waving flag
+      const px = b.x + b.w - 70, py = top + b.d * 0.6;
+      g.rect(px - 3, py - 140, 6, 140).fill(W).rect(px - 1.5, py - 138, 3, 138).fill('#9AA3B0');
+      g.poly([px, py - 136, px + 64, py - 124, px + 58, py - 108, px, py - 96]).fill(W).poly([px + 2, py - 132, px + 58, py - 122, px + 53, py - 110, px + 2, py - 100]).fill('#E5484D');
+      g.circle(px, py - 140, 6).fill('#F9C846');
+      break;
+    }
+    case 'hospital':   // a big red cross
+      g.circle(cx, cy, 52).fill(W).circle(cx, cy, 46).fill('#FFFFFF').roundRect(cx - 12, cy - 34, 24, 68, 4).fill('#E5484D').roundRect(cx - 34, cy - 12, 68, 24, 4).fill('#E5484D');
+      break;
+    case 'fire': {   // the alarm bell
+      g.roundRect(cx - 40, cy - 58, 80, 76, 14).fill(W).roundRect(cx - 34, cy - 52, 68, 64, 10).fill('#8C2F2B');
+      g.poly([cx - 20, cy - 4, cx - 14, cy - 40, cx + 14, cy - 40, cx + 20, cy - 4]).fill('#F9C846').circle(cx, cy, 6).fill('#E3A12F');
+      break;
+    }
+    default:
+      if (b.kind !== 'house') return null;
+      // a chimney toward one end of the roof
+      g.roundRect(b.x + b.w * 0.72 - 6, top + 8 - 6, 46, 64, 6).fill(W).roundRect(b.x + b.w * 0.72, top + 8, 34, 52, 4).fill('#B5654F')
+       .rect(b.x + b.w * 0.72 - 2, top + 8, 38, 10).fill('#8A4B3A');
+  }
+  const c = new Container(); c.addChild(g);
+  return c;
+}
+
 export function drawTree(x: number, y: number): Container {
   const g = new Graphics();
   const R = 62, TW = 30, TH = 90, CY = y - TH - R * 0.55;   // canopy radius, trunk, canopy centre
