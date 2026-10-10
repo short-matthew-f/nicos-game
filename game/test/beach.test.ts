@@ -42,3 +42,23 @@ describe('the beach', () => {
     expect(TOOLS.find(t => t.id === 'detector')!.price).toBeGreaterThan(0);
   });
 });
+
+import { inPool, atEdge, climbOut, SPLASH, waterSlideAt, WSLIDE_T } from '../src/play';
+import { POOL } from '../src/world/zones';
+describe('the pool', () => {
+  it('climbing out anywhere round the edge lands on the deck, somewhere Nico can stand', () => {
+    for (let x = POOL.x + 30; x < POOL.x + POOL.w - 30; x += 40) for (const y of [POOL.y + 60, POOL.y + POOL.d - 20]) {
+      const [px, py] = inPool(x, y); expect(atEdge(px, py), `${px},${py}`).toBe(true);
+      const [ox, oy] = climbOut(px, py); expect(freeAt(ox, oy, SOLIDS, WORLD), `out at ${ox},${oy}`).toBe(true);
+    }
+    for (let y = POOL.y + 60; y < POOL.y + POOL.d; y += 40) for (const x of [POOL.x + 20, POOL.x + POOL.w - 20]) {
+      const [ox, oy] = climbOut(...inPool(x, y)); expect(freeAt(ox, oy, SOLIDS, WORLD), `out at ${ox},${oy}`).toBe(true);
+    }
+  });
+  it('the water slide ends in the water, away from the edge', () => {
+    expect(inPool(...SPLASH)).toEqual(SPLASH);
+    expect(atEdge(...SPLASH)).toBe(false);
+    expect(waterSlideAt(WSLIDE_T.climb + WSLIDE_T.sit + WSLIDE_T.slide + 0.01)).toBeNull();
+    expect(waterSlideAt(0.5)!.view).toBe('back');   // climbing
+  });
+});

@@ -556,3 +556,14 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - **Fox:** new, two of them in the forest. Very shy: it flees from 330 px.
 - **The ranger** (the cabin now has a door, as do the barn and the pool house) pays $3 for each animal's photo the first time you show it.
 - **Tests:** star scoring. e2e: buy the camera, the camera is offered near a deer, the viewfinder and Snap appear, nothing in frame gives no photo, the deer in frame gives 2+ stars, put it away, the ranger pays (149 checks).
+
+## 2026-10-10: the pool: water slide, swimming, a floating ring (Nico's idea)
+- **🛝 Water slide:** at the tower's foot. Nico climbs the ladder (back view), sits at the top, and whooshes round the twisting chute, which speeds up as it goes. The chute now comes down to the water. Then a splash (sound and a ripple ring), and he's swimming (`waterSlideAt`, `WSLIDE` in `zones.ts`).
+- **🏊 Jump in:** from the deck on the pool's south side.
+- **Swimming:**
+  - The stick steers at 150 px/s (100 on the ring), kept inside the pool. He bobs gently.
+  - A **mask cuts him off at the waterline**, so the pool, its lane ropes and the shimmer show below, with a ripple ring round him. A first version covered his legs with a patch of pool colour, which hid the ropes.
+  - He's drawn lower without moving: `Body.dy`. A first version moved him down every frame, so he drifted to the bottom.
+- **🛟 Float on a ring:** the action button toggles a red-and-white ring. He floats higher and bobs slower.
+- **🪜 Climb out:** offered within 46 px of an edge. He steps straight out onto the deck, or a step along the edge if a lounger's in the way (found by a test).
+- **Tests:** climbing out anywhere round the edge lands on free deck; the slide ends in the water, away from the edge. e2e: the slide, splash, swim, ring, climb out, jump in from the deck, climb out again (158 checks).

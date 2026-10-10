@@ -58,6 +58,8 @@ export function oceanSolids(): { x: number; y: number; w: number; d: number }[] 
 export const LAKE = { x: 6950, y: 330, w: 800, d: 420 };
 /** The swimming pool (water: solid for now) inside the pool park. */
 export const POOL = { x: 1820, y: 3880, w: 700, d: 360 };
+/** The water slide tower's foot (the chute twists from its top down to the pool's top edge). */
+export const WSLIDE = { x: 1760, y: 3860 };
 
 export const ZONE_LOTS = [
   { id: 'pooldeck', x: 1660, y: 3740, w: 1240, d: 640, fill: '#DCEFF5' },
@@ -87,7 +89,7 @@ export const ZONE_PROPS: ZoneProp[] = [
   { kind: 'umbrella', x: 5450, y: 4220, color: '#2F7FD8' }, { kind: 'sandcastle', x: 6300, y: 3730 },
   { kind: 'lighthouse', x: 7230, y: 2700 },
   // the pool park
-  { kind: 'waterslide', x: 1760, y: 3860 },
+  { kind: 'waterslide', x: WSLIDE.x, y: WSLIDE.y },
   { kind: 'lounge', x: 2000, y: 4320 }, { kind: 'lounge', x: 2160, y: 4320 }, { kind: 'lounge', x: 2320, y: 4320 },
   { kind: 'umbrella', x: 2640, y: 4300, color: '#7FD1E8' },
   // the farm

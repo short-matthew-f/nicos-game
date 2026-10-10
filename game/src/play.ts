@@ -1,6 +1,8 @@
 // Playground activities: short scripted moves where the game drives Nico's pose. Each is a
 // pure function of time, so it can be tested without drawing anything.
-import { SLIDE, SWINGS, SWING_BAR, SWING_SEAT } from './world/map';
+import { SLIDE, SWINGS, SWING_BAR, SWING_SEAT, SOLIDS, WORLD } from './world/map';
+import { freeAt } from './player';
+import { WSLIDE, POOL } from './world/zones';
 import type { View } from './rig/pose';
 
 export interface Body {
@@ -9,6 +11,7 @@ export interface Body {
   amp: number; crouch: number; hold: number; sit: number;
   z: number;                       // draw order (in front of the equipment while on it)
   sy: number;                      // extra vertical scale (swinging toward the camera)
+  dy?: number;                     // drawn this much lower than (x, y) without moving there (in the water)
 }
 
 const lerp = (a: number, b: number, u: number) => a + (b - a) * Math.max(0, Math.min(1, u));
@@ -66,4 +69,39 @@ export function swingAt(t: number, seat: number): { body: Body; chain: number } 
   // feet hang a little below the plank; Nico draws between the frame and his seat
   const y = SWING_BAR + (SWING_SEAT + 22 - SWING_BAR) * chain;
   return { chain, body: { x: seatX(seat), y, view: 'front', face: 1, amp: 0, crouch: 1, hold: 0, sit: 0, z: SWINGS.y + 1, sy: 0.96 + 0.08 * (chain - 1) / 0.32 } };
+}
+
+// ---- the water slide: climb the tower, sit at the top, whoosh round the twisting chute, splash
+export const WSLIDE_T = { climb: 1.1, sit: 0.3, slide: 1.4 };
+const W0 = [WSLIDE.x + 40, WSLIDE.y - 300], W1 = [WSLIDE.x + 260, WSLIDE.y - 300], W2 = [WSLIDE.x + 40, WSLIDE.y - 150], W3 = [WSLIDE.x + 230, WSLIDE.y + 50];   // (the chute comes right down to the water)
+const bez = (u: number) => [0, 1].map(i => (1 - u) ** 3 * W0[i] + 3 * (1 - u) ** 2 * u * W1[i] + 3 * (1 - u) * u * u * W2[i] + u ** 3 * W3[i]) as [number, number];
+/** Where he lands: the chute's end, dropped to the water's surface. */
+export const SPLASH: [number, number] = [W3[0], POOL.y + 130];   // (well in: not close enough to an edge to climb straight out)
+/** Nico on the water slide at time t (null: he's splashed down). (He's drawn where the chute is drawn.) */
+export function waterSlideAt(t: number): Body | null {
+  const T = WSLIDE_T, z = WSLIDE.y + 2, pose = { face: 1, hold: 0, sy: 1 };
+  if (t < T.climb) { const u = t / T.climb; return { ...pose, x: WSLIDE.x, y: lerp(WSLIDE.y + 10, W0[1] + 4, u), view: 'back', amp: 1, crouch: 0, sit: 0, z }; }
+  if (t < T.climb + T.sit) { return { ...pose, x: lerp(WSLIDE.x, W0[0], (t - T.climb) / T.sit), y: W0[1] + 4, view: 'front', amp: 0, crouch: 1, sit: 1, z }; }
+  const u = (t - T.climb - T.sit) / T.slide;
+  if (u >= 1) return null;
+  const [x, y] = bez(ease(u) * 0.6 + u * 0.4);   // speeds up as it goes
+  return { ...pose, x, y: y + 4, view: 'front', amp: 0, crouch: 1, sit: 1, z };
+}
+
+// ---- swimming
+export const SWIM = { speed: 150, ringSpeed: 100, edge: 46, inset: 26 };
+/** Keep a swimmer inside the pool. */
+export const inPool = (x: number, y: number): [number, number] =>
+  [Math.min(POOL.x + POOL.w - SWIM.inset, Math.max(POOL.x + SWIM.inset, x)), Math.min(POOL.y + POOL.d - 10, Math.max(POOL.y + SWIM.inset + 30, y))];
+/** Close enough to an edge to climb out? */
+export const atEdge = (x: number, y: number) =>
+  x - POOL.x < SWIM.edge || POOL.x + POOL.w - x < SWIM.edge || y - POOL.y < SWIM.edge + 30 || POOL.y + POOL.d - y < SWIM.edge;
+/** Where he stands after climbing out at (x, y): straight out over the nearest edge, onto the deck. */
+export function climbOut(x: number, y: number): [number, number] {
+  const d = [x - POOL.x, POOL.x + POOL.w - x, y - POOL.y, POOL.y + POOL.d - y], i = d.indexOf(Math.min(...d));
+  const at = (along: number, out: number): [number, number] =>
+    i === 0 ? [POOL.x - out, y + along] : i === 1 ? [POOL.x + POOL.w + out, y + along] : i === 2 ? [x + along, POOL.y - out + 10] : [x + along, POOL.y + POOL.d + out + 10];
+  // straight out if that's clear; otherwise a step along the edge (a lounger might be in the way)
+  for (const along of [0, 40, -40, 80, -80, 120, -120]) for (const out of [50, 90]) { const p = at(along, out); if (freeAt(p[0], p[1], SOLIDS, WORLD)) return p; }
+  return at(0, 50);
 }

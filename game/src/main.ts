@@ -21,7 +21,8 @@ import { load, save as writeSave, VERSION, type Save } from './state';
 import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
-import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
+import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
+import { POOL, WSLIDE } from './world/zones';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -170,7 +171,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim'; t: number; from: [number, number]; seat: number } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -186,6 +187,7 @@ async function main() {
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
     if (play.kind === 'camera') viewfinder.hidden = true;
+    if (play.kind === 'swim') { waterSkin.visible = ring.visible = false; nico.view.root.mask = null; swimMask.clear(); floating = false; const [ox, oy] = climbOut(nico.x, nico.y); nico.x = ox; nico.y = oy; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
     Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
@@ -218,6 +220,28 @@ async function main() {
   const snapSpot: Spot = { id: 'snap', x: 0, y: 0, r: Infinity, label: '📸 Snap!', run: snap };
   const cameraSpot: Spot = { id: 'camera', x: 0, y: 0, r: Infinity, priority: -0.5, label: '📷 Camera', run: startCamera,
     when: () => mode === 'walk' && biz.tools.includes('camera') && animals.list.some(a => Math.hypot(a.x - nico.x, a.y - nico.y) < CAM.reach) };
+  // the pool: the water slide, swimming (the water hides his legs), floating on a ring
+  // (a mask cuts him off at the waterline, so the pool, its ropes and shimmer show below; a ripple rings him)
+  const waterSkin = new Graphics().ellipse(0, -36, 50, 11).stroke({ width: 5, color: '#FFFFFF', alpha: 0.7 }).ellipse(0, -36, 40, 7).fill({ color: '#7CD3EF', alpha: 0.6 });
+  const swimMask = new Graphics(); layer.addChild(swimMask);
+  const ring = new Graphics();
+  ring.ellipse(0, -34, 52, 19).fill('#FFFFFF').ellipse(0, -34, 48, 16).fill('#E5484D').ellipse(0, -36, 30, 8).fill('#4FC3E8');
+  for (const a of [0.4, 1.6, 2.7]) ring.ellipse(Math.cos(a) * 40, -34 + Math.sin(a) * 13, 7, 9).fill('#FFFFFF');
+  waterSkin.visible = ring.visible = false; layer.addChild(waterSkin, ring);
+  let floating = false;
+  const splashes: { g: Graphics; t: number }[] = [];
+  function splash(x: number, y: number) {
+    sfx.splash();
+    const g = new Graphics().ellipse(0, 0, 40, 12).stroke({ width: 5, color: '#FFFFFF', alpha: 0.9 }); g.position.set(x, y); g.zIndex = y + 1; layer.addChild(g); splashes.push({ g, t: 0 });
+  }
+  function startWaterslide() { mode = 'play'; play = { kind: 'waterslide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
+  function startSwim(x: number, y: number) {
+    [nico.x, nico.y] = inPool(x, y); mode = 'play'; play = { kind: 'swim', t: 0, from: [nico.x, nico.y], seat: 0 };
+    splash(nico.x, nico.y - 30); waterSkin.visible = true;
+  }
+  const swimSpot: Spot = { id: 'swimact', x: 0, y: 0, r: Infinity,
+    label: () => (atEdge(nico.x, nico.y) ? '🪜 Climb out' : floating ? '🛟 Ring off' : '🛟 Float on a ring'),
+    run: () => { if (atEdge(nico.x, nico.y)) { stopPlay(); return; } floating = !floating; ring.visible = floating; sfx.tap(); } };
   const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
   const standUp: Spot = { id: 'stand', x: 0, y: 0, r: Infinity, label: 'Stand up', run: stopPlay };
   function sitOnBench(bx: number, by: number) { mode = 'play'; play = { kind: 'bench', t: 0, from: [bx, by], seat: 0 }; }
@@ -458,7 +482,9 @@ async function main() {
       if (advanceJob(job)) payJob();
     },
   };
-  spots.push(jobSpot, digSpot, cameraSpot);
+  spots.push(jobSpot, digSpot, cameraSpot,
+    { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
+    { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
   const jobEl = document.getElementById('job')!;
   jobEl.addEventListener('click', () => {
@@ -628,6 +654,21 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'waterslide') {
+        const w = waterSlideAt(play.t);
+        if (w) b = w;
+        else { startSwim(SPLASH[0], SPLASH[1]); b = { x: nico.x, y: nico.y, view: 'front', face: 1, amp: 0, crouch: 0, hold: 0, sit: 0, z: nico.y, sy: 1 }; }
+      } else if (play.kind === 'swim') {
+        // paddling about: the stick steers (slower on the ring); the water hides everything below his chest
+        const sp = floating ? SWIM.ringSpeed : SWIM.speed, vx = input.vx * sp, vy = input.vy * sp;
+        [nico.x, nico.y] = inPool(nico.x + vx * dt, nico.y + vy * dt);
+        Object.assign(nico.st, chooseView(vx, vy, nico.st));
+        const bob = Math.sin(play.t * (floating ? 2 : 4)) * (floating ? 4 : 2), sink = floating ? 8 : 20;
+        b = { x: nico.x, y: nico.y, dy: sink + bob, view: nico.st.view, face: nico.st.face, amp: Math.hypot(input.vx, input.vy) > 0.1 ? 1 : 0.35, crouch: 0, hold: 0, sit: 0, z: nico.y, sy: 1 };
+        waterSkin.position.set(nico.x, nico.y + bob * 0.3); waterSkin.zIndex = nico.y + 0.5;
+        const line = nico.y + bob * 0.3 - 36;
+        swimMask.clear().rect(nico.x - 150, line - 400, 300, 400).fill(0xffffff); nico.view.root.mask = swimMask;
+        ring.position.set(nico.x, nico.y + (floating ? 6 : 0) + bob); ring.zIndex = nico.y + 0.6;
       } else if (play.kind === 'camera') {
         // standing still, camera up; the stick moves where it's pointing (not too far off)
         aim[0] += input.vx * CAM.aimSpeed * dt; aim[1] += input.vy * CAM.aimSpeed * dt;
@@ -651,7 +692,7 @@ async function main() {
         nico.x = b.x; nico.y = b.y;
         Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, sit: b.sit, stride_y: 0 });
         stepGait(nico.st, b.amp * 150, 0, dt);   // (climbing the ladder: a steady step)
-        nico.view.pose(nico.x, nico.y, nico.st);
+        nico.view.pose(nico.x, nico.y + (b.dy ?? 0), nico.st);   // (dy: drawn lower, not moved: sunk in the water)
         nico.view.root.zIndex = b.z;
         nico.view.root.scale.y *= b.sy;
       }
@@ -713,6 +754,8 @@ async function main() {
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
+    for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
+    splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
     animals.update(dt, [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]]);
     clouds.update(dt);
     const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y], ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
@@ -767,7 +810,7 @@ async function main() {
     spots[0].x = car.x; spots[0].y = car.y;
     cameraSpot.x = nico.x; cameraSpot.y = nico.y;
     action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
-      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : null) : nearest(spots, nico.x, nico.y));
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : play?.kind === 'swim' ? swimSpot : null) : nearest(spots, nico.x, nico.y));
     boostEl.hidden = boost <= 0;
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
@@ -844,7 +887,7 @@ async function main() {
       animals: animals.list.map(a => ({ kind: a.kind, x: a.x, y: a.y, scared: a.scared > 0 })),
       shells: shells.spots.filter(q => q.gone <= 0).map(q => ({ x: q.x, y: q.y, kind: q.kind })), buried: treasure.spots.map(([x, y]) => ({ x, y })), signal,
       use: (id: string) => { spots.find(q => q.id === id)?.run(); },   // (tests: use a spot by name, whoever else is standing near it)
-      photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
+      floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,

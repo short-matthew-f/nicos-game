@@ -413,9 +413,9 @@ export function drawProp(p: Prop): Container {
       g.roundRect(x - 50, y - 300, 100, 302, 10).fill('#FFFFFF').roundRect(x - 44, y - 294, 88, 294, 8).fill('#F9A826');
       for (let k = y - 280; k < y - 10; k += 28) g.rect(x - 30, k, 60, 8).fill('#FFE29A');
       g.roundRect(x - 56, y - 316, 112, 24, 8).fill('#FFFFFF').roundRect(x - 52, y - 312, 104, 16, 6).fill('#D9822B');
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 44, color: '#FFFFFF', cap: 'round' });
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 34, color: '#2F7FD8', cap: 'round' });
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 10, color: '#7CC6E6', cap: 'round' });
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 44, color: '#FFFFFF', cap: 'round' });
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 34, color: '#2F7FD8', cap: 'round' });
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 10, color: '#7CC6E6', cap: 'round' });
       break;
     }
     case 'lounge':
