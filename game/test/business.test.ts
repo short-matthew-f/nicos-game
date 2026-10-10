@@ -4,6 +4,8 @@ import {
   makeUnit, lineup, guess, buyUnit, sellOne, shelfValue, goalPlace, worth, sellPrice, freshBiz, has, missing, add, use, unlocks, carPrice, nextGoal,
 } from '../src/business';
 import { START_MONEY } from '../src/state';
+import { PRODUCTS, product, unlockedProducts, partsCost, priceOf, runProgram, ROBOT_LEVEL, type Move } from '../src/business';
+import { PLANS } from '../src/plans';
 import { JOBS } from '../src/jobs';
 import { COIN_SPOTS, COIN } from '../src/world/life';
 
@@ -115,7 +117,10 @@ describe('what Nico owns', () => {
     b.workbench = true; expect(step(0)).toMatch(/parts/);
     add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body'); expect(step(0)).toMatch(/Build/);
     b.designs.push('car'); b.stock.car = 1; use(b, CAR_RECIPE); expect(step(0)).toMatch(/Sell/);
-    b.stock.car = 0; b.sold.car = 1; expect(step(0)).toBeNull();
+    b.stock.car = 0; b.sold.car = 1; expect(step(0)).toMatch(/New idea.*robot/);   // selling the car brings the next idea
+    add(b, 'tin'); add(b, 'gear', 2); add(b, 'battery'); add(b, 'bulb'); expect(step(0)).toMatch(/Build the toy robot/);
+    b.designs.push('robot'); b.stock.robot = 1; expect(step(0)).toMatch(/Sell your toy robot/);
+    b.stock.robot = 0; b.sold.robot = 1; expect(step(0)).toBeNull();
   });
   it('buying a unit hands over everything at once; selling takes it back off', () => {
     const b = freshBiz();
@@ -137,6 +142,47 @@ describe('what Nico owns', () => {
     expect(goalPlace(b, 0)).toBe('parts'); add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body');
     expect(goalPlace(b, 0)).toBe('garage'); b.designs.push('car'); b.stock.car = 1;
     expect(goalPlace(b, 0)).toBe('toys'); b.sold.car = 1; b.stock.car = 0;
+    expect(goalPlace(b, 0)).toBe('parts');   // the robot's parts
+    b.sold.robot = 1; b.designs.push('robot');
     expect(goalPlace(b, 0)).toBeNull();
+  });
+});
+
+describe('products', () => {
+  it('each plan matches its recipe: one slot per part, the tray holds exactly the recipe, quick steps cover every part', () => {
+    for (const p of PRODUCTS) {
+      const plan = PLANS[p.id]; expect(plan, p.id).toBeDefined();
+      const count = (xs: { kind: string }[]) => xs.reduce((m, x) => ({ ...m, [x.kind]: (m[x.kind] ?? 0) + 1 }), {} as Record<string, number>);
+      expect(count(plan.slots), `${p.id} slots`).toEqual(p.recipe);
+      expect(count(plan.tray), `${p.id} tray`).toEqual(p.recipe);
+      expect(new Set(plan.steps.map(s => s[1])), `${p.id} steps`).toEqual(new Set(Object.keys(p.recipe)));
+      // the order can always be finished: every slot's needs exist, and there's no loop
+      const done = new Set<string>(); let moved = true;
+      while (moved) { moved = false; for (const sl of plan.slots) if (!done.has(sl.id) && sl.needs.every(n => done.has(n))) { done.add(sl.id); moved = true; } }
+      expect(done.size, `${p.id} buildable in order`).toBe(plan.slots.length);
+    }
+  });
+  it('every part is a real item, sold at Parts & Tools, and every product sells for more than its parts', () => {
+    for (const p of PRODUCTS) {
+      for (const id of Object.keys(p.recipe)) { expect(item(id)?.kind, id).toBe('part'); expect(PARTS_FOR_SALE.some(q => q.id === id), id).toBe(true); }
+      expect(p.sale.repeat, p.id).toBeGreaterThan(partsCost(p.recipe));
+      expect(p.sale.first, p.id).toBeGreaterThan(p.sale.repeat);
+    }
+  });
+  it('one idea at a time: each later product unlocks when the one before it sells', () => {
+    const b = freshBiz();
+    expect(unlockedProducts(b).map(p => p.id)).toEqual(['car']);
+    b.sold.car = 1; expect(unlockedProducts(b).map(p => p.id)).toEqual(['car', 'robot']);
+    for (const p of PRODUCTS) if (p.after) expect(PRODUCTS.some(q => q.id === p.after), p.id).toBe(true);
+    expect(priceOf(b, 'robot')).toBe(product('robot').sale.first);
+  });
+  it("the robot's test can be passed and can be failed (a bump, or stopping short)", () => {
+    const solve: Move[] = ['U', 'U', 'R', 'R', 'R', 'D', 'R', 'R', 'U', 'U'];
+    expect(runProgram(solve).result).toBe('star');
+    expect(solve.length).toBeLessThanOrEqual(ROBOT_LEVEL.maxMoves);
+    expect(runProgram(['R', 'R']).result).toBe('bump');     // into a box
+    expect(runProgram(['L']).result).toBe('bump');          // off the edge
+    expect(runProgram(['U']).result).toBe('short');
+    expect(runProgram(['U', 'U', 'R', 'R', 'R', 'D', 'R', 'R', 'U', 'U']).path.at(-1)).toEqual(ROBOT_LEVEL.star);
   });
 });

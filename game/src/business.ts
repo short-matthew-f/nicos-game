@@ -10,6 +10,10 @@ export const ITEMS: Item[] = [
   { id: 'wheel', label: '🛞 Wheel', kind: 'part', value: [1, 2] },
   { id: 'axle', label: '🥢 Axle', kind: 'part', value: [1, 3] },
   { id: 'body', label: '🪵 Wooden body', kind: 'part', value: [3, 5] },
+  { id: 'tin', label: '🥫 Tin body', kind: 'part', value: [2, 5] },
+  { id: 'gear', label: '⚙️ Gear', kind: 'part', value: [1, 3] },
+  { id: 'battery', label: '🔋 Battery', kind: 'part', value: [2, 4] },
+  { id: 'bulb', label: '💡 Light bulb', kind: 'part', value: [1, 2] },
   // things people leave in storage units
   { id: 'teddy', label: '🧸 Old teddy', kind: 'find', value: [2, 5] },
   { id: 'radio', label: '📻 Radio', kind: 'find', value: [4, 9] },
@@ -30,11 +34,49 @@ export const item = (id: string) => ITEMS.find(i => i.id === id)!;
 export const WORKBENCH = { price: 25 };
 export const PARTS_FOR_SALE: { id: string; price: number }[] = [
   { id: 'wheel', price: 2 }, { id: 'axle', price: 3 }, { id: 'body', price: 5 },
+  { id: 'tin', price: 4 }, { id: 'gear', price: 3 }, { id: 'battery', price: 4 }, { id: 'bulb', price: 2 },
 ];
-/** What the toy car needs. */
-export const CAR_RECIPE: Record<string, number> = { axle: 2, wheel: 4, body: 1 };
-export const CAR_SALE = { first: 40, repeat: 30 };   // the toy shop pays more for the very first one
+
+// ---- products: each one is an idea Nico can design (build + test once), then make more of
+export interface Product {
+  id: string; name: string; emoji: string;
+  recipe: Record<string, number>;
+  sale: { first: number; repeat: number };   // the toy shop pays more for the very first one
+  test: 'ramp' | 'program';                   // the test minigame (workshop.ts)
+  after?: string;                             // unlocked once this product has sold (one new idea at a time)
+  idea: string;                               // how the idea is pitched
+}
+export const PRODUCTS: Product[] = [
+  { id: 'car', name: 'toy car', emoji: '🚗', recipe: { axle: 2, wheel: 4, body: 1 }, sale: { first: 40, repeat: 30 }, test: 'ramp',
+    idea: 'A wooden toy car that really rolls.' },
+  { id: 'robot', name: 'toy robot', emoji: '🤖', recipe: { tin: 1, gear: 2, battery: 1, bulb: 1 }, sale: { first: 55, repeat: 38 }, test: 'program', after: 'car',
+    idea: 'A little robot you can program to walk around!' },
+];
+export const product = (id: string) => PRODUCTS.find(p => p.id === id)!;
+/** Ideas Nico can work on now. */
+export const unlockedProducts = (b: Biz) => PRODUCTS.filter(p => !p.after || (b.sold[p.after] ?? 0) > 0);
+export const partsCost = (recipe: Record<string, number>) => Object.entries(recipe).reduce((t, [id, n]) => t + n * (PARTS_FOR_SALE.find(q => q.id === id)?.price ?? Infinity), 0);
+
+/** What the toy car needs (kept for the car's screens). */
+export const CAR_RECIPE: Record<string, number> = PRODUCTS[0].recipe;
+export const CAR_SALE = PRODUCTS[0].sale;
 export const RAMP = { heights: [1, 2, 3], pass: 2 };  // ramp heights to try; the car reaches the line from `pass` up
+/** The robot's test: a grid; walk from start to the star without bumping a box. */
+export const ROBOT_LEVEL = { cols: 6, rows: 4, start: [0, 3] as [number, number], star: [5, 0] as [number, number],
+  boxes: [[2, 3], [2, 2], [4, 0], [4, 1]] as [number, number][], maxMoves: 12 };
+export type Move = 'U' | 'D' | 'L' | 'R';
+/** Run a program: every cell the robot reaches, and how it ended. */
+export function runProgram(moves: Move[], lv = ROBOT_LEVEL): { path: [number, number][]; result: 'star' | 'bump' | 'short' } {
+  const d: Record<Move, [number, number]> = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+  let [x, y] = lv.start; const path: [number, number][] = [[x, y]];
+  for (const m of moves) {
+    const nx = x + d[m][0], ny = y + d[m][1];
+    if (nx < 0 || ny < 0 || nx >= lv.cols || ny >= lv.rows || lv.boxes.some(([bx, by]) => bx === nx && by === ny)) return { path, result: 'bump' };
+    x = nx; y = ny; path.push([x, y]);
+    if (x === lv.star[0] && y === lv.star[1]) return { path, result: 'star' };
+  }
+  return { path, result: 'short' };
+}
 
 // ---- skills
 export interface Skill { id: string; name: string; text: string; flips: number }   // unlocked after this many units
@@ -173,28 +215,35 @@ export function sellOne(b: Biz, id: string, value: number): number {
 }
 export const shelfValue = (b: Biz) => b.finds.reduce((s, f) => s + sellPrice(f.value, b.skills.includes('appraiser')), 0);
 
-export const carPrice = (b: Biz) => (!b.sold.car ? CAR_SALE.first : CAR_SALE.repeat);
+export const priceOf = (b: Biz, pid: string) => (!b.sold[pid] ? product(pid).sale.first : product(pid).sale.repeat);
+export const carPrice = (b: Biz) => priceOf(b, 'car');
 /** Everything sold, all products. */
 export const soldAll = (b: Biz) => Object.values(b.sold).reduce((t, n) => t + n, 0);
+
+/** The idea being worked on: the first unlocked product not sold yet (null: all done). */
+export const currentIdea = (b: Biz) => unlockedProducts(b).find(p => !b.sold[p.id]) ?? null;
 
 /** Where the next goal is (a building id), for the minimap star; null when it's not a place. */
 export function goalPlace(b: Biz, money: number): string | null {
   if (b.flips === 0) return 'storage';
   if (!b.workbench) return money >= WORKBENCH.price ? 'parts' : null;
-  if (!b.designs.includes('car')) return missing(b, CAR_RECIPE).length ? 'parts' : 'garage';
-  if (!b.sold.car) return b.stock.car ? 'toys' : 'garage';
-  return null;
+  const p = currentIdea(b);
+  if (!p) return null;
+  if (!b.designs.includes(p.id)) return missing(b, p.recipe).length ? 'parts' : 'garage';
+  return b.stock[p.id] ? 'toys' : 'garage';
 }
 
-/** The next thing to do, for the goal chip (null when the loop's been done once). */
+/** The next thing to do, for the goal chip (null when every idea has been made and sold). */
 export function nextGoal(b: Biz, money: number): string | null {
   if (b.flips === 0) return '📦 Check out the storage units (bottom right of town)';
   if (!b.workbench) return money >= WORKBENCH.price ? `🛠️ Buy a workbench at Parts & Tools ($${WORKBENCH.price})` : `💰 Save up $${WORKBENCH.price} for a workbench (jobs, coins, storage units)`;
-  if (!b.designs.includes('car')) {
-    const need = missing(b, CAR_RECIPE);
-    if (need.length) return `🔩 Get car parts: ${need.map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ')} (Parts & Tools)`;
-    return '🚗 Build the toy car at your workbench (your garage)';
+  const p = currentIdea(b);
+  if (!p) return null;
+  const fresh = p.after && !b.designs.includes(p.id) ? '💡 New idea! ' : '';
+  if (!b.designs.includes(p.id)) {
+    const need = missing(b, p.recipe);
+    if (need.length) return `${fresh}🔩 Get ${p.name} parts: ${need.map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ')} (Parts & Tools)`;
+    return `${fresh}${p.emoji} Build the ${p.name} at your workbench (your garage)`;
   }
-  if (!b.sold.car) return b.stock.car ? '🧸 Sell your toy car at the Toy Shop' : '🚗 Build a toy car at your workbench';
-  return null;
+  return b.stock[p.id] ? `🧸 Sell your ${p.name} at the Toy Shop` : `${p.emoji} Build a ${p.name} at your workbench`;
 }

@@ -478,3 +478,29 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - **The job in progress is saved**, which was a caveat before. A request's id (`want:<giver>:<item>`) is enough to rebuild it, and an id that no longer exists is dropped.
   - A v5 save moves `cars` and `sold` across.
 - **e2e:** the request offered, accepted, "no radio yet", the right unit shown and bought, the radio set to Keep, a reload mid-request, then the hand-over and pay (123 checks). The stall-proofing and the job saving are mutation-checked.
+
+## 2026-10-10: products, and the toy robot (Nico: "more mini games like the car!")
+- **Products are data now:** `PRODUCTS` in `src/business.ts` (recipe, sale prices, test minigame, unlocked `after` another product sells, and a pitch line). The build plans (slots, order, tray, quick steps, "why" hints) are in `src/plans.ts`, with no DOM, so tests can check them against the recipes. The garage, the Toy Shop, Parts & Tools (a kit per idea; only parts for ideas you've had) and the goal chip all loop over products.
+- **Toy robot** (unlocks when the first toy car sells: "💡 New idea!"):
+
+  | Thing | Value |
+  |---|---|
+  | Parts | Tin body $4, 2 gears ($3 each), a battery $4, a light bulb $2 ($16 in all) |
+  | Build order | Tin body first, then gears and battery, then the bulb (it needs the battery) |
+  | Sale | $55 for the first one, $38 after that |
+
+- **The robot's test: program it.** A 6×4 grid with four boxes and a star. Tap arrows to queue up to 12 moves, then press Go. The robot walks the program step by step.
+  - Bumping a box or the edge: "Bonk!" and a wobble.
+  - Stopping short of the star: a hint to add more steps.
+  - Either way, ⌫ edits the program and nothing is lost.
+  - Reaching the star: a cheer, then the design is done.
+  - The level is `ROBOT_LEVEL`; the logic is `runProgram`, which the tests cover.
+- **Shop window:** shows one of each product sold, a robot sprite included.
+- **New parts** join the storage-unit pool; the profit and loss test still holds.
+- **Tests:**
+  - every plan matches its recipe (slots, tray, quick steps) and can be built in order;
+  - every part is sold at Parts & Tools;
+  - every product sells for more than its parts cost;
+  - unlocks come one at a time;
+  - the robot's test can be passed and failed (a bump, an edge, stopping short);
+  - e2e builds the robot (a wrong order first), fails a program, fixes it, passes, and sells the robot (131 checks).

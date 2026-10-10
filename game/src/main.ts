@@ -25,9 +25,9 @@ import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './pl
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
-import { Workshop } from './workshop';
+import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
-import { WORKBENCH, PARTS_FOR_SALE, CAR_RECIPE, item, add, has, missing, shelfValue, sellOne, carPrice, nextGoal, goalPlace, soldAll, take, owns } from './business';
+import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -242,10 +242,12 @@ async function main() {
     wanted: () => wanted(),
     skill: sk => { sfx.cheer(); showCard(`skill:${sk.id}`, `🎓 New skill: ${sk.name}!`, sk.text, [], 'Nice!'); },
   });
-  const toyWindow = new ToyWindow(); layer.addChild(toyWindow.view); toyWindow.set(soldAll(state.biz));
   const biz = state.biz;
+  /** What's in the toy shop window: one of each thing sold, then more cars. */
+  function windowToys() { const kinds = PRODUCTS.filter(q => biz.sold[q.id]).map(q => q.id); while (kinds.length < Math.min(3, soldAll(biz))) kinds.push('car'); return kinds.slice(0, 3); }
+  const toyWindow = new ToyWindow(); layer.addChild(toyWindow.view); toyWindow.set(windowToys());
   const partsLine = () => Object.entries(biz.items).map(([id, n]) => `${item(id).label.split(' ')[0]}×${n}`).join('  ') || 'none';
-  const needLine = () => missing(biz, CAR_RECIPE).map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ');
+  const needLine = (recipe: Record<string, number>) => missing(biz, recipe).map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ');
   const BIZ_DOORS: Record<string, (p: Place) => void> = {
     storage: p => {
       const finds = biz.finds.length, worth = shelfValue(biz);
@@ -262,36 +264,46 @@ async function main() {
     parts: p => showParts(p),
     garage: p => {
       const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
-      const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(biz.stock.car ? [`Toy cars ready to sell: ${biz.stock.car}`] : [])];
+      const made = PRODUCTS.filter(q => biz.stock[q.id]).map(q => `${q.emoji}×${biz.stock[q.id]}`).join(' ');
+      const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(made ? [`Ready to sell: ${made}`] : [])];
       if (!biz.workbench) { showCard('garage', p.title, `Your garage. There's room in here for a workbench: Parts & Tools sells them. ${lines.join(' ')}`, []); return; }
-      const ready = has(biz, CAR_RECIPE), proven = biz.designs.includes('car');
-      showCard('garage', '🛠️ Your workbench', lines.join(' '), [
-        proven
-          ? { label: '🚗 Build a toy car', sub: ready ? '3 quick steps' : `need ${needLine()}`, id: 'quick', disabled: !ready, onClick: () => work.quick() }
-          : { label: '🚗 Build the toy car', sub: ready ? 'your first one!' : `need ${needLine()}`, id: 'build', disabled: !ready, onClick: () => work.build() },
-      ]);
+      // one button per idea: the hands-on first build, then quick builds once it's designed
+      showCard('garage', '🛠️ Your workbench', lines.join(' '), unlockedProducts(biz).map(q => {
+        const ready = has(biz, q.recipe), proven = biz.designs.includes(q.id);
+        return proven
+          ? { label: `${q.emoji} Build a ${q.name}`, sub: ready ? `${PLANS[q.id].steps.length} quick steps` : `need ${needLine(q.recipe)}`, id: `quick:${q.id}`, disabled: !ready, onClick: () => work.quick(q.id) }
+          : { label: `${q.emoji} Build the ${q.name}`, sub: ready ? 'your first one!' : `need ${needLine(q.recipe)}`, id: `build:${q.id}`, disabled: !ready, onClick: () => work.build(q.id) };
+      }));
     },
     toys: p => {
-      if (!biz.stock.car) { showCard('toys', p.title, biz.sold.car ? `Your toy cars are selling well! Bring more when you've built them.` : p.text, []); return; }
-      const price = carPrice(biz);
-      showCard('toys', p.title, biz.sold.car ? 'Another toy car? The kids love them!' : '"A toy car you built yourself? Let me see... It rolls beautifully! I\'ll buy it."', [
-        { label: '🚗 Sell a toy car', sub: `$${price}`, id: 'sellcar', onClick: () => {
-          if (!biz.stock.car) return;
-          biz.stock.car--; biz.sold.car = (biz.sold.car ?? 0) + 1; state.money += price; showMoney(); persist(); sfx.cash(5); toyWindow.set(soldAll(biz));
-          toast(biz.sold.car === 1 ? `🎉 Your first sale! +$${price}. Look: it's in the shop window!` : `Sold! +$${price}`);
-        } },
-      ]);
+      const have = PRODUCTS.filter(q => biz.stock[q.id]);
+      if (!have.length) { showCard('toys', p.title, soldAll(biz) ? `Your toys are selling well! Bring more when you've built them.` : p.text, []); return; }
+      const firstEver = have.find(q => !biz.sold[q.id]);
+      showCard('toys', p.title, firstEver ? `"A ${firstEver.name} you built yourself? Let me see... It's wonderful! I'll buy it."` : 'More toys? The kids love them!',
+        have.map(q => {
+          const price = priceOf(biz, q.id);
+          return { label: `${q.emoji} Sell a ${q.name}`, sub: `$${price}`, id: `sell:${q.id}`, onClick: () => {
+            if (!biz.stock[q.id]) return;
+            const first = !biz.sold[q.id];
+            biz.stock[q.id]--; biz.sold[q.id] = (biz.sold[q.id] ?? 0) + 1; state.money += price; showMoney(); persist(); sfx.cash(5); toyWindow.set(windowToys());
+            const next = PRODUCTS.find(n => n.after === q.id);
+            toast(first ? `🎉 Your first ${q.name} sale! +$${price}. Look: it's in the shop window!${next ? ` 💡 New idea: a ${next.name}!` : ''}` : `Sold! +$${price}`);
+          } };
+        }));
     },
   };
   function showParts(p: Place) {
-    const kit = missing(biz, CAR_RECIPE), kitCost = kit.reduce((t, [id, n]) => t + n * PARTS_FOR_SALE.find(q => q.id === id)!.price, 0);
     const buy = (cost: number, then: () => void) => () => { if (state.money < cost) return; state.money -= cost; then(); showMoney(); persist(); sfx.tap(); showParts(p); };
+    const ideas = unlockedProducts(biz), used = new Set(ideas.flatMap(q => Object.keys(q.recipe)));   // only parts for ideas Nico has had
     showCard('parts', p.title, biz.workbench ? `Your parts: ${partsLine()}.` : 'Wheels, axles, bodies and tools. A toy car needs a workbench to build it on.', [
       ...(!biz.workbench ? [{ label: '🛠️ Workbench', sub: `$${WORKBENCH.price}`, id: 'workbench', disabled: state.money < WORKBENCH.price,
         onClick: buy(WORKBENCH.price, () => { biz.workbench = true; toast('🛠️ Workbench bought! It\'s in your garage.'); }) }] : []),
-      ...(biz.workbench && kit.length ? [{ label: '🧰 Car kit', sub: `$${kitCost} · ${needLine()}`, id: 'kit', disabled: state.money < kitCost,
-        onClick: buy(kitCost, () => { for (const [id, n] of kit) add(biz, id, n); toast('🧰 Everything you need for a toy car!'); }) }] : []),
-      ...PARTS_FOR_SALE.map(q => ({ label: item(q.id).label, sub: `$${q.price}`, id: `part:${q.id}`, disabled: state.money < q.price,
+      ...(biz.workbench ? ideas.filter(q => missing(biz, q.recipe).length).map(q => {
+        const kit = missing(biz, q.recipe), cost = partsCost(Object.fromEntries(kit));
+        return { label: `🧰 ${q.name[0].toUpperCase()}${q.name.slice(1)} kit`, sub: `$${cost} · ${needLine(q.recipe)}`, id: `kit:${q.id}`, disabled: state.money < cost,
+          onClick: buy(cost, () => { for (const [id, n] of kit) add(biz, id, n); toast(`🧰 Everything you need for a ${q.name}!`); }) };
+      }) : []),
+      ...PARTS_FOR_SALE.filter(q => used.has(q.id)).map(q => ({ label: item(q.id).label, sub: `$${q.price}`, id: `part:${q.id}`, disabled: state.money < q.price,
         onClick: buy(q.price, () => add(biz, q.id)) })),
     ]);
   }
@@ -717,7 +729,7 @@ async function main() {
       bigMap: bigMap.visible, minimapAt: (() => { const b = minimap.view.getBounds(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })(),
       low, goLow: () => goLow(),
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,
-      setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(soldAll(biz)); persist(); },
+      setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(windowToys()); persist(); },
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,

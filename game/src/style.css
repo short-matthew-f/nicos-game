@@ -140,5 +140,13 @@ html, body {
 .picks { display: flex; gap: 6px; background: #E9EEF3; border-radius: 16px; padding: 4px; }
 .work .picks button { min-width: 0; box-shadow: none; background: transparent; }
 .work .picks button.on { background: #fff; box-shadow: 0 2px 0 rgba(43,63,85,.2); }
+/* the robot's program test */
+.gridview { width: 100%; max-height: calc(100vh - 300px); display: block; }
+.gridview .bot { transition: transform .3s ease-in-out; }
+.gridview .bonk { animation: wobble .5s; transform-box: fill-box; transform-origin: center; }
+.gridview text.wave { animation: wave .5s ease-in-out 3; transform-box: fill-box; transform-origin: center; }
+.work .strip { margin-top: 8px; min-height: 34px; font-size: 24px; font-weight: 800; background: #F6E7CF; border-radius: 12px; padding: 4px 10px; letter-spacing: 2px; }
+.work .pad { display: flex; gap: 6px; }
+.work .pad button { min-width: 64px; padding: 0 8px; font-size: 26px; }
 @media (max-width: 640px) { .stage.auction { grid-template-columns: 1fr; } .lot .door { height: 70px; } }
 #buttons button[hidden] { display: none; }

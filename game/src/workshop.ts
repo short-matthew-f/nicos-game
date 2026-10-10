@@ -3,10 +3,12 @@
 // inline SVG over the game (the world is paused behind it, like the cards). The rules live
 // in business.ts; this file is the hands-on part. See docs/UX_NOTES.md for the feel rules.
 import {
-  item, lineup, guess, worth, sellPrice, buyUnit, sellOne, use, has, unlocks, CAR_RECIPE, RAMP,
+  item, lineup, guess, worth, sellPrice, buyUnit, sellOne, use, has, unlocks, product, runProgram, RAMP, ROBOT_LEVEL, type Move,
   type Biz, type Unit, type Skill,
 } from './business';
 import { sfx } from './sound';
+import { PLANS, type Slot } from './plans';
+export { PLANS };
 
 export interface WorkHost {
   biz: Biz;
@@ -30,17 +32,6 @@ const emoji = (id: string) => item(id).label.split(' ')[0];
 const name = (id: string) => item(id).label.split(' ').slice(1).join(' ');
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// ---- the toy car's blueprint (top-down, nose to the right) and its parts
-export interface Slot { id: string; kind: string; x: number; y: number; needs: string[] }   // needs: slots that must be filled first
-export const SLOTS: Slot[] = [
-  { id: 'axle0', kind: 'axle', x: 235, y: 150, needs: [] },
-  { id: 'axle1', kind: 'axle', x: 365, y: 150, needs: [] },
-  { id: 'wheel0', kind: 'wheel', x: 235, y: 62, needs: ['axle0'] },
-  { id: 'wheel1', kind: 'wheel', x: 235, y: 238, needs: ['axle0'] },
-  { id: 'wheel2', kind: 'wheel', x: 365, y: 62, needs: ['axle1'] },
-  { id: 'wheel3', kind: 'wheel', x: 365, y: 238, needs: ['axle1'] },
-  { id: 'body', kind: 'body', x: 300, y: 150, needs: ['axle0', 'axle1'] },
-];
 export const SNAP = { at: 80, keep: 100 };   // snaps within `at` of a slot, and stays snapped until `keep` (no flicker)
 const LIFT = 46;                              // a picked-up part rides this far above the finger, so it isn't hidden
 
@@ -51,6 +42,20 @@ function partArt(kind: string): SVGGElement {
   } else if (kind === 'wheel') {
     g.append(s('rect', { x: -26, y: -15, width: 52, height: 30, rx: 10, fill: '#2C3E52', stroke: '#1B2733', 'stroke-width': 3 }),
       s('rect', { x: -12, y: -6, width: 24, height: 12, rx: 4, fill: '#C9D3DC' }));
+  } else if (kind === 'tin') {
+    g.append(s('line', { x1: 0, y1: -85, x2: 0, y2: -115, stroke: '#2B3F55', 'stroke-width': 4 }),                         // antenna
+      s('rect', { x: -75, y: -85, width: 150, height: 170, rx: 24, fill: '#A9B8C6', stroke: '#2B3F55', 'stroke-width': 4 }),
+      s('circle', { cx: -30, cy: -40, r: 16, fill: '#FFFFFF', stroke: '#2B3F55', 'stroke-width': 3 }), s('circle', { cx: -30, cy: -40, r: 6, fill: '#2B3F55' }),
+      s('circle', { cx: 30, cy: -40, r: 16, fill: '#FFFFFF', stroke: '#2B3F55', 'stroke-width': 3 }), s('circle', { cx: 30, cy: -40, r: 6, fill: '#2B3F55' }),
+      s('rect', { x: -26, y: -8, width: 52, height: 10, rx: 4, fill: '#2B3F55' }));                                         // mouth
+  } else if (kind === 'gear') {
+    for (let a = 0; a < 360; a += 45) { const t = s('rect', { x: -6, y: -30, width: 12, height: 12, rx: 2, fill: '#F2B632', stroke: '#2B3F55', 'stroke-width': 2 }); t.setAttribute('transform', `rotate(${a})`); g.append(t); }
+    g.append(s('circle', { cx: 0, cy: 0, r: 22, fill: '#F2B632', stroke: '#2B3F55', 'stroke-width': 3 }), s('circle', { cx: 0, cy: 0, r: 7, fill: '#2B3F55' }));
+  } else if (kind === 'battery') {
+    g.append(s('rect', { x: -38, y: -17, width: 76, height: 34, rx: 6, fill: '#3BB273', stroke: '#2B3F55', 'stroke-width': 3 }),
+      s('rect', { x: 38, y: -7, width: 8, height: 14, rx: 2, fill: '#2B3F55' }), s('rect', { x: -30, y: -17, width: 20, height: 34, fill: '#2B3F55', opacity: 0.25 }));
+  } else if (kind === 'bulb') {
+    g.append(s('circle', { cx: 0, cy: -6, r: 17, fill: '#FFE066', stroke: '#2B3F55', 'stroke-width': 3 }), s('rect', { x: -9, y: 9, width: 18, height: 12, rx: 3, fill: '#9AA6B2', stroke: '#2B3F55', 'stroke-width': 2 }));
   } else {
     g.append(s('rect', { x: -105, y: -62, width: 210, height: 124, rx: 30, fill: '#E0453A', stroke: '#2B3F55', 'stroke-width': 4 }),
       s('rect', { x: -40, y: -42, width: 78, height: 84, rx: 16, fill: '#F7D9A8', stroke: '#2B3F55', 'stroke-width': 3 }),   // the seat
@@ -73,7 +78,7 @@ export class Workshop {
   screen: string | null = null;
   /** for tests: the build's filled slots, the ramp's last result */
   filled = new Set<string>();
-  lastRun: { height: number; passed: boolean } | null = null;
+  lastRun: { height: number; passed: boolean; moves?: string } | null = null;
   private cleanup: (() => void) | null = null;   // window listeners of the screen that's up
 
   constructor(private host: WorkHost) {
@@ -207,7 +212,8 @@ export class Workshop {
   }
 
   // ------------------------------------------------------------ the blueprint (shared by both builds)
-  private blueprint(): { svg: SVGSVGElement; layers: Record<string, SVGGElement>; slots: Map<string, SVGGElement> } {
+  private blueprint(pid: string): { svg: SVGSVGElement; layers: Record<string, SVGGElement>; slots: Map<string, SVGGElement> } {
+    const plan = PLANS[pid];
     const svg = s('svg', { viewBox: '0 0 600 400', class: 'blueprint' }) as SVGSVGElement;
     svg.append(s('rect', { x: 0, y: 0, width: 600, height: 300, rx: 18, fill: '#E8F1FA' }));
     for (let x = 30; x < 600; x += 30) svg.append(s('line', { x1: x, y1: 0, x2: x, y2: 300, stroke: '#D3E2F0', 'stroke-width': 1 }));
@@ -215,27 +221,24 @@ export class Workshop {
     svg.append(s('rect', { x: 0, y: 300, width: 600, height: 100, rx: 18, fill: '#F6E7CF' }));   // the tray
     const slotLayer = s('g') as SVGGElement; svg.append(slotLayer);
     const layers: Record<string, SVGGElement> = {};
-    for (const k of ['axle', 'wheel', 'body', 'tray', 'held']) { layers[k] = s('g') as SVGGElement; svg.append(layers[k]); }
+    for (const k of [...new Set(plan.slots.map(q => q.kind)), 'tray', 'held']) { layers[k] = s('g') as SVGGElement; svg.append(layers[k]); }   // (drawn in slot order)
     const slots = new Map<string, SVGGElement>();
-    for (const sl of SLOTS) { const g = slotArt(sl.kind); g.classList.add('slot'); g.dataset.slot = sl.id; at(g, sl.x, sl.y); slotLayer.append(g); slots.set(sl.id, g); }
+    for (const sl of plan.slots) { const g = slotArt(sl.kind); g.classList.add('slot'); g.dataset.slot = sl.id; at(g, sl.x, sl.y); slotLayer.append(g); slots.set(sl.id, g); }
     return { svg, layers, slots };
   }
 
   // ------------------------------------------------------------ the first build: drag the parts on
-  build() {
-    this.show('build', 'Build the toy car', 'Drag the parts onto the plan. Axles first, then wheels, then the body.');
+  build(pid = 'car') {
+    const pr = product(pid), plan = PLANS[pid], SLOTS = plan.slots;
+    this.show('build', `Build the ${pr.name}`, plan.hint);
     this.filled = new Set();
-    const { svg, layers, slots } = this.blueprint();
+    const { svg, layers, slots } = this.blueprint(pid);
     this.stage.append(svg);
     const ready = (sl: Slot) => !this.filled.has(sl.id) && sl.needs.every(n => this.filled.has(n));
     const glow = () => { for (const sl of SLOTS) slots.get(sl.id)!.classList.toggle('ready', ready(sl)); };
-    const test = this.button('Test it on the ramp →', () => this.ramp(), 'primary'); test.disabled = true;
+    const test = this.button(pr.test === 'ramp' ? 'Test it on the ramp →' : 'Test it: program it! →', () => (pr.test === 'ramp' ? this.ramp() : this.program()), 'primary'); test.disabled = true;
     // the tray: one of each part the recipe needs, laid out along the bottom
-    const tray: { kind: string; x: number; y: number; sc: number }[] = [
-      { kind: 'axle', x: 50, y: 350, sc: 0.45 }, { kind: 'axle', x: 90, y: 350, sc: 0.45 },
-      { kind: 'wheel', x: 160, y: 335, sc: 0.8 }, { kind: 'wheel', x: 160, y: 368, sc: 0.8 }, { kind: 'wheel', x: 220, y: 335, sc: 0.8 }, { kind: 'wheel', x: 220, y: 368, sc: 0.8 },
-      { kind: 'body', x: 360, y: 350, sc: 0.62 },
-    ];
+    const tray = plan.tray;
     const toSvg = (e: PointerEvent) => { const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM()!.inverse()); return [p.x, p.y]; };
     // one drag at a time; move/up are heard on the window (pointer capture on SVG groups
     // isn't reliable in Safari), and dropped when the screen closes
@@ -260,14 +263,14 @@ export class Workshop {
       if (sl) {
         this.filled.add(sl.id); g.classList.add('placed'); layers[t.kind].append(g); at(g, sl.x, sl.y, 1);
         slots.get(sl.id)!.classList.add('done'); sfx.snap(); glow();
-        if (this.filled.size === SLOTS.length) { test.disabled = false; this.sub.textContent = 'All together! Now let\'s see if it rolls.'; sfx.cheer(); }
+        if (this.filled.size === SLOTS.length) { test.disabled = false; this.sub.textContent = pr.test === 'ramp' ? 'All together! Now let\'s see if it rolls.' : 'All together! Now let\'s see if it works.'; sfx.cheer(); }
         return;
       }
       // not on a slot: say why if it was close to one, and slide back to the tray
       const [x, y0] = toSvg(e), y = y0 - LIFT;
       const near = SLOTS.find(q => !this.filled.has(q.id) && Math.hypot(q.x - x, q.y - y) < SNAP.at);
-      if (near && near.kind !== t.kind) this.sub.textContent = `That spot is for ${near.kind === 'body' ? 'the body' : `a ${near.kind}`}.`;
-      else if (near && near.kind === t.kind) this.sub.textContent = t.kind === 'wheel' ? 'Wheels go on the end of an axle: put the axles in first.' : 'The body goes on last, on top of both axles.';
+      if (near && near.kind !== t.kind) this.sub.textContent = `That spot is for ${/^[aeiou]/.test(name(near.kind).toLowerCase()) ? 'an' : 'a'} ${name(near.kind).toLowerCase()}.`;
+      else if (near && near.kind === t.kind && plan.why[t.kind]) this.sub.textContent = plan.why[t.kind];
       g.classList.add('back'); sfx.boing();
       layers.tray.append(g); at(g, t.x, t.y, t.sc);
       setTimeout(() => g.classList.remove('back'), 260);
@@ -351,39 +354,92 @@ export class Workshop {
       flag.classList.add('wave'); sfx.cheer();
       this.sub.textContent = 'It works! 🎉 Your toy car design is finished. Now you can build them quickly.';
       this.actions.replaceChildren();
-      this.button('Done', () => { this.prototypeDone(); }, 'primary');
+      this.button('Done', () => { this.prototypeDone('car'); }, 'primary');
     };
   }
-  /** The first car passed: use up the parts, remember the design, one car to sell. */
-  private prototypeDone() {
-    const b = this.host.biz;
-    if (!b.designs.includes('car') && use(b, CAR_RECIPE)) { b.designs.push('car'); b.stock.car = (b.stock.car ?? 0) + 1; }
+  /** The first one passed its test: use up the parts, remember the design, one to sell. */
+  private prototypeDone(pid: string) {
+    const b = this.host.biz, pr = product(pid);
+    if (!b.designs.includes(pid) && use(b, pr.recipe)) { b.designs.push(pid); b.stock[pid] = (b.stock[pid] ?? 0) + 1; }
     this.host.save();
-    this.host.toast('🚗 Toy car made! Take it to the Toy Shop to sell it.');
+    this.host.toast(`${pr.emoji} ${pr.name[0].toUpperCase()}${pr.name.slice(1)} made! Take it to the Toy Shop to sell it.`);
     this.close();
   }
 
-  // ------------------------------------------------------------ repeat builds: three taps
-  quick() {
-    const b = this.host.biz;
-    if (!has(b, CAR_RECIPE)) return;
-    this.show('quick', 'Build a toy car', 'You know how now: three quick steps.');
-    const { svg, layers, slots } = this.blueprint();
+  // ------------------------------------------------------------ the robot's test: program it to the star
+  program() {
+    const lv = ROBOT_LEVEL, C = 80, ox = (600 - lv.cols * C) / 2, oy = 10;
+    this.show('program', 'Program the robot', `Tap arrows to plan its walk (up to ${lv.maxMoves} steps), then Go! Get it to the ⭐ without bumping a box.`);
+    const svg = s('svg', { viewBox: `0 0 600 ${lv.rows * C + 20}`, class: 'gridview' }) as SVGSVGElement;
+    for (let y = 0; y < lv.rows; y++) for (let x = 0; x < lv.cols; x++)
+      svg.append(s('rect', { x: ox + x * C + 2, y: oy + y * C + 2, width: C - 4, height: C - 4, rx: 10, fill: (x + y) % 2 ? '#E8F1FA' : '#DCE9F5' }));
+    for (const [bx, by] of lv.boxes) svg.append(s('rect', { x: ox + bx * C + 10, y: oy + by * C + 10, width: C - 20, height: C - 20, rx: 6, fill: '#D9A066', stroke: '#2B3F55', 'stroke-width': 3 }));
+    const star = s('text', { x: ox + lv.star[0] * C + C / 2, y: oy + lv.star[1] * C + C / 2 + 16, 'text-anchor': 'middle', 'font-size': 44 }); star.textContent = '⭐'; svg.append(star);
+    const bot = s('g') as SVGGElement, wob = s('g') as SVGGElement, botIn = partArt('tin');   // (wobble the middle layer: the outer one's transform is its position)
+    botIn.setAttribute('transform', 'scale(0.36)'); wob.append(botIn); bot.append(wob); svg.append(bot);
+    bot.classList.add('bot');
+    const put = (x: number, y: number) => at(bot, ox + x * C + C / 2, oy + y * C + C / 2 + 4);
+    put(...lv.start);
     this.stage.append(svg);
-    const steps: [string, string][] = [['Fit the axles', 'axle'], ['Pop on the wheels', 'wheel'], ['Snap on the body', 'body']];
+    const strip = h('div', 'strip'); this.stage.append(strip);
+    const moves: Move[] = [], ARROW: Record<Move, string> = { U: '⬆️', D: '⬇️', L: '⬅️', R: '➡️' };
+    let busy = false;
+    const show = () => { strip.textContent = moves.length ? moves.map(m => ARROW[m]).join(' ') : 'Your program: (empty)'; go.disabled = !moves.length || busy; };
+    const pad = h('div', 'pad');
+    for (const m of ['L', 'U', 'D', 'R'] as Move[]) {
+      const b = h('button', '', ARROW[m]); b.type = 'button'; b.dataset.move = m;
+      b.addEventListener('click', () => { if (busy || moves.length >= lv.maxMoves) return; moves.push(m); sfx.tap(); show(); });
+      pad.append(b);
+    }
+    const back = h('button', '', '⌫'); back.type = 'button'; back.dataset.move = 'back';
+    back.addEventListener('click', () => { if (busy) return; moves.pop(); sfx.tap(); show(); });
+    pad.append(back);
+    this.actions.append(pad);
+    const go = this.button('Go!', () => run(), 'primary'); go.dataset.go = '1';
+    const run = async () => {
+      if (busy || !moves.length) return; busy = true; show();
+      put(...lv.start); await wait(200);
+      const res = runProgram(moves, lv);
+      for (const [x, y] of res.path.slice(1)) { put(x, y); sfx.lift(); await wait(330); }
+      this.lastRun = { height: moves.length, passed: res.result === 'star', moves: moves.join('') } as typeof this.lastRun;
+      if (res.result === 'star') {
+        sfx.cheer(); star.classList.add('wave');
+        this.sub.textContent = 'It made it! 🎉 Your toy robot design is finished. Now you can build them quickly.';
+        this.actions.replaceChildren();
+        this.button('Done', () => this.prototypeDone('robot'), 'primary');
+        return;
+      }
+      if (res.result === 'bump') {
+        wob.classList.add('bonk'); sfx.boing();
+        setTimeout(() => wob.classList.remove('bonk'), 500);
+        this.sub.textContent = 'Bonk! It walked into a box (or the edge). Change the program with ⌫ and try again.';
+      } else { sfx.boing(); this.sub.textContent = 'It stopped before the star. Add some more steps and try again.'; }
+      busy = false; show(); go.textContent = 'Try again';
+    };
+    show();
+  }
+
+  // ------------------------------------------------------------ repeat builds: three taps
+  quick(pid = 'car') {
+    const b = this.host.biz, pr = product(pid), plan = PLANS[pid];
+    if (!has(b, pr.recipe)) return;
+    const steps = plan.steps;
+    this.show('quick', `Build a ${pr.name}`, `You know how now: ${steps.length} quick steps.`);
+    const { svg, layers, slots } = this.blueprint(pid);
+    this.stage.append(svg);
     let i = 0;
     const btn = this.button(steps[0][0], () => {
       if (i >= steps.length) return;
       const kind = steps[i][1];
-      for (const sl of SLOTS) if (sl.kind === kind) {
+      for (const sl of plan.slots) if (sl.kind === kind) {
         const g = partArt(kind); g.classList.add('part', 'placed', 'drop'); at(g, sl.x, sl.y - 40, 1); layers[kind].append(g);
         requestAnimationFrame(() => requestAnimationFrame(() => at(g, sl.x, sl.y, 1)));
         slots.get(sl.id)!.classList.add('done');
       }
       sfx.snap(); i++;
       if (i < steps.length) { btn.textContent = steps[i][0]; return; }
-      use(b, CAR_RECIPE); b.stock.car = (b.stock.car ?? 0) + 1; this.host.save(); sfx.cheer();
-      this.sub.textContent = `Another toy car! You have ${b.stock.car} ready to sell.`;
+      use(b, pr.recipe); b.stock[pid] = (b.stock[pid] ?? 0) + 1; this.host.save(); sfx.cheer();
+      this.sub.textContent = `Another ${pr.name}! You have ${b.stock[pid]} ready to sell.`;
       btn.textContent = 'Done'; btn.onclick = () => this.close();
     }, 'primary');
     btn.dataset.step = '1';
