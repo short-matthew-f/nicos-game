@@ -845,3 +845,12 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - Grandparents' houses never catch fire. Their art loads in the background.
 - e2e: learn pizzelle, cut a plasma star, paint and hang a picture (235 checks).
   - The item-request check now catches Maya between doors: while she waits at the school door, the door wins the tie.
+
+### No more emoji in the world (2026-10-10)
+- **The user:** "why are there suddenly a bunch of emoji in the game". The new insides used emoji as quick stand-ins for things on shelves and counters, and for the cow, horse, chickens, fire truck, bike and bear.
+- **`world/icons.ts`:** about 80 small drawn icons in the sticker style (flat shapes with a white edge): food, tools and parts, toys, pool things, the cabin's animals, the grandparents' things, the pantry's ingredients. There are also eight big drawn things: the cow, horse, chicken, chick, fire truck, bike, bear and plant.
+- **Rooms now draw these** instead of emoji, and the wall signs lost their emoji. Also redrawn:
+  - the bakery pantry shelf, and the menu board (little cookie, cupcake and bread drawings with prices);
+  - the shed's parts bins;
+  - the carved sign at home (NICO between two drawn stars, hearts or rockets).
+- **Emoji still in the world, from before:** the finds lying in a storage unit and on the shed shelves, and the Burger Barn tray. The minimap labels, and the buttons and messages, also use emoji.

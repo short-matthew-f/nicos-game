@@ -7,6 +7,7 @@ import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
 import { Dust } from './world/dust';
+import { icon } from './world/icons';
 import { Night, DAY, inForest, darkness, light } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
@@ -644,8 +645,12 @@ async function main() {
   let tvGlow: Graphics | null = null, fish: Graphics[] = [], petCat: Container | null = null;
   function homeDecor(id: string): Container {
     const c = new Container(); c.sortableChildren = true;
-    if (id === 'sign') { const a = decorArt('sign'), q = HOME_DECOR.sign, t = new Text({ text: `${biz.home.sign ?? '⭐'} NICO ${biz.home.sign ?? '⭐'}`, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#5A3A22' } });
-      t.anchor.set(0.5); t.position.set(q.x + q.w / 2, q.y + q.h / 2); c.addChild(a, t); c.zIndex = 1; return c; }
+    if (id === 'sign') {   // the carved sign: NICO, with the design he picked at either end (drawn, not emoji)
+      const a = decorArt('sign'), q = HOME_DECOR.sign, t = new Text({ text: 'NICO', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#5A3A22' } });
+      const shape = ({ '⭐': 'star', '❤️': 'heart', '🚀': 'rocket' } as Record<string, string>)[biz.home.sign ?? '⭐'] ?? 'star';
+      t.anchor.set(0.5); t.position.set(q.x + q.w / 2, q.y + q.h / 2); c.addChild(a, t);
+      for (const dx of [-60, 60]) { const ic = icon(shape, 26); ic.position.set(q.x + q.w / 2 + dx, q.y + q.h / 2); c.addChild(ic); }
+      c.zIndex = 1; return c; }
     if (id === 'cat') { const k = drawCat(); k.position.set(HOME_DECOR.cat.x, HOME_DECOR.cat.y); k.scale.set(1.3); c.addChild(k); c.zIndex = HOME_DECOR.cat.y; petCat = c; return c; }
     const a = decorArt(id); c.addChild(a); c.zIndex = a.zIndex;
     if (id === 'tv') { tvGlow = tvScreen(); tvGlow.alpha = 0.1; c.addChild(tvGlow); }

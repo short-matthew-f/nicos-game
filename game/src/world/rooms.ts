@@ -6,6 +6,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { NAVY, BAND } from './draw';
 import type { Rect } from './map';
 import { WALLPAPERS, RUGS } from '../decor';
+import { icon } from './icons';
 
 export interface Room {
   id: string;                         // the building it's inside
@@ -267,7 +268,7 @@ export function binsArt(): Container {
     g.roundRect(x + 2 - BAND, top - BAND, bw - 4 + 2 * BAND, s.h + 2 * BAND, 8).fill('#FFFFFF').roundRect(x + 2, top, bw - 4, s.h, 6).fill(col).rect(x + 2, top + 8, bw - 4, 6).fill({ color: '#FFFFFF', alpha: 0.35 });
   });
   c.addChild(g);
-  ['🛞', '⚙️', '🔋', '🥢'].forEach((e, i) => { const t = new Text({ text: e, style: { fontSize: 28 } }); t.anchor.set(0.5); t.position.set(s.x + i * bw + bw / 2, top + 4); c.addChild(t); });
+  ['wheel', 'gear', 'battery', 'sticks'].forEach((e, i) => { const t = icon(e, 28); t.position.set(s.x + i * bw + bw / 2, top + 2); c.addChild(t); });
   c.zIndex = s.y + s.d; return c;
 }
 /** A paint station: a waist-high table of paint cans (a brush in each), with splats on the front. */
@@ -485,9 +486,14 @@ export function drawBakeryRoom(): { view: Container; layer: Container } {
   // the menu board
   g.roundRect(440 - BAND, 40 - BAND, 360 + 2 * BAND, 150 + 2 * BAND, 12).fill('#FFFFFF').roundRect(440, 40, 360, 150, 10).fill('#2F3B33');
   g.roundRect(BAKERY_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');
-  const t = new Text({ text: "NICO'S BAKERY\n🍪 $3  🧁 $4  🍞 $5", style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#FFFFFF', align: 'center', lineHeight: 40 } });
-  t.anchor.set(0.5); t.position.set(620, 115);
-  view.addChild(g, t, layer);
+  const t = new Text({ text: "NICO'S BAKERY", style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 28, fill: '#FFFFFF' } });
+  t.anchor.set(0.5); t.position.set(620, 78);
+  view.addChild(g, t);
+  [['cookie', '$3'], ['cupcake', '$4'], ['bread', '$5']].forEach(([n, p], i) => {   // the menu: a little drawing and a price each
+    const x = 520 + i * 100, ic = icon(n, 30), pt = new Text({ text: p, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 24, fill: '#FFFFFF' } });
+    ic.position.set(x - 18, 140); pt.anchor.set(0, 0.5); pt.position.set(x + 2, 140); view.addChild(ic, pt);
+  });
+  view.addChild(layer);
   return { view, layer };
 }
 /** One baked thing, sitting at (0, 0). */
@@ -542,8 +548,8 @@ export function pantryArt(): Container {
   const boards = [top + 70, top + 150];
   for (const by of boards) g.rect(s.x + 8, by, s.w - 16, 10).fill('#D9A066');
   c.addChild(g);
-  ['🌾', '🍬', '🧈', '🥚', '🍫', '🌾', '🍬', '🥚'].forEach((e, i) => {
-    const t = new Text({ text: e, style: { fontSize: 34 } }); t.anchor.set(0.5, 1); t.position.set(s.x + 36 + (i % 4) * 62, boards[Math.floor(i / 4)] + 2); c.addChild(t);
+  ['flour', 'sugar', 'butter', 'egg', 'chocolate', 'flour', 'sugar', 'egg'].forEach((e, i) => {
+    const t = icon(e, 34); t.position.set(s.x + 36 + (i % 4) * 62, boards[Math.floor(i / 4)] - 16); c.addChild(t);
   });
   c.zIndex = s.y + s.d; return c;
 }
