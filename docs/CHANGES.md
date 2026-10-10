@@ -162,3 +162,23 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - e2e, now 31 checks: Get in appears, stick-right drives right, no Get out at speed, stick-down turns down, the camera pulls back, release stops and offers Get out, Get out lands beside the car, traffic stops behind the parked car, and a reload restores Nico's spot.
   - Mutations, all red: steering sign flipped (3 unit tests and 1 e2e), traffic ignoring Nico's car (e2e), and save disabled (e2e).
 - **Correction to the mutation method:** `npm run build` type-checks first, so a mutation that leaves an unused import fails the build, and the e2e then quietly tests the previous `dist/`. Two mutations looked green for that reason. Mutation runs now build with `npx vite build` and check for "built".
+
+## 2026-10-09: v1 slice 2 (building doors, Burger Barn lunch, the playground)
+- **Decisions:**
+  - **Doors:** every building has a door spot. `places.ts` is pure data: title, a line of text, and optionally a menu. Walking up shows "Go in" ("Order lunch" at Burger Barn) and opens a card. Nico can't move while a card is open; Leave or Escape closes it. School, hospital, home, garage, fire station, parts shop, toy shop and storage have a line each, hinting at what's coming.
+  - **Lunch:** burger $5, fries $3, shake $4. It's the first use of money. Food gives "speedy" walking (1.35×) for 40 to 90 s, capped at 180 s and shown as ⚡ in the HUD. It's a small, temporary payoff, not a hunger meter: no new thing to keep track of. Items you can't afford are greyed out. There's no way to earn yet; that comes in v2.
+  - **Playground:** the equipment is now sized against Nico, about 1.6× bigger. At first the tower was shorter than he is.
+    - **Slide:** a scripted 2.8 s run. He walks to the ladder, climbs it (back view), sits (side view, crouched), speeds up down the chute and hops off.
+    - **Swings:** he sits on the nearest seat and swings toward and away from the camera. The chains stretch, and he's drawn between the frame and his seat's chains, so he reads as sitting in it. Hop off, or pushing the stick, ends it.
+  - Activity timelines live in `play.ts` as pure functions of time.
+- **Corrections:**
+  - The e2e hook object had a `place` field for the open building, which overwrote the `place()` test helper. It's renamed `inside`.
+  - The first playground render showed the equipment smaller than Nico, so it was resized.
+- **Tests:**
+  - Vitest, 94 tests.
+    - Every place is a real building whose door Nico can stand at.
+    - `buy`: price, cap, exact money, not enough.
+    - Slide: reaches the platform, ends past the chute somewhere Nico can stand, sits while sliding, always drawn in front of the slide.
+    - Swing: builds up, then swings.
+  - e2e, 46 checks: the Burger Barn door, the menu opens, frozen while open, fries take $3 and give a boost, the HUD updates, boosted walking is faster, a $5 burger is disabled with $2, Leave, the school door, climbs the slide, lands at the bottom, the swing moves, Hop off is offered, the stick hops off.
+  - Mutations: no boost and no stick-to-hop-off each went red in the e2e. Breaking the "enough money" check went red in Vitest only: the e2e stays green because the UI disables the button separately.

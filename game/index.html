@@ -13,7 +13,7 @@
 <body>
   <div id="game"></div>
   <div id="hud">
-    <div id="left"><div id="money" class="chip">$20</div><div id="stats" class="chip"><span id="fps">-- fps</span> · <span id="people">1 person</span></div></div>
+    <div id="left"><div id="money" class="chip">$20</div><div id="boost" class="chip" hidden></div><div id="stats" class="chip"><span id="fps">-- fps</span> · <span id="people">1 person</span></div></div>
     <div id="buttons">
       <button id="more" type="button">+10 people</button>
       <button id="fewer" type="button">Clear</button>
@@ -23,6 +23,14 @@
   <div id="hint">Drag anywhere to walk · WASD / arrows on a keyboard</div>
   <button id="action" type="button" hidden></button>
   <div id="toast" role="status"></div>
+  <div id="place" class="modal" hidden>
+    <div class="card" role="dialog" aria-labelledby="place-title">
+      <h2 id="place-title"></h2>
+      <p id="place-text"></p>
+      <div id="place-menu" class="menu"></div>
+      <div class="row"><button id="place-close" type="button">Leave</button></div>
+    </div>
+  </div>
   <div id="update" hidden>
     <div class="card" role="dialog" aria-labelledby="update-title">
       <h2 id="update-title">New version ready!</h2>

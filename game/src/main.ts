@@ -1,5 +1,5 @@
 import { Application, Container } from 'pixi.js';
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR } from './world/map';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { loadNicoArt, NicoView } from './rig/nico';
@@ -10,6 +10,8 @@ import { startUpdates, BUILD_ID } from './update';
 import { load, save as writeSave, type Save } from './state';
 import { steer, moveCar, carFits, circles, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
+import { PLACES, BOOST, buy, type Place } from './places';
+import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
 
 const VIEW_H = 800;          // world px visible top to bottom while walking (Nico ~ 1/6 of the screen)
 const VIEW_H_DRIVE = 1050;   // ...and while driving: see further ahead
@@ -37,7 +39,7 @@ async function main() {
   const layer = new Container(); layer.sortableChildren = true;
   world.addChild(drawGround(), layer);
   app.stage.addChild(world);
-  drawWorld(layer);
+  const { seats } = drawWorld(layer);
 
   const cars = makeTraffic(3);
   for (const c of cars) layer.addChild(c.view);
@@ -54,7 +56,8 @@ async function main() {
   if (saved.car && carFits(saved.car.x, saved.car.y, saved.car.h, SOLIDS, WORLD)) Object.assign(car, saved.car, { speed: 0 });
   const { view: carView, turn: turnCar } = carSprite(MY_CAR.color, false, MY_CAR.stripe);
   layer.addChild(carView);
-  let mode: 'walk' | 'drive' = saved.driving ? 'drive' : 'walk';
+  let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
+  let boost = 0;   // seconds of speedy walking left (lunch)
 
   const persist = () => writeSave({ v: 1, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive' });
   window.addEventListener('pagehide', persist);
@@ -63,6 +66,7 @@ async function main() {
 
   const moneyEl = document.getElementById('money')!;
   const showMoney = () => { moneyEl.textContent = `$${state.money}`; };
+  const boostEl = document.getElementById('boost')!;
   showMoney();
 
   // ---- getting in and out
@@ -83,8 +87,56 @@ async function main() {
   }
   nico.view.root.visible = mode === 'walk';
 
+  // ---- playground: the game takes over Nico's pose for a moment
+  let play: { kind: 'slide' | 'swing'; t: number; from: [number, number]; seat: number } | null = null;
+  function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
+  function startSwing() {
+    const seat = Math.abs(nico.x - seatX(0)) < Math.abs(nico.x - seatX(1)) ? 0 : 1;
+    mode = 'play'; play = { kind: 'swing', t: 0, from: [nico.x, nico.y], seat };
+  }
+  function stopPlay() {
+    if (!play) return;
+    if (play.kind === 'swing') { seats[play.seat].scale.y = 1; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
+    play = null; mode = 'walk';
+    nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
+    Object.assign(nico.st, { crouch: 0, hold: 0, amp: 0 });
+  }
+  const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
+
+  // ---- buildings: walk up to a door to see what's there
+  const placeEl = document.getElementById('place')!, menuEl = document.getElementById('place-menu')!;
+  let openPlace: Place | null = null;
+  function showPlace(p: Place) {
+    openPlace = p;
+    document.getElementById('place-title')!.textContent = p.title;
+    document.getElementById('place-text')!.textContent = p.text;
+    menuEl.replaceChildren();
+    for (const item of p.menu ?? []) {
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.item = item.id;
+      b.innerHTML = `<span>${item.label}</span><span class="price">$${item.price}</span><span class="more">+${item.boost}s speedy</span>`;
+      b.disabled = item.price > state.money;
+      b.addEventListener('click', () => {
+        const r = buy(state.money, boost, item);
+        if (!r) return;
+        state.money = r.money; boost = r.boost; showMoney(); persist();
+        closePlace(); toast(`Yum! ${item.label}. You feel speedy!`);
+      });
+      menuEl.appendChild(b);
+    }
+    placeEl.hidden = false;
+  }
+  function closePlace() { placeEl.hidden = true; openPlace = null; }
+  document.getElementById('place-close')!.addEventListener('click', closePlace);
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && openPlace) closePlace(); });
+
   const spots: Spot[] = [
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
+    { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
+    { id: 'swing', x: (seatX(0) + seatX(1)) / 2, y: SWINGS.y + 25, r: 110, label: 'Swing', run: startSwing },
+    ...PLACES.map(p => {
+      const [x, y] = doorOf(BUILDINGS.find(b => b.id === p.building)!);
+      return { id: p.building, x, y, r: 70, label: p.action ?? 'Go in', run: () => showPlace(p) };
+    }),
   ];
   const outSpot: Spot = { id: 'out', x: 0, y: 0, r: Infinity, label: 'Get out', run: getOut };
   const action = new ActionButton();
@@ -104,6 +156,7 @@ async function main() {
     // stand Nico d px ahead of car i, in its lane (for the car-stops check)
     inFrontOf: (i: number, d: number) => { const c = cars[i], [x, y] = c.pos, h = c.loop.heading(c.s); nico.x = x + Math.cos(h) * d; nico.y = y + Math.sin(h) * d; },
     act: () => { action.spot?.run(); },
+    setMoney: (m: number) => { state.money = m; showMoney(); },
   };
   (window as unknown as { __game: unknown }).__game = game;
   const updater = startUpdates(persist);
@@ -160,16 +213,39 @@ async function main() {
     if (fpsAcc > 500) { fps = Math.round(1000 * fpsN / fpsAcc); fpsEl.textContent = `${fps} fps`; fpsAcc = 0; fpsN = 0; }
     if (Math.hypot(input.vx, input.vy) > 0) hint.style.opacity = '0';
 
-    if (mode === 'walk') {
-      const vx = input.vx * WALK_SPEED, vy = input.vy * WALK_SPEED;
+    const frozen = openPlace !== null;   // a building's card is open
+    boost = Math.max(0, boost - dt);
+    const fast = boost > 0 ? BOOST.speed : 1;
+    if (mode === 'play' && play) {
+      play.t += dt;
+      let b: Body;
+      if (play.kind === 'slide') {
+        b = slideAt(play.t, play.from);
+        if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else {
+        const sw = swingAt(play.t, play.seat);
+        seats[play.seat].scale.y = sw.chain; b = sw.body;
+        if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.6) stopPlay();
+      }
+      if (play) {
+        nico.x = b.x; nico.y = b.y;
+        Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, stride_y: 0 });
+        stepGait(nico.st, b.amp, 0, dt);
+        nico.view.pose(nico.x, nico.y, nico.st);
+        nico.view.root.zIndex = b.z;
+        nico.view.root.scale.y *= b.sy;
+      }
+    }
+    if (mode === 'walk' && !frozen) {
+      const vx = input.vx * WALK_SPEED * fast, vy = input.vy * WALK_SPEED * fast;
       const sp = Math.hypot(input.vx, input.vy);
       [nico.x, nico.y] = moveCircle(nico.x, nico.y, vx * dt, vy * dt, SOLIDS, WORLD);
       Object.assign(nico.st, chooseView(vx, vy, nico.st));
-      stepGait(nico.st, sp, vy, dt);
+      stepGait(nico.st, sp * fast, vy, dt);
       nico.view.pose(nico.x, nico.y, nico.st);
-    } else {
+    } else if (mode === 'drive') {
       const prevH = car.h;
-      steer(car, input.vx, input.vy, dt);
+      if (frozen) steer(car, 0, 0, dt); else steer(car, input.vx, input.vy, dt);
       moveCar(car, prevH, dt, SOLIDS, WORLD, carCirclesOf(cars));
     }
     carView.position.set(car.x, car.y);
@@ -195,12 +271,15 @@ async function main() {
 
     // traffic brakes for Nico on foot, and for every part of his car
     const blockers: [number, number][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y]);
-    if (mode === 'walk') blockers.push([nico.x, nico.y]);
+    if (mode !== 'drive') blockers.push([nico.x, nico.y]);
     for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], blockers);
 
     // action button
     spots[0].x = car.x; spots[0].y = car.y;
-    action.show(mode === 'drive' ? (car.speed < 40 ? outSpot : null) : nearest(spots, nico.x, nico.y));
+    action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : null) : nearest(spots, nico.x, nico.y));
+    boostEl.hidden = boost <= 0;
+    if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
     // camera follows Nico (or his car, looking ahead), clamped to the world; eases the zoom
     const wantH = mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
@@ -214,7 +293,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
-      mode, money: state.money, action: action.spot ? action.spot.id : null,
+      mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },

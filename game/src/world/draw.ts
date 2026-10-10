@@ -2,7 +2,7 @@
 // navy shadow offset down-right. Static things draw the band as geometry (cheap);
 // only characters use the live outline filter.
 import { Container, Graphics, Text } from 'pixi.js';
-import { BUILDINGS, DRIVEWAYS, LOTS, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
+import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
 
 export const NAVY = 0x2B3F55;
 const BAND = 7, SH = { x: 6, y: 10, a: 0.18 };
@@ -92,29 +92,42 @@ export function drawTree(x: number, y: number): Container {
   return c;
 }
 
-/** Playground equipment on the sand lot: a slide and a swing set (not solid in v0). */
-export function drawPlayground(): Container[] {
-  const lot = LOTS.find(l => l.id === 'playground')!;
+/** The slide and the swing frame (not solid), plus the swing seats. The seats hang from
+ * the bar and are separate layer items drawn just in front of the frame, so a swing can
+ * move and Nico can sit between the frame and his seat's chains. */
+export function drawPlayground(): { items: Container[]; seats: Container[] } {
   const slide = new Graphics();
-  const sx = lot.x + 70, sy = lot.y + 120;
-  stickerRect(slide, sx, sy - 110, 150, 110, 8);
-  slide.roundRect(sx, sy - 110, 46, 110, 6).fill('#F9A826')                 // tower
-       .rect(sx + 6, sy - 100, 34, 6).fill('#FFE29A').rect(sx + 6, sy - 80, 34, 6).fill('#FFE29A')
-       .poly([sx + 46, sy - 96, sx + 150, sy - 14, sx + 150, sy, sx + 46, sy - 74]).fill('#5FAFA5');
+  const { x: sx, y: sy, w: tw, h: th, top, len } = SLIDE;
+  stickerRect(slide, sx, sy - th, len, th, 10);
+  slide.roundRect(sx, sy - th, tw, th, 8).fill('#F9A826');                    // tower
+  for (let y = sy - th + 16; y < sy - 8; y += 26) slide.rect(sx + 9, y, tw - 18, 8).fill('#FFE29A');   // ladder rungs
+  slide.roundRect(sx - 4, sy - top - 8, tw + 8, 12, 5).fill('#D9822B')         // platform lip
+       .poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy, sx + tw, sy - top + 30]).fill('#5FAFA5')
+       .poly([sx + tw, sy - top - 4, sx + len, sy - 22, sx + len, sy - 14, sx + tw, sy - top + 6]).fill('#7CC6BC');
   const swings = new Graphics();
-  const wx = lot.x + 260, wy = lot.y + 130;
-  stickerRect(swings, wx, wy - 110, 130, 110, 8);
-  swings.roundRect(wx, wy - 110, 130, 12, 6).fill('#D77B72')
-        .rect(wx + 4, wy - 104, 8, 104).fill('#D77B72').rect(wx + 118, wy - 104, 8, 104).fill('#D77B72');
-  for (const ox of [36, 86]) swings.rect(wx + ox, wy - 98, 2, 60).fill('#34495E').rect(wx + ox + 14, wy - 98, 2, 60).fill('#34495E')
-                                   .roundRect(wx + ox - 4, wy - 40, 24, 8, 3).fill('#3E8F8A');
+  const { x: wx, y: wy, w: ww, h: wh } = SWINGS;
+  stickerRect(swings, wx, wy - wh, ww, wh, 10);
+  swings.roundRect(wx, wy - wh, ww, 16, 8).fill('#D77B72')
+        .rect(wx + 6, wy - wh + 8, 12, wh - 8).fill('#D77B72').rect(wx + ww - 18, wy - wh + 8, 12, wh - 8).fill('#D77B72');
+  const seats = SWINGS.seats.map(ox => {
+    // drawn hanging from the bar, origin at the bar: scale.y swings it toward the camera
+    const g = new Graphics();
+    const l = SWING_SEAT - SWING_BAR;
+    g.rect(-24, 0, 3, l).fill('#34495E').rect(21, 0, 3, l).fill('#34495E')
+     .roundRect(-27, l - 5, 54, 11, 4).fill('#3E8F8A');
+    const c = new Container(); c.addChild(g);
+    c.position.set(wx + ox, SWING_BAR); c.zIndex = wy + 2;
+    return c;
+  });
   const a = new Container(); a.addChild(slide); a.zIndex = sy;
   const b = new Container(); b.addChild(swings); b.zIndex = wy;
-  return [a, b];
+  return { items: [a, b, ...seats], seats };
 }
 
-export function drawWorld(layer: Container): void {
+export function drawWorld(layer: Container): { seats: Container[] } {
   for (const b of BUILDINGS) layer.addChild(drawBuilding(b));
   for (const [x, y] of TREES) layer.addChild(drawTree(x, y));
-  for (const p of drawPlayground()) layer.addChild(p);
+  const pg = drawPlayground();
+  for (const p of pg.items) layer.addChild(p);
+  return { seats: pg.seats };
 }
