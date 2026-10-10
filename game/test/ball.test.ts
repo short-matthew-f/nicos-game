@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { kick, roll, kickoff, BALL } from '../src/world/ball';
+import { kick, nudge, roll, kickoff, BALL } from '../src/world/ball';
 import { GOALS, GOAL_MOUTH, SOLIDS, WORLD } from '../src/world/map';
 
 const run = (b: ReturnType<typeof kickoff>, secs: number, solids = SOLIDS) => {
@@ -33,5 +33,14 @@ describe('soccer ball', () => {
     expect(run(inGoal, 2)).toBe(1);
     const wide = { x: g.x - 60, y: g.y + GOAL_MOUTH, vx: 600, vy: 0, z: 0, vz: 0 };
     expect(run(wide, 2)).toBe(0);
+  });
+  it('a passing car pushes it out to the side, not along the road in front', () => {
+    for (const side of [1, -1]) {
+      const b = { x: 1000, y: 500 + side * 10, vx: 0, vy: 0, z: 0, vz: 0 };
+      expect(nudge(b, 1000, 500, 40, 0)).toBe(true);           // car heading east (+x)
+      expect(Math.sign(b.vy)).toBe(side); expect(Math.abs(b.vx)).toBeLessThan(1e-9);
+      expect(Math.abs(b.y - 500)).toBeGreaterThan(40 + BALL.r);  // out from under it
+    }
+    const far = kickoff(); expect(nudge(far, far.x - 300, far.y, 40, 0)).toBe(false);
   });
 });

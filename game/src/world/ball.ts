@@ -24,6 +24,17 @@ export function kick(b: BallState, kx: number, ky: number, kr: number, ks: numbe
   return true;
 }
 
+/** A vehicle heading `h` touching the ball pushes it out sideways (off the road), never
+ * along in front of it. Returns true if it touched. */
+export function nudge(b: BallState, cx: number, cy: number, cr: number, h: number): boolean {
+  const dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy);
+  if (d > cr + BALL.r) return false;
+  const px = -Math.sin(h), py = Math.cos(h), side = dx * px + dy * py >= 0 ? 1 : -1;   // which side of the car it's on
+  b.vx = px * side * BALL.kickMin; b.vy = py * side * BALL.kickMin;
+  b.x = cx + px * side * (cr + BALL.r + 1); b.y = cy + py * side * (cr + BALL.r + 1);
+  return true;
+}
+
 /** Roll for dt: friction, bounces off solids and the world edge. Returns the goal it went
  * into (-1 left, 1 right) or 0. */
 export function roll(b: BallState, dt: number, solids: Rect[], bounds: { w: number; h: number }): number {

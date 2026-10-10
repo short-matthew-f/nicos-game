@@ -31,4 +31,15 @@ describe('odd jobs', () => {
     const a = start(j, () => 0.99), b = start(j, () => 0);
     expect(a.at[0]).not.toEqual(b.at[0]);
   });
+  it('a giver can walk to the meeting place from anywhere on their route without going through anything', () => {
+    const seg = (a: [number, number], b: [number, number]) => Array.from({ length: 41 }, (_, i) => [a[0] + (b[0] - a[0]) * i / 40, a[1] + (b[1] - a[1]) * i / 40] as [number, number]);
+    for (const j of JOBS) if (j.meet) {
+      const route = TOWNSFOLK.find(t => t.who === j.giver)!.route;
+      for (let i = 0; i < route.length; i++) for (const from of seg([route[i].x, route[i].y], [route[(i + 1) % route.length].x, route[(i + 1) % route.length].y])) {
+        const legs: [number, number][] = [from, [j.meet[0][0], from[1]], ...j.meet];   // as main.ts walks it
+        for (let k = 0; k + 1 < legs.length; k++) for (const [x, y] of seg(legs[k], legs[k + 1]))
+          expect(freeAt(x, y, SOLIDS, WORLD), `${j.id}: from ${from} at ${x.toFixed(0)},${y.toFixed(0)}`).toBe(true);
+      }
+    }
+  });
 });

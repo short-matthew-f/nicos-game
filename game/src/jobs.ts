@@ -1,13 +1,16 @@
 // Odd jobs from people around town: a way to earn a little money. Data first; the game
 // loop only asks "where's the next target?" and calls advance() when Nico does the step.
-import { BUILDINGS, doorOf } from './world/map';
+import { BUILDINGS, FIELD, ROADS_X, ROAD_W, SIDEWALK, doorOf } from './world/map';
 
 export type Step =
   | { kind: 'go'; label: string; note: string; at: [number, number] | [number, number][] }   // several: one is picked when the job starts
   | { kind: 'ball'; note: string }      // kick the soccer ball to the person who asked
   | { kind: 'return'; note: string };   // go back and tell them
 
-export interface Job { id: string; giver: string; title: string; ask: string; thanks: string; reward: number; steps: Step[]; cooldown: number }
+export interface Job {
+  id: string; giver: string; title: string; ask: string; thanks: string; reward: number; steps: Step[]; cooldown: number;
+  meet?: [number, number][];   // while the job's on, the giver walks these points and waits at the last one
+}
 
 const door = (id: string) => { const [x, y] = doorOf(BUILDINGS.find(b => b.id === id)!); return [x, y] as [number, number]; };
 
@@ -38,7 +41,9 @@ export const JOBS: Job[] = [
       { kind: 'return', note: 'bring Whiskers back to Sam' },
     ] },
   { id: 'ball', giver: 'ava', title: "Ava's soccer ball", reward: 4, cooldown: 120,
-    ask: 'I lost my soccer ball. I think it\'s on the field behind the toy shop. Can you kick it back to me? I\'ll give you $4.',
+    ask: 'I lost my soccer ball. I think it\'s on the field behind the toy shop. I\'ll wait at the end of the field: can you kick it to me? I\'ll give you $4.',
+    // she comes to the field (down her sidewalk, across the road) so the ball never has to cross traffic
+    meet: [[ROADS_X[0] - ROAD_W / 2 - SIDEWALK / 2, FIELD.y + 60], [FIELD.x + 110, FIELD.y + 60]],
     thanks: 'My ball! You\'re the best, Nico.',
     steps: [{ kind: 'ball', note: 'kick the soccer ball over to Ava' }] },
   { id: 'book', giver: 'maya', title: "Maya's library book", reward: 3, cooldown: 90,

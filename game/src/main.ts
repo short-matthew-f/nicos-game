@@ -9,7 +9,7 @@ import { FireTruck, TRUCK } from './world/firetruck';
 import { FireScene } from './world/fire';
 import { Siren, sfx, audio } from './sound';
 import { Minimap } from './minimap';
-import { BallView, kick, roll, kickoff } from './world/ball';
+import { BallView, kick, nudge, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
 import { Pigeons, Clouds, Coins, COIN } from './world/life';
 import { loadArt, PersonView } from './rig/person';
@@ -231,12 +231,12 @@ async function main() {
     }),
   ];
   // ---- people Nico knows, on their routines; walk up to one to say hi
-  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean } }
+  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean }; trip: [number, number][]; met: [number, number] | null }
   const locals: Local[] = TOWNSFOLK.map(t => {
     const view = new PersonView(t.who);
     layer.addChild(view.root);
     const r = t.route[0];
-    return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0 };
+    return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0, trip: [], met: null };
   });
   // ---- odd jobs: people with a job show a "!"; talk to them to take it on
   let job: Active | null = null;
@@ -285,7 +285,38 @@ async function main() {
     const j = job.job;
     showCard('job:quit', j.title, `Right now: ${jobStep(job).note}.`, [{ label: 'Give up the job', id: 'quit', onClick: () => { toast('Job dropped.'); job = null; } }], 'Keep going');
   });
+  /** Stand still, turned toward Nico. */
+  /** Back from a job's meeting place: the same legs in reverse (before the start point). */
+  function meetBack(l: Local): [number, number][] {
+    const m = jobFor(l.t.who)?.meet; if (!m || !l.met) return [];
+    return [...m.slice(0, -1).reverse(), [m[0][0], l.met[1]]];
+  }
+  function standFacing(l: Local, mx: number, my: number, dt: number) {
+    l.w.vx = l.w.vy = 0;
+    Object.assign(l.st, chooseView(mx - l.w.x, my - l.w.y, l.st));
+    stepGait(l.st, 0, 0, dt, GAIT_SCALE * l.view.height);
+    l.view.pose(l.w.x, l.w.y, l.st);
+  }
   function stepLocal(l: Local, dt: number) {
+    // someone Nico's doing a job for (or who has one to offer) waits for him when he's close,
+    // instead of walking off; a job with a meeting place sends them there and back
+    if (l.swingT < 0) {
+      const [mx, my] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y];
+      const near = Math.hypot(mx - l.w.x, my - l.w.y);
+      const mine = !!job && job.job.giver === l.t.who, meet = mine ? job!.job.meet : undefined;
+      if (meet && !l.met) { l.met = [l.w.x, l.w.y]; l.trip = [[meet[0][0], l.w.y], ...meet]; }   // along her own street first
+      if (!mine && l.met) { l.trip = [...meetBack(l), l.met]; l.met = null; }   // job over (or dropped): walk back, then carry on
+      if (l.trip.length) {
+        const [tx, ty] = l.trip[0], dx = tx - l.w.x, dy = ty - l.w.y, d = Math.hypot(dx, dy), step = l.t.speed * dt;
+        if (d <= step) { l.w.x = tx; l.w.y = ty; l.trip.shift(); l.w.vx = l.w.vy = 0; }
+        else { l.w.vx = dx / d * l.t.speed; l.w.vy = dy / d * l.t.speed; l.w.x += l.w.vx * dt; l.w.y += l.w.vy * dt; }
+        Object.assign(l.st, chooseView(l.w.vx, l.w.vy, l.st));
+        stepGait(l.st, Math.hypot(l.w.vx, l.w.vy), l.w.vy, dt, GAIT_SCALE * l.view.height);
+        l.view.pose(l.w.x, l.w.y, l.st);
+        return;
+      }
+      if (l.met || (mine && near < 320) || (offers(l.t.who) && near < 220)) { standFacing(l, mx, my, dt); return; }
+    }
     const reached = stepRoute(l.t, l.w, dt);
     if (reached?.swing !== undefined && !seatTaken[reached.swing]) { l.seat = reached.swing; seatTaken[l.seat] = l.t.who; l.swingT = 0; }
     if (l.swingT >= 0) {
@@ -479,6 +510,9 @@ async function main() {
       if (mode === 'walk' && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
       if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) { sfx.kick(); break; }
       for (const l of locals) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
+      // traffic nudges it off the road to the side, rather than driving over and hiding it
+      for (const c of cars) if (c.speed > 5) { const h = c.loop.heading(c.s); for (const [cx, cy, r] of circles(c.pos[0], c.pos[1], h)) if (nudge(ball, cx, cy, r, h)) break; }
+      if (truck.out) for (const [cx, cy] of truck.points()) if (nudge(ball, cx, cy, TRUCK.wid * 0.45, truck.heading)) break;
       const g = roll(ball, dt, SOLIDS, WORLD);
       if (g) {
         if (g < 0) score.right++; else score.left++;
@@ -544,7 +578,7 @@ async function main() {
       jobAt = jobTarget(job, [giver.w.x, giver.w.y]);
       const st = jobStep(job);
       if (st.kind === 'go') { jobSpot.x = jobAt[0]; jobSpot.y = jobAt[1]; }
-      if (st.kind === 'ball' && Math.hypot(ball.x - giver.w.x, ball.y - giver.w.y) < 130) payJob();
+      if (st.kind === 'ball' && Math.hypot(ball.x - giver.w.x, ball.y - giver.w.y) < 170) payJob();
       cat.visible = !!job && job.job.id === 'cat' && job.step === 0;
       if (cat.visible) { cat.position.set(jobAt[0], jobAt[1] - 6); cat.zIndex = jobAt[1]; }
     } else cat.visible = false;
@@ -561,6 +595,7 @@ async function main() {
       ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
       ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
       ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
+      ...(job?.job.id === 'ball' ? [{ x: ball.x, y: ball.y, color: '#FFFFFF', r: 4.5, ring: true }] : []),   // where the ball is
       { x: mode === 'drive' ? car.x : nico.x, y: mode === 'drive' ? car.y : nico.y, color: '#F08A3C', r: 5, ring: true },
     ]);
     minimap.update(mapDots);
