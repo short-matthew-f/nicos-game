@@ -15,10 +15,10 @@ export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 
 let art: ArtMeta | null = null;
 // ?v= so a new deploy never mixes with cached art (Pages lets browsers cache files for 10 minutes)
-const v = `?v=${encodeURIComponent(BUILD_ID)}`;
+const BUST = `?v=${encodeURIComponent(BUILD_ID)}`;
 export async function loadNicoArt(base = './'): Promise<void> {
-  art = await (await fetch(`${base}art/nico/nico.json${v}`)).json() as ArtMeta;
-  const urls = Object.values(art.views).flat().map(p => base + p.img + v);
+  art = await (await fetch(`${base}art/nico/nico.json${BUST}`)).json() as ArtMeta;
+  const urls = Object.values(art.views).flat().map(p => base + p.img + BUST);
   await Assets.load(urls);
 }
 
@@ -32,7 +32,7 @@ export class NicoView {
     for (const v of ['side', 'front', 'back'] as View[]) {
       const c = new Container();
       const parts = art.views[v].map(meta => {
-        const sprite = new Sprite(Texture.from(base + meta.img + v));
+        const sprite = new Sprite(Texture.from(base + meta.img + BUST));
         c.addChild(sprite);
         return { meta, sprite };
       });
@@ -51,6 +51,11 @@ export class NicoView {
     const px = RIG_SCALE * zoom;
     this.outline.thickness = OUTLINE * px * resolution;
     this.shadow.offset = { x: SHADOW.x * px, y: SHADOW.y * px };
+  }
+
+  /** Every part has real pixels (a bad image URL gives Pixi's 1x1 empty texture). */
+  artLoaded(): boolean {
+    return Object.values(this.views).every(v => v.parts.every(p => p.sprite.texture.width > 2 && p.sprite.texture.source.resource != null));
   }
 
   pose(x: number, y: number, st: PoseState) {

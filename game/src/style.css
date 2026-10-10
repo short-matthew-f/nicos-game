@@ -14,7 +14,7 @@ html, body {
 }
 #stats { background: rgba(255,255,255,.85); border-radius: 12px; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #buttons { display: flex; gap: 8px; pointer-events: auto; }
-#buttons button {
+#buttons button, #check-update {
   min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; font: inherit; font-weight: 800;
   background: #fff; color: var(--navy); box-shadow: 0 3px 0 rgba(43,63,85,.25); touch-action: manipulation;
 }
@@ -56,3 +56,4 @@ html, body {
 }
 .card button.primary { background: #F9A826; }
 .card button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(43,63,85,.25); }
+#check-update { font-size: 22px; min-width: 48px; }

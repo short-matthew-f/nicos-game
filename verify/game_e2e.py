@@ -21,6 +21,7 @@ with sync_playwright() as p:
     g0 = G()
     check(not errs, f'page errors: {errs}')
     check(g0['fps'] > 0, 'fps counter running')
+    check(g0['nico']['art'], 'every rig part image loaded')
     W, H = pg.viewport_size['width'], pg.viewport_size['height']
     s = g0['nico']['screen']
     check(abs(s['x'] + s['w'] / 2 - W / 2) < 60, f'Nico centred horizontally by the camera ({s})')

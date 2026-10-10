@@ -136,7 +136,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
-      nico: { x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
+      nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },
       cars: cars.map(c => ({ speed: c.speed, pos: c.pos, heading: c.loop.heading(c.s) })), fps, people: walkers.length + 1, zoom,
     });

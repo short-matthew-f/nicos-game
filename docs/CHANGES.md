@@ -145,3 +145,4 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
     - Restart reloads the page and tidies the URL, with no re-prompt loop.
   - Mutation: removing the restarted-into guard went red in both suites.
   - **Not proven by mutation:** swapping `?v=` navigation for `location.reload()` stayed green. The local preview server doesn't cache HTML the way Pages does, so the cache-bust can't be tested here.
+- **Correction:** the commit that added `?v=` to the rig art reused the name `v`, which the sprite loop already used for the view. Sprites loaded `…png` + `side` and drew nothing, and the e2e stayed green because Pixi's empty texture still has bounds. The cache-bust is now `BUST`, and the e2e checks that every part's image actually loaded. That check went red with a deliberately bad URL.
