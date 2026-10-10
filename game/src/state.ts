@@ -1,6 +1,6 @@
 // The save: one small versioned object in localStorage. When the shape changes, bump
 // VERSION and add a step to migrate(), so a change of plan never wipes Nico's progress.
-import { freshBiz, type Biz } from './business';
+import { freshBiz, freshDoors, HALL, ITEMS, type Biz } from './business';
 
 export const VERSION = 6;
 export const START_MONEY = 20;
@@ -76,6 +76,7 @@ function cleanBiz(raw: unknown): Biz {
   return {
     items, finds, workbench: b.workbench === true, designs: strs(b.designs), skills: strs(b.skills),
     tools: strs(b.tools), shells: counts(b.shells), photos: counts(b.photos), shown: strs(b.shown),
+    doors: cleanDoors(b.doors, count(b.seed) || f.seed), unit: cleanUnit(b.unit),
     stock: counts(b.stock), sold: counts(b.sold), flips: count(b.flips), seed: count(b.seed) || f.seed,
   };
 }
@@ -98,4 +99,26 @@ function cleanJob(raw: unknown): SavedJob | null {
   if (typeof j.id !== 'string' || typeof j.step !== 'number' || !Number.isInteger(j.step) || j.step < 0 || !Array.isArray(j.at)) return null;
   const at = j.at.map(p => (Array.isArray(p) && p.length === 2 && p.every(n => typeof n === 'number' && isFinite(n)) ? [p[0], p[1]] as [number, number] : null));
   return { id: j.id, step: j.step, at };
+}
+
+function cleanDoors(raw: unknown, seed: number): Biz['doors'] {
+  const fresh = freshDoors(seed);
+  if (!Array.isArray(raw) || raw.length !== fresh.length) return fresh;
+  return fresh.map((d, i) => {
+    const r = raw[i] as Partial<Biz['doors'][number]> | null;
+    if (!r || typeof r !== 'object') return d;
+    const seedOk = typeof r.seed === 'number' && Number.isInteger(r.seed) && r.seed > 0;
+    const sold = typeof r.sold === 'number' && isFinite(r.sold) ? Math.min(HALL.restock, Math.max(0, r.sold)) : 0;
+    return { seed: seedOk ? r.seed! : d.seed, sold, ...(typeof r.must === 'string' && ITEMS.some(it => it.id === r.must) ? { must: r.must } : {}) };
+  });
+}
+function cleanUnit(raw: unknown): Biz['unit'] {
+  if (!raw || typeof raw !== 'object') return null;
+  const u = raw as Partial<NonNullable<Biz['unit']>>;
+  if (typeof u.door !== 'number' || !Number.isInteger(u.door) || u.door < 0 || u.door >= HALL.doors || !Array.isArray(u.items)) return null;
+  const items = u.items.filter(it => it && ITEMS.some(i => i.id === it.id) && typeof it.value === 'number' && it.value >= 0 && Number.isInteger(it.slot))
+    .map(it => ({ id: it.id, value: Math.floor(it.value), slot: it.slot }));
+  if (!items.length) return null;
+  const n = (x: unknown) => (typeof x === 'number' && isFinite(x) && x >= 0 ? x : 0);
+  return { door: u.door, name: typeof u.name === 'string' ? u.name : 'A', paid: n(u.paid), got: n(u.got), items };
 }

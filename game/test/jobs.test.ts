@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { JOBS, start, current, advance, target, wantJob, jobById, pickWant, wantReward, WANT_REASONS, WANTERS } from '../src/jobs';
-import { item, sellPrice, lineup, freshBiz, add, take, owns } from '../src/business';
+import { item, sellPrice, freshBiz, freshDoors, add, take, owns, ensureWanted, doorState, doorUnit, peekOf, DOOR_NAMES } from '../src/business';
 import { TOWNSFOLK } from '../src/townsfolk';
 import { SOLIDS, WORLD } from '../src/world/map';
 import { freeAt } from '../src/player';
@@ -56,11 +56,14 @@ describe('odd jobs', () => {
     expect(jobById('cat')!.id).toBe('cat');
     for (const bad of ['want:maya:spaceship', 'want:nobody:radio', 'want:maya:wheel', 'nope']) expect(jobById(bad), bad).toBeNull();
   });
-  it('while someone wants a thing, every auction has one (a request never stalls on bad luck)', () => {
-    for (const id of Object.keys(WANT_REASONS)) for (let seed = 1; seed < 60; seed++)
-      for (const u of lineup(seed, false, id)) if (u.contents.some(c => c.id === id)) expect(u.peek[0], `${id} seed ${seed} shows`).toBe(id);
-    for (const id of Object.keys(WANT_REASONS)) for (let seed = 1; seed < 60; seed++)
-      expect(lineup(seed, false, id).some(u => u.contents.some(c => c.id === id)), `${id} seed ${seed}`).toBe(true);
+  it('while someone wants a thing, a unit for sale has one, and you can see it through the gap (a request never stalls)', () => {
+    for (const id of Object.keys(WANT_REASONS)) for (let seed = 1; seed < 60; seed++) {
+      const b = freshBiz(); b.flips = 1; b.doors = freshDoors(seed);
+      ensureWanted(b, id);
+      const has = DOOR_NAMES.map((_, i) => i).filter(i => doorState(b, i) === 'sale' && doorUnit(b, i).contents.some(c => c.id === id));
+      expect(has.length, `${id} seed ${seed}`).toBeGreaterThan(0);
+      for (const i of has) expect(peekOf(doorUnit(b, i), id)[0]).toBe(id);
+    }
   });
   it('handing a thing over takes the cheapest one kept', () => {
     const b = freshBiz(); b.finds.push({ id: 'radio', value: 9 }, { id: 'radio', value: 5 }); add(b, 'wheel');

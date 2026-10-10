@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ITEMS, item, STARTER, WORKBENCH, PARTS_FOR_SALE, CAR_RECIPE, CAR_SALE, RAMP, SKILLS,
-  makeUnit, lineup, guess, buyUnit, sellOne, shelfValue, goalPlace, worth, sellPrice, freshBiz, has, missing, add, use, unlocks, carPrice, nextGoal,
+  makeUnit, guess, sellOne, doorState, doorUnit, buyDoor, decide, tickDoors, HALL, DOOR_NAMES, shelfValue, goalPlace, worth, sellPrice, freshBiz, has, missing, add, use, unlocks, carPrice, nextGoal,
 } from '../src/business';
 import { START_MONEY } from '../src/state';
 import { PRODUCTS, product, unlockedProducts, partsCost, priceOf, runProgram, ROBOT_LEVEL, type Move } from '../src/business';
@@ -73,16 +73,12 @@ describe('storage units', () => {
       for (const p of u.peek) expect(u.contents.some(c => c.id === p)).toBe(true);
     }
   });
-  it('the very first visit offers only units that make a profit (just the starter)', () => {
-    for (const seed of [1, 2, 7, 99]) for (const u of lineup(seed, true)) {
-      const finds = u.contents.filter(c => item(c.id).kind === 'find').reduce((t, c) => t + c.value, 0);
-      expect(finds, `${u.name}`).toBeGreaterThan(u.price);
-    }
-  });
-  it('the first lineup is the starter; later ones are three new units', () => {
-    expect(lineup(1, true)).toEqual([STARTER]);
-    expect(lineup(1, false).includes(STARTER)).toBe(false);
-    expect(lineup(2, false)).toHaveLength(3);
+  it('the very first visit offers just the starter unit (a sure profit); the other doors wait', () => {
+    const b = freshBiz();
+    expect(doorState(b, 0)).toBe('sale'); expect(doorUnit(b, 0)).toBe(STARTER);
+    for (let i = 1; i < DOOR_NAMES.length; i++) expect(doorState(b, i)).toBe('locked');
+    const finds = STARTER.contents.filter(c => item(c.id).kind === 'find').reduce((t, c) => t + c.value, 0);
+    expect(finds).toBeGreaterThan(STARTER.price);
   });
   it('appraisers sell for more', () => {
     expect(sellPrice(10, true)).toBeGreaterThan(sellPrice(10, false));
@@ -123,18 +119,55 @@ describe('what Nico owns', () => {
     b.designs.push('robot'); b.stock.robot = 1; expect(step(0)).toMatch(/Sell your toy robot/);
     b.stock.robot = 0; b.sold.robot = 1; expect(step(0)).toBeNull();
   });
-  it('buying a unit hands over everything at once; selling takes it back off', () => {
+  it('buy a unit, then sort it one thing at a time: sell, keep or trash; one unit at a time', () => {
     const b = freshBiz();
-    expect(buyUnit(b, STARTER, STARTER.price - 1)).toBe(false);
-    expect(b.flips).toBe(0);
-    expect(buyUnit(b, STARTER, START_MONEY)).toBe(true);
-    expect(b.items.wheel).toBe(4); expect(b.finds.map(f => f.id).sort()).toEqual(['radio', 'teddy']);
-    expect(b.flips).toBe(1); expect(b.seed).toBe(freshBiz().seed + 1);   // a new lineup next time
-    expect(shelfValue(b)).toBe(11);
-    expect(sellOne(b, 'radio', 7)).toBe(7);
-    expect(sellOne(b, 'radio', 7)).toBe(0);           // can't sell it twice
-    expect(sellOne(b, 'wheel', 2)).toBe(2); expect(b.items.wheel).toBe(3);
-    b.skills.push('appraiser'); expect(sellOne(b, 'teddy', 4)).toBe(sellPrice(4, true));
+    expect(buyDoor(b, 0, STARTER.price - 1)).toBe(false); expect(b.flips).toBe(0);
+    expect(buyDoor(b, 0, START_MONEY)).toBe(true);
+    expect(b.flips).toBe(1); expect(doorState(b, 0)).toBe('yours'); expect(b.unit!.items).toHaveLength(STARTER.contents.length);
+    expect(doorState(b, 1)).toBe('sale');
+    expect(buyDoor(b, 1, 999)).toBe(false);   // still sorting Unit A
+    const slotOf = (id: string) => b.unit!.items.find(i => i.id === id)!.slot;
+    expect(decide(b, slotOf('radio'), 'sell')).toEqual({ money: 7, done: false });
+    expect(decide(b, slotOf('teddy'), 'trash')).toEqual({ money: 0, done: false });
+    expect(b.finds).toEqual([]);
+    for (let k = 0; k < 3; k++) expect(decide(b, slotOf('wheel'), 'keep').done).toBe(false);
+    expect(decide(b, slotOf('wheel'), 'keep')).toEqual({ money: 0, done: true });
+    expect(b.items.wheel).toBe(4); expect(b.unit).toBeNull();
+    expect(decide(b, 0, 'sell')).toEqual({ money: 0, done: false });   // nothing to sort now
+  });
+  it("a sorted unit is SOLD until new stuff arrives (only while you're playing)", () => {
+    const b = freshBiz(); buyDoor(b, 0, 99);
+    for (const it of [...b.unit!.items]) decide(b, it.slot, 'sell');
+    expect(doorState(b, 0)).toBe('sold');
+    tickDoors(b, HALL.restock - 1); expect(doorState(b, 0)).toBe('sold');
+    tickDoors(b, 1); expect(doorState(b, 0)).toBe('sale');
+    expect(doorUnit(b, 0)).not.toBe(STARTER);   // something new behind it
+  });
+  it('junk is worth nothing (the trash is for it); finds can be kept and sold later', () => {
+    for (const id of ['socks', 'papers', 'bucket']) { expect(item(id).value).toEqual([0, 0]); expect(sellPrice(0, true)).toBe(0); }
+    const b = freshBiz(); b.finds.push({ id: 'radio', value: 7 });
+    expect(shelfValue(b)).toBe(7); expect(sellOne(b, 'radio', 7)).toBe(7); expect(sellOne(b, 'radio', 7)).toBe(0);
+    b.skills.push('appraiser'); b.finds.push({ id: 'teddy', value: 4 }); expect(sellOne(b, 'teddy', 4)).toBe(sellPrice(4, true));
+  });
+  it('no endless money: a greedy player buying and selling everything earns only so much an hour', () => {
+    // Nico found he could buy auction units over and over. Now: six doors, one unit at a time, and a
+    // sorted unit's door stays shut for minutes. Simulate an hour of buying the best-looking unit as
+    // soon as possible (with Appraiser: exact guesses, +20%) and selling everything straight away.
+    const b = freshBiz(); b.skills.push('appraiser');
+    let money = 1000, bought = 0;
+    for (let t = 0; t < 3600; t++) {
+      tickDoors(b, 1);
+      if (!b.unit) {
+        const best = DOOR_NAMES.map((_, i) => i).filter(i => doorState(b, i) === 'sale')
+          .map(i => { const u = doorUnit(b, i), [lo, hi] = guess(u, true); return { i, u, gain: (lo + hi) / 2 * 1.2 - u.price }; })
+          .sort((x, y) => y.gain - x.gain)[0];
+        if (best && buyDoor(b, best.i, money)) { money -= best.u.price; bought++; }
+      }
+      if (b.unit) for (const it of [...b.unit.items]) money += decide(b, it.slot, 'sell').money;
+    }
+    const perMinute = (money - 1000) / 60; console.log(`greedy: $${perMinute.toFixed(1)}/min from ${bought} units`);
+    expect(bought).toBeLessThanOrEqual(DOOR_NAMES.length * (1 + 3600 / HALL.restock));
+    expect(perMinute, `$${perMinute.toFixed(1)} a minute from ${bought} units`).toBeLessThan(6);
   });
   it('the goal star points at the right building', () => {
     const b = freshBiz();

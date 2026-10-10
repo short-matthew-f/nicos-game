@@ -1,10 +1,10 @@
-// The workshop screens (v2): the storage auction, opening a unit, building the toy car by
+// The workshop screens (v2): building the toy car (and later products) by
 // dragging parts onto the blueprint, the ramp test, and the quick repeat build. Plain DOM +
 // inline SVG over the game (the world is paused behind it, like the cards). The rules live
 // in business.ts; this file is the hands-on part. See docs/UX_NOTES.md for the feel rules.
 import {
-  item, lineup, guess, worth, sellPrice, buyUnit, sellOne, use, has, unlocks, product, runProgram, RAMP, ROBOT_LEVEL, type Move,
-  type Biz, type Unit, type Skill,
+  item, use, has, product, runProgram, RAMP, ROBOT_LEVEL, type Move,
+  type Biz, type Skill,
 } from './business';
 import { sfx } from './sound';
 import { PLANS, type Slot } from './plans';
@@ -18,7 +18,6 @@ export interface WorkHost {
   toast(msg: string): void;
   opened(on: boolean): void;           // pause the world while a screen is up
   skill(s: Skill): void;               // a new skill was earned
-  wanted(): string | null;             // an item someone asked Nico to find
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -28,7 +27,6 @@ const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = '') =
 const s = (tag: string, attrs: Record<string, string | number> = {}) => {
   const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, String(attrs[k])); return e;
 };
-const emoji = (id: string) => item(id).label.split(' ')[0];
 const name = (id: string) => item(id).label.split(' ').slice(1).join(' ');
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -107,108 +105,6 @@ export class Workshop {
   }
   private button(label: string, onClick: () => void, cls = '') {
     const b = h('button', cls, label); b.type = 'button'; b.addEventListener('click', onClick); this.actions.append(b); return b;
-  }
-
-  // ------------------------------------------------------------ the auction
-  auction() {
-    const b = this.host.biz, ap = b.skills.includes('appraiser');
-    const units = lineup(b.seed, b.flips === 0, this.host.wanted());
-    this.show('auction', 'Storage unit auction', ap ? '🔍 Appraiser: your guesses are spot on.'
-      : units.length === 1 ? 'Just one unit up today: a good one to start with. More next time! The guess is what the stuff inside might sell for.'
-      : 'Peek through the doors. The price is on the tag; the guess is what the stuff inside might sell for.');
-    for (const u of units) {
-      const card = h('div', 'lot'); card.dataset.unit = u.name;
-      const door = h('div', 'door'); door.append(h('span', 'peek', [...u.peek.map(emoji), '❓'].join(' ')));
-      const [lo, hi] = guess(u, ap || !!u.starter);   // the starter's guess is a close one: no scary low end on the first buy
-      card.append(door, h('div', 'uname', `Unit ${u.name} · ${u.size}`), h('div', 'guess', `Worth about $${lo}–$${hi}`));
-      if (u.starter) card.append(h('div', 'tag', '⭐ Good first buy'));
-      const want = this.host.wanted();
-      if (want && u.contents.some(c => c.id === want)) { card.append(h('div', 'tag', `⭐ There's ${item(want).label} inside!`)); card.dataset.wanted = '1'; }
-      const buy = h('button', 'primary', `Buy $${u.price}`); buy.type = 'button'; buy.dataset.buy = u.name;
-      const short = u.price - this.host.money();
-      if (short > 0) { buy.disabled = true; buy.textContent = `$${u.price} (need $${short} more)`; }
-      // two taps to spend money: the first one asks
-      let armed = -Infinity;
-      buy.addEventListener('click', () => {
-        if (performance.now() - armed > 3000) { armed = performance.now(); buy.textContent = `Tap again: buy for $${u.price}`; buy.classList.add('sure'); sfx.tap(); return; }
-        if (!buyUnit(b, u, this.host.money())) return;
-        this.host.setMoney(this.host.money() - u.price);
-        this.openUnit(u);
-      });
-      card.append(buy);
-      this.stage.append(card);
-    }
-    this.button('Not today', () => this.close());
-  }
-
-  // ------------------------------------------------------------ opening a unit
-  /** Everything's already Nico's (buyUnit); here he sees it and picks what to sell. */
-  async openUnit(u: Unit) {
-    const b = this.host.biz, ap = b.skills.includes('appraiser');
-    this.show('unit', `Unit ${u.name}: it's yours!`, 'Tap the boxes to open them.');
-    const door = h('div', 'rolldoor'); this.stage.append(door);
-    const grid = h('div', 'finds'); this.stage.append(grid);
-    sfx.door();
-    requestAnimationFrame(() => door.classList.add('up'));
-    const want = this.host.wanted();
-    const sell: boolean[] = u.contents.map(c => item(c.id).kind === 'find' && c.id !== want);   // finds sell; parts and wanted things are kept (can change)
-    const open: boolean[] = u.contents.map(() => false);
-    const tiles: HTMLElement[] = [];
-    const total = () => u.contents.reduce((t, c, i) => t + (sell[i] && open[i] ? sellPrice(c.value, ap) : 0), 0);
-    const done = this.button('Open them all', () => openAll());
-    const refresh = () => {
-      const n = open.filter(Boolean).length, all = n === u.contents.length;
-      const ns = sell.filter((x, i) => x && open[i]).length, nk = n - ns;
-      done.textContent = all ? (ns ? `Sell ${ns} for $${total()}${nk ? ` · keep ${nk}` : ''}` : `Keep all ${nk}`) : 'Open them all';
-      done.className = all ? 'primary' : '';
-      this.sub.textContent = all ? `Worth $${worth(u)} in all (you paid $${u.price}). Tap a find to switch between Sell and Keep.` : 'Tap the boxes to open them.';
-    };
-    const reveal = async (i: number) => {
-      if (open[i] || this.screen !== 'unit') return;
-      open[i] = true;
-      const c = u.contents[i], rare = c.value >= 10, t = tiles[i];
-      t.classList.add('opening'); sfx.pop();
-      await wait(rare ? 380 : 140);
-      if (this.screen !== 'unit') return;
-      if (rare) sfx.sparkle();
-      t.classList.remove('box', 'opening'); t.classList.add('open'); if (rare) t.classList.add('rare');
-      t.replaceChildren(h('div', 'big', emoji(c.id)), h('div', 'nm', name(c.id)), h('div', 'val', `$${sellPrice(c.value, ap)}`), h('div', 'choice'));
-      choice(i); refresh();
-    };
-    const choice = (i: number) => {
-      const t = tiles[i], el = t.querySelector('.choice')!;
-      el.textContent = sell[i] ? '💰 Sell' : u.contents[i].id === want ? '⭐ Keep: wanted!' : (item(u.contents[i].id).kind === 'part' ? '🔧 Keep (part)' : '🏠 Keep');
-      t.classList.toggle('keep', !sell[i]);
-    };
-    u.contents.forEach((c, i) => {
-      const t = h('button', 'find box'); t.type = 'button'; t.dataset.find = String(i); t.dataset.id = c.id;
-      t.append(h('div', 'big', '📦'));
-      t.addEventListener('click', () => {
-        if (!open[i]) { void reveal(i); return; }
-        sell[i] = !sell[i]; sfx.tap(); choice(i); refresh();
-      });
-      tiles.push(t); grid.append(t);
-    });
-    const openAll = async () => {
-      if (open.every(Boolean)) return finish();
-      for (let i = 0; i < open.length; i++) if (!open[i]) {   // quick, but one at a time
-        if (this.screen !== 'unit') return;   // left halfway: stop
-        await reveal(i); await wait(110);
-      }
-    };
-    const finish = () => {
-      let got = 0, n = 0;
-      u.contents.forEach((c, i) => { if (sell[i] && open[i]) { got += sellOne(b, c.id, c.value); n++; } });
-      if (got) { this.host.setMoney(this.host.money() + got); sfx.cash(n); }
-      const profit = got - u.price;
-      this.host.toast(got ? `Sold ${n} thing${n === 1 ? '' : 's'} for $${got}${profit > 0 ? ` (that's $${profit} more than you paid!)` : ''}` : 'All kept: they\'re on the shelf in your garage.');
-      const skills = unlocks(b);   // (before close, which saves)
-      this.close();
-      for (const sk of skills) this.host.skill(sk);
-    };
-    done.addEventListener('click', () => { if (open.every(Boolean)) finish(); });
-    await wait(650);
-    refresh();
   }
 
   // ------------------------------------------------------------ the blueprint (shared by both builds)

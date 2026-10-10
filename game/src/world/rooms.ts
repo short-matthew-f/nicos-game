@@ -105,3 +105,93 @@ export function trayArt(emoji: string): Container {
   const t = new Text({ text: emoji, style: { fontSize: 30 } }); t.anchor.set(0.5, 0.9); t.position.set(0, -2);
   c.addChild(g, t); return c;
 }
+
+// ---- the storage building: a hallway of roll-up doors (each a unit for sale), an office desk
+export const HALL_ROOM = { w: 1960, h: 780, wall: 300 };
+export const doorX = (i: number) => 360 + i * 260;          // each door's centre
+export const DOOR_W = 210;
+export const HALL_DESK = { x: 40, y: 380, w: 200, d: 56 };   // the office desk (the clerk stands behind it)
+export const HALL_EXIT: [number, number] = [HALL_ROOM.w / 2, HALL_ROOM.h - 30];
+
+export interface DoorView { g: Graphics; sign: Text; note: Text; peek: Text }
+export function drawHall(): { view: Container; layer: Container; doors: DoorView[] } {
+  const view = new Container(), floor = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = HALL_ROOM;
+  floor.rect(-3000, -3000, w + 6000, h + 6000).fill('#23272E');
+  floor.rect(0, wall, w, h - wall).fill('#C9CCC4');
+  for (let x = 0; x < w; x += 160) floor.rect(x, wall, 3, h - wall).fill({ color: '#000000', alpha: 0.05 });   // floor joints
+  floor.rect(0, 0, w, wall).fill('#8E9AA6');
+  for (let y = 10; y < wall; y += 22) floor.rect(0, y, w, 6).fill({ color: '#FFFFFF', alpha: 0.08 });   // corrugated wall
+  floor.rect(0, wall - 12, w, 12).fill('#6B7782');
+  floor.roundRect(HALL_EXIT[0] - 100, h - 34, 200, 34, 8).fill('#4B5560');   // the way out
+  view.addChild(floor);
+  const doors: DoorView[] = [];
+  for (let i = 0; i < 6; i++) {
+    const g = new Graphics(); view.addChild(g);
+    const st = { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900' as const, fill: '#2B3F55' };
+    const sign = new Text({ text: '', style: { ...st, fontSize: 24 } }); sign.anchor.set(0.5); sign.position.set(doorX(i), 40);
+    const note = new Text({ text: '', style: { ...st, fontSize: 18, fill: '#FFFFFF', fontWeight: '800' as const } }); note.anchor.set(0.5); note.position.set(doorX(i), 190);
+    const peek = new Text({ text: '', style: { fontSize: 26 } }); peek.anchor.set(0.5, 1); peek.position.set(doorX(i), wall - 4);
+    view.addChild(sign, note, peek);
+    doors.push({ g, sign, note, peek });
+  }
+  // the office: a desk, a sign
+  const d = HALL_DESK, desk = new Graphics()
+    .roundRect(d.x - BAND, d.y - 40 - BAND, d.w + 2 * BAND, d.d + 40 + 2 * BAND, 8).fill('#FFFFFF')
+    .roundRect(d.x, d.y - 40, d.w, 34, 6).fill('#D8C7A0').roundRect(d.x, d.y - 8, d.w, d.d + 8, 6).fill('#E3A857')
+    .roundRect(d.x + 120, d.y - 66, 54, 30, 4).fill('#2B3F55');
+  desk.zIndex = d.y + d.d; layer.addChild(desk);
+  const office = new Text({ text: 'OFFICE', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 20, fill: '#FFFFFF' } });
+  office.anchor.set(0.5); office.position.set(d.x + d.w / 2, 150); view.addChild(office);
+  view.addChild(layer);
+  return { view, layer, doors };
+}
+
+/** Redraw one door: for sale (closed, with a gap you can peek through), yours (rolled up, open), sold, or locked. */
+export function paintDoor(v: DoorView, i: number, state: 'sale' | 'yours' | 'sold' | 'locked', sign: string, note: string, peek: string) {
+  const x = doorX(i) - DOOR_W / 2, top = 64, bottom = HALL_ROOM.wall - 2, g = v.g.clear();
+  g.roundRect(x - BAND - 6, top - BAND - 6, DOOR_W + 2 * BAND + 12, bottom - top + BAND + 6, 8).fill('#FFFFFF').roundRect(x - 6, top - 6, DOOR_W + 12, bottom - top + 6, 6).fill('#5A6570');
+  g.roundRect(x + 30 - BAND, 20 - BAND, DOOR_W - 60 + 2 * BAND, 40 + 2 * BAND, 8).fill('#FFFFFF').roundRect(x + 30, 20, DOOR_W - 60, 40, 6).fill(state === 'sale' ? '#F9C846' : state === 'yours' ? '#7CD3A0' : '#C9D3DC');
+  if (state === 'yours') {
+    g.rect(x, top, DOOR_W, bottom - top).fill('#2C3440');
+    for (let y = top; y < top + 40; y += 10) g.rect(x, y, DOOR_W, 7).fill('#E3A857');   // rolled up at the top
+  } else {
+    const c = state === 'sale' ? ['#E3A857', '#C98E3E'] : ['#AEB5BC', '#959DA6'];
+    for (let y = top; y < bottom - (state === 'sale' ? 30 : 0); y += 16) g.rect(x, y, DOOR_W, 12).fill(c[0]).rect(x, y + 12, DOOR_W, 4).fill(c[1]);
+    if (state === 'sale') g.rect(x, bottom - 30, DOOR_W, 30).fill('#2C3440');   // the gap at the bottom you can peek through
+    g.roundRect(x + DOOR_W / 2 - 18, bottom - 52, 36, 10, 4).fill('#5A6570');      // handle
+  }
+  v.sign.text = sign; v.note.text = note; v.peek.text = peek;
+}
+
+// ---- inside a storage unit: a concrete box with the finds lying about, and the door behind you
+export const UNIT_ROOM = { w: 1040, h: 760, wall: 170 };
+/** Where each find lies (by its slot in the unit), a little scattered. */
+export function unitSlot(slot: number): [number, number] {
+  const cols = 4, col = slot % cols, row = Math.floor(slot / cols);
+  const jx = ((slot * 37) % 50) - 25, jy = ((slot * 53) % 40) - 20;
+  return [190 + col * 220 + jx + (row % 2) * 60, 320 + row * 150 + jy];
+}
+export const UNIT_EXIT: [number, number] = [UNIT_ROOM.w / 2, UNIT_ROOM.h - 30];
+export function drawUnit(): { view: Container; layer: Container } {
+  const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = UNIT_ROOM;
+  g.rect(-3000, -3000, w + 6000, h + 6000).fill('#23272E');
+  g.rect(0, wall, w, h - wall).fill('#B9B8AE');
+  for (const [x, y, r] of [[300, 400, 60], [760, 600, 80], [520, 300, 40]]) g.ellipse(x, y, r, r * 0.4).fill({ color: '#000000', alpha: 0.05 });   // stains
+  g.rect(0, 0, w, wall).fill('#9AA3AD');
+  for (let x = 0; x < w; x += 26) g.rect(x, 0, 8, wall).fill({ color: '#FFFFFF', alpha: 0.08 });
+  g.rect(0, wall - 10, w, 10).fill('#6B7782');
+  g.rect(w / 2 - 120, h - 20, 240, 20).fill('#2C3440');   // the open door behind you
+  g.roundRect(60, 40, 120, 10, 4).fill('#F9E39A');           // a light
+  view.addChild(g, layer);
+  return { view, layer };
+}
+/** A find lying in a unit: big emoji on a sticker disc, with a shadow. */
+export function findArt(emoji: string): Container {
+  const c = new Container(), g = new Graphics()
+    .ellipse(6, 4, 40, 12).fill({ color: NAVY, alpha: 0.18 })
+    .circle(0, -38, 36 + BAND).fill('#FFFFFF').circle(0, -38, 36).fill('#FFF4DA');
+  const t = new Text({ text: emoji, style: { fontSize: 46 } }); t.anchor.set(0.5); t.position.set(0, -38);
+  c.addChild(g, t); return c;
+}

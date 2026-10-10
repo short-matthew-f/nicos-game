@@ -223,6 +223,10 @@ LOOKS = {
     'cook': Look('cook', skin='#E8B48E', skin2='#D69C76', hair='#3A2A20', style='short', top='tee',
                  shirt='#E5484D', shirt2='#C93B40', sleeve='#FFFFFF', trim='#FFFFFF',
                  pants='#2F343C', pants2='#272B32', shoe='#2F343C', shoe2='#272B32', height=1.12),
+    # runs the storage office: an orange work vest
+    'clerk': Look('clerk', skin='#C68B62', skin2='#B07650', hair='#5A5A5A', hl='#7A7A7A', style='shaggy', top='hoodie',
+                  shirt='#F28C38', shirt2='#D9772A', sleeve='#5B8FD6', trim='#F9E39A',
+                  pants='#3E4A5A', pants2='#334050', shoe='#7A5236', shoe2='#664430', height=1.18),
 }
 
 @contextmanager

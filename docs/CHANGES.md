@@ -592,3 +592,29 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 
 ## 2026-10-10: bring the car home
 - **Nico:** his car was missing. The garage card now always has **🚗 Bring my car home**, which puts it back on the home driveway, facing the road, wherever it's ended up. (The minimap shows the car as a red dot while you're on foot.)
+
+## 2026-10-10: the storage building, inside (and the end of endless money)
+- **Nico found infinite money:** auction units were worth a little more than their price on average, there was no limit on buying them, and Appraiser showed exact values, so he could keep picking winners.
+- **Now** (user: "turn the storage units into an inside space... walk up to a bunch of different items and choose whether to trash, sell or keep each"):
+  - **The hallway** (`drawHall`): six roll-up doors with a sign each (A · $12), a value guess on the door, and a gap underneath where you can see a couple of things inside. There's an office desk with the **clerk** (a new look: orange vest; Nico's art unchanged).
+  - **Buying:** walk up to a door, then a card shows what's under the door, the guess and the price. Buy it and the door rolls up ("YOURS").
+  - **Inside a unit** (`drawUnit`): the finds lie about the concrete floor as big stickers. Walk up to each one and choose **💰 Sell**, **🏠 Keep** (shelf) or **🔧 Keep** (parts box), or **🗑️ Trash**.
+  - **Junk** (old socks, newspapers, a leaky bucket) is worth nothing, so Trash is a real choice.
+  - A wanted item says "⭐ Someone asked you to find one of these!"
+- **The limits** (the user also suggested "limit the number of auctions which spawn in a certain timeframe", which is what this does):
+  - You sort **one unit at a time**.
+  - A sorted unit's door shows **SOLD, "new stuff in 6:59"**: 7 minutes of play before new stuff arrives (`HALL.restock`). The timers only count while the game is open.
+  - Unit prices sit closer to what's inside (×0.8–1.1 of the estimate, was ×0.7–1.0).
+- **The first time,** only Unit A (the starter) is for sale; the other doors say "buy Unit A first".
+- **Leaving halfway is fine:** the rest waits in your unit (it's saved).
+- **The clerk** buys your kept finds ("Sell all").
+- **Save:** `biz.doors` and `biz.unit`, cleaned up field by field. The old auction screens are gone from `workshop.ts`.
+- **A regression test for the loophole:** a greedy player with Appraiser, buying the best-looking unit the moment one's free and selling everything, for an hour of play. With the new rules that comes to $4.20 a minute (54 units). The test fails above $6/min. The first version of the new rules allowed $8.60/min, hence the tighter prices and the longer restock.
+- **e2e (173 checks):**
+  - the hallway, with only Unit A for sale at first;
+  - the card, then buy, then the door is "yours";
+  - walk in, sort all six things, sold out;
+  - the other doors open;
+  - leave halfway, one unit at a time;
+  - Appraiser on the third unit;
+  - a wanted radio shows under a door, its card says so, keep it.

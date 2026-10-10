@@ -27,6 +27,10 @@ export const ITEMS: Item[] = [
   { id: 'console', label: '🎮 Old game console', kind: 'find', value: [10, 22] },
   { id: 'clock', label: '⏰ Clock', kind: 'find', value: [2, 6] },
   { id: 'trophy', label: '🏆 Trophy', kind: 'find', value: [3, 9] },
+  // junk: nobody will buy it (that's what the trash is for)
+  { id: 'socks', label: '🧦 Old socks', kind: 'find', value: [0, 0] },
+  { id: 'papers', label: '🗞️ Old newspapers', kind: 'find', value: [0, 0] },
+  { id: 'bucket', label: '🪣 Leaky bucket', kind: 'find', value: [0, 0] },
   // dug up on the beach with the metal detector
   { id: 'bottle', label: '🍾 Old bottle', kind: 'find', value: [1, 3], where: 'beach' },
   { id: 'oldkey', label: '🗝️ Old key', kind: 'find', value: [2, 6], where: 'beach' },
@@ -138,24 +142,73 @@ export function makeUnit(seed: number, name: string, must?: string): Unit {
   const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find' && !i.where))));
   if (must && !contents.some(c => c.id === must)) contents[contents.length - 1] = roll(item(must));   // (someone asked for one)
   const [lo, hi] = guess({ contents } as Unit, true);
-  const price = Math.max(5, Math.round((lo + (hi - lo) * (0.25 + r() * 0.5)) * (0.7 + r() * 0.3)));
+  const price = Math.max(5, Math.round((lo + (hi - lo) * (0.25 + r() * 0.5)) * (0.8 + r() * 0.3)));   // (around what it's worth: a small edge, not a money machine)
   const peek = [...new Set(contents.map(c => c.id))].slice(0, 2);
   return { name, size: sz.size, price, contents, peek };
 }
 
-/** Units up for auction: three of them, except the very first visit, which has only the
- * starter (so the first buy can't be a loss). */
-export function lineup(seed: number, firstTime: boolean, want?: string | null): Unit[] {
-  if (firstTime) return [STARTER];
-  const units = ['A', 'B', 'C'].map((nm, i) => makeUnit(seed * 3 + i + 1, nm));
-  // someone wants a thing: make sure one unit has it, so a request never stalls on bad luck
-  if (want && !units.some(u => u.contents.some(c => c.id === want))) {
-    const i = seed % 3; units[i] = makeUnit(seed * 3 + i + 1, units[i].name, want);
-  }
-  // ...and it shows through the door, so it's clear which one to buy
-  if (want) for (const u of units) if (u.contents.some(c => c.id === want)) u.peek = [want, ...u.peek.filter(p => p !== want)].slice(0, 2);
-  return units;
+// ---- the storage building: a hallway of doors, each a unit for sale. A sorted unit's door is
+// SOLD until new stuff arrives (minutes of play), and you sort one unit at a time, so there's only
+// so much to be made (Nico found the old auction could be bought over and over for money).
+export const HALL = { doors: 6, restock: 420 };   // s of play before a sold-out unit has new stuff
+export const DOOR_NAMES = ['A', 'B', 'C', 'D', 'E', 'F'];
+export interface Door { seed: number; must?: string; sold: number }   // sold: s until it's for sale again (0: for sale)
+export interface OpenUnit { door: number; name: string; paid: number; got: number; items: { id: string; value: number; slot: number }[] }
+export const freshDoors = (seed = 1): Door[] => DOOR_NAMES.map((_, i) => ({ seed: seed * 10 + i + 1, sold: 0 }));
+
+/** What's behind door i. The very first unit is the starter (cheap, a sure profit, wheels inside). */
+export function doorUnit(b: Biz, i: number): Unit {
+  if (b.flips === 0 && i === 0) return STARTER;
+  const d = b.doors[i];
+  return makeUnit(d.seed, DOOR_NAMES[i], d.must);
 }
+export type DoorState = 'sale' | 'yours' | 'sold' | 'locked';
+export function doorState(b: Biz, i: number): DoorState {
+  if (b.unit?.door === i) return 'yours';
+  if (b.flips === 0 && i > 0) return 'locked';   // the first time, just the starter: no losing first buy
+  return b.doors[i].sold > 0 ? 'sold' : 'sale';
+}
+/** Buy the unit behind door i (only if it's for sale, Nico can pay, and he's not still sorting one). */
+export function buyDoor(b: Biz, i: number, money: number): boolean {
+  if (doorState(b, i) !== 'sale' || b.unit) return false;
+  const u = doorUnit(b, i);
+  if (u.price > money) return false;
+  b.unit = { door: i, name: u.name, paid: u.price, got: 0, items: u.contents.map((c, slot) => ({ ...c, slot })) };
+  b.flips++;
+  return true;
+}
+export type Choice = 'sell' | 'keep' | 'trash';
+/** Decide what to do with the find in `slot`: the money it made, and whether that emptied the unit
+ * (which then closes, SOLD until new stuff arrives). */
+export function decide(b: Biz, slot: number, choice: Choice): { money: number; done: boolean } {
+  const u = b.unit; if (!u) return { money: 0, done: false };
+  const k = u.items.findIndex(it => it.slot === slot); if (k < 0) return { money: 0, done: false };
+  const it = u.items.splice(k, 1)[0];
+  let money = 0;
+  if (choice === 'sell') { money = sellPrice(it.value, b.skills.includes('appraiser')); u.got += money; }
+  if (choice === 'keep') { if (item(it.id).kind === 'part') add(b, it.id); else b.finds.push({ id: it.id, value: it.value }); }
+  const done = u.items.length === 0;
+  if (done) {
+    const d = b.doors[u.door];
+    d.sold = HALL.restock; d.must = undefined; b.seed++; d.seed = b.seed * 10 + u.door + 1;
+    b.unit = null;
+  }
+  return { money, done };
+}
+/** Time passing (only while the game's open): sold-out units fill up again. */
+export function tickDoors(b: Biz, dt: number) { for (const d of b.doors) if (d.sold > 0) d.sold = Math.max(0, d.sold - dt); }
+/** Someone wants a thing: make sure a unit for sale has one (so a request never stalls on bad luck). */
+export function ensureWanted(b: Biz, want: string | null) {
+  if (!want || b.flips === 0) return;
+  const forSale = DOOR_NAMES.map((_, i) => i).filter(i => doorState(b, i) === 'sale');
+  if (!forSale.length || forSale.some(i => doorUnit(b, i).contents.some(c => c.id === want))) return;
+  b.doors[forSale[0]].must = want;
+}
+/** What you'd see through the gap under a door: the wanted thing first, if it's in there. */
+export function peekOf(u: Unit, want: string | null): string[] {
+  return want && u.contents.some(c => c.id === want) ? [want, ...u.peek.filter(p => p !== want)].slice(0, 2) : u.peek;
+}
+
 /** Stars for a photo: how close to the middle of the frame (0 = dead centre, 1 = the edge), and
  * whether the animal was running (blurry). Null if it's out of the frame. */
 export function photoStars(offX: number, offY: number, running: boolean): number | null {
@@ -204,13 +257,15 @@ export interface Biz {
   sold: Record<string, number>;    // sold, ever, by product
   flips: number;                   // storage units bought, ever
   skills: string[];
-  seed: number;                    // which auction lineup is up
+  seed: number;                    // bumps every time a unit is sorted (new stuff behind its door)
+  doors: Door[];                   // the storage building's doors
+  unit: OpenUnit | null;           // the unit Nico's sorting through (one at a time)
   tools: string[];                 // 'detector', ...
   shells: Record<string, number>;  // shells collected, by kind
   photos: Record<string, number>;  // best photo of each animal (1-3 stars)
   shown: string[];                 // animals whose photo the ranger has paid for
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, tools: [], shells: {}, photos: {}, shown: [] });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [] });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>
@@ -226,14 +281,6 @@ export function unlocks(b: Biz): Skill[] {
   const got = SKILLS.filter(s => b.flips >= s.flips && !b.skills.includes(s.id));
   for (const s of got) b.skills.push(s.id);
   return got;
-}
-/** Buy a unit: everything in it is Nico's straight away (parts to his parts, finds to the
- * shelf), so leaving halfway through sorting never loses anything. False if he can't afford it. */
-export function buyUnit(b: Biz, u: Unit, money: number): boolean {
-  if (u.price > money) return false;
-  for (const c of u.contents) if (item(c.id).kind === 'part') add(b, c.id); else b.finds.push({ ...c });
-  b.flips++; b.seed++;
-  return true;
 }
 /** Sell one thing from a unit (a find off the shelf, or a part): what it fetched, or 0 if it's not there. */
 export function sellOne(b: Biz, id: string, value: number): number {

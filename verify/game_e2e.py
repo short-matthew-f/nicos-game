@@ -121,6 +121,16 @@ with sync_playwright() as p:
     check(G()['room'] == 'burger', "inside Burger Barn")
     def room_at(spot):
         p = G()['roomSpots'][spot]; pg.evaluate(f"()=>window.__game.place({p['x']}, {p['y']})"); pg.wait_for_timeout(150)
+    def sort_unit(choose, limit=99):   # walk to each find in turn and pick sell / keep / trash
+        n = 0
+        while n < limit:
+            fs = [k for k in G()['roomSpots'] if k.startswith('find')]
+            if not fs: break
+            room_at(fs[0]); pg.click('#action'); pg.wait_for_timeout(150)
+            title = pg.locator('#place-title').inner_text(); c = choose(title)
+            if c == 'sell' and pg.locator('#place-menu button[data-item=sell]').is_disabled(): c = 'trash'
+            pg.click(f'#place-menu button[data-item={c}]'); pg.wait_for_timeout(150); n += 1
+        return n
     room_at('order')
     check(G()['action'] == 'order', f"at the counter: Order ({pg.locator('#action').inner_text()})")
     pg.click('#action'); pg.wait_for_timeout(200)
@@ -304,23 +314,32 @@ with sync_playwright() as p:
     pg.mouse.click(W * 0.6, H * 0.5); pg.wait_for_timeout(200)
     check(not G()['bigMap'], 'a tap closes it')
     # ---- v2: the business loop, start to finish
-    pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], stock:{}, sold:{}, flips:0, skills:[], seed:1}); window.__game.setMoney(20)}")
+    pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], stock:{}, sold:{}, flips:0, skills:[], seed:1, unit:null, doors:[0,1,2,3,4,5].map(i => ({seed: 11 + i, sold: 0}))}); window.__game.setMoney(20)}")
     pg.wait_for_timeout(200)
     check(pg.locator('#goal').is_visible() and 'storage' in pg.locator('#goal').inner_text(), f"the goal chip points to the storage units ({pg.locator('#goal').inner_text()})")
     def door(spot):   # walk up to a door and go in (by name: a passer-by near the door would otherwise get the tap)
         at(spot); pg.wait_for_timeout(150); pg.evaluate(f"()=>window.__game.use('{spot}')"); pg.wait_for_timeout(250)
-    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
-    check(G()['work']['screen'] == 'auction' and pg.locator('#work .lot').count() == 1, 'the first auction has just the starter unit (no losing first buy)')
-    pg.click('[data-buy=A]'); pg.wait_for_timeout(150)
-    check(G()['money'] == 20 and G()['work']['screen'] == 'auction', 'one tap on Buy only asks (money is safe from a mis-tap)')
-    pg.click('[data-buy=A]'); pg.wait_for_timeout(300)
+    door('storage'); pg.wait_for_timeout(300)
+    check(G()['room'] == 'storage', 'inside the storage building: a hallway of doors')
+    hd = G()['hallDoors']
+    check(hd[0]['state'] == 'sale' and hd[0]['price'] == 10 and all(d['state'] == 'locked' for d in hd[1:]), f"the first time, just Unit A ($10) is for sale ({[d['state'] for d in hd]})")
+    room_at('door0')
+    check('Unit A: $10' in pg.locator('#action').inner_text(), f"at the door: its price ({pg.locator('#action').inner_text()})")
+    pg.click('#action'); pg.wait_for_timeout(200)
+    check(pg.locator('#place').is_visible() and 'Unit A' in pg.locator('#place-title').inner_text() and 'Wheel' in pg.locator('#place-text').inner_text() and G()['money'] == 20, 'a card shows what you can see under the door, and the price; nothing spent yet')
+    pg.click('#place-menu button[data-item=buy]'); pg.wait_for_timeout(300)
     gb = G()
-    check(gb['work']['screen'] == 'unit' and gb['money'] == 10 and gb['biz']['flips'] == 1 and gb['biz']['items'].get('wheel') == 4, f"a second tap buys it: -$10, and everything inside is already Nico's ({gb['money']}, {gb['biz']})")
-    pg.wait_for_timeout(700); pg.click('#work .actions button'); pg.wait_for_timeout(1500)
-    check(pg.locator('#work .find.open').count() == 6, 'Open them all reveals every box')
-    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    check(gb['money'] == 10 and gb['biz']['flips'] == 1 and gb['biz']['unit'] and gb['hallDoors'][0]['state'] == 'yours', f"bought: -$10, the door rolls up ({gb['money']})")
+    room_at('door0'); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['room'] == 'unit0' and sum(1 for k in G()['roomSpots'] if k.startswith('find')) == 6, 'walk in: six things lying about')
+    sort_unit(lambda t: 'keep' if 'Wheel' in t else 'sell')
     gb = G()
-    check(gb['money'] == 21 and gb['biz']['finds'] == [] and gb['biz']['items'].get('wheel') == 4 and gb['work']['screen'] is None, f"sold the finds, kept the wheels: a profit on the first unit ({gb['money']}, {gb['biz']})")
+    check(gb['money'] == 21 and gb['biz']['finds'] == [] and gb['biz']['items'].get('wheel') == 4 and gb['biz']['unit'] is None, f"sold the finds, kept the wheels: a profit on the first unit ({gb['money']}, {gb['biz']['items']})")
+    room_at('leave'); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['room'] == 'storage' and G()['hallDoors'][0]['state'] == 'sold', "back in the hallway: Unit A is SOLD till new stuff comes")
+    check(all(d['state'] == 'sale' for d in G()['hallDoors'][1:]), 'and now the other doors are open for business')
+    room_at('leave'); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['room'] is None, 'out of the storage building')
     pg.evaluate("()=>window.__game.setMoney(40)")
     door('parts'); pg.click('[data-item=workbench]'); pg.wait_for_timeout(250)
     check(G()['biz']['workbench'] and G()['money'] == 15 and G()['inside'] == 'parts', 'bought a workbench ($25); the shop stays open for more')
@@ -388,14 +407,24 @@ with sync_playwright() as p:
     door('toys'); m0 = G()['money']; pg.click('[data-item="sell:robot"]'); pg.wait_for_timeout(300)
     check(G()['money'] == m0 + 55 and G()['biz']['sold'].get('robot') == 1, f"the Toy Shop buys the first robot for $55 ({m0} -> {G()['money']})")
     check(not pg.locator('#goal').is_visible(), 'every idea made and sold: the goal chip steps aside')
-    # the Appraiser skill: earned on the third unit
-    pg.evaluate("()=>{window.__game.setBiz({flips:2}); window.__game.setMoney(200)}")
-    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
-    check(pg.locator('#work .lot').count() == 3, 'after the first, three units to choose from')
-    pg.click('[data-buy=B]'); pg.click('[data-buy=B]'); pg.wait_for_timeout(900)
-    pg.click('#work .actions button'); pg.wait_for_timeout(2600); pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    # the Appraiser skill: earned on the third unit; one unit at a time; leaving halfway keeps the rest
+    fresh_doors = '[' + ','.join(f'{{"seed":{30 + i},"sold":0}}' for i in range(6)) + ']'
+    pg.evaluate(f"()=>{{window.__game.setBiz({{flips:2, unit:null, doors:{fresh_doors}}}); window.__game.setMoney(200)}}")
+    door('storage'); pg.wait_for_timeout(300)
+    room_at('door1'); pg.click('#action'); pg.wait_for_timeout(150); pg.click('#place-menu button[data-item=buy]'); pg.wait_for_timeout(200)
+    room_at('door1'); pg.click('#action'); pg.wait_for_timeout(300)
+    n0 = sum(1 for k in G()['roomSpots'] if k.startswith('find'))
+    sort_unit(lambda t: 'sell', limit=1)
+    room_at('leave'); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['room'] == 'storage' and len(G()['biz']['unit']['items']) == n0 - 1, f"leave halfway: the rest waits in your unit ({n0 - 1} left)")
+    room_at('door2'); pg.click('#action'); pg.wait_for_timeout(150)
+    check(pg.locator('#place-menu button[data-item=buy]').is_disabled() and 'finish' in pg.locator('#place-text').inner_text(), 'one unit at a time: finish Unit B first')
+    pg.keyboard.press('Escape')
+    room_at('door1'); pg.click('#action'); pg.wait_for_timeout(300)
+    sort_unit(lambda t: 'sell'); pg.wait_for_timeout(2800)
     check('appraiser' in G()['biz']['skills'] and 'Appraiser' in pg.locator('#place-title').inner_text(), 'the third unit earns the Appraiser skill (with a card saying so)')
     pg.keyboard.press('Escape')
+    room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250); room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250)
     # item requests: someone asks for a thing; the storage units are sure to have one; keep it, hand it over
     pg.evaluate("()=>{window.__game.setBiz({finds: []}); window.__game.offerWant('maya', 'radio')}"); pg.wait_for_timeout(200)
     near('maya')
@@ -408,15 +437,21 @@ with sync_playwright() as p:
     check(math.dist(G()['job']['at'], (sd['x'], sd['y'])) < 5, 'the minimap star points at the storage units')
     m0 = G()['money']; near('maya'); pg.click('#action'); pg.wait_for_timeout(150)
     check(G()['money'] == m0 and G()['job'] is not None, 'no radio yet: she asks how it is going, no pay')
-    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
-    lot = pg.locator('#work .lot[data-wanted="1"]')
-    check(lot.count() >= 1 and '📻' in lot.first.inner_text(), 'a unit with a radio shows it through the door, tagged')
-    pg.locator('#work .lot[data-wanted="1"] button').first.click(); pg.locator('#work .lot[data-wanted="1"] button').first.click(); pg.wait_for_timeout(900)
-    pg.click('#work .actions button'); pg.wait_for_timeout(2800)
-    tile = pg.locator('#work .find[data-id=radio]')
-    found = tile.count() > 0
-    check(found and 'wanted' in tile.first.inner_text() and 'keep' in tile.first.get_attribute('class'), f"the wanted radio is set to Keep, marked wanted ({tile.first.inner_text() if found else '-'})")
-    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    door('storage'); pg.wait_for_timeout(300)
+    wi = next((i for i, d in enumerate(G()['hallDoors']) if d['state'] == 'sale' and 'radio' in d['peek']), None)
+    check(wi is not None and G()['hallDoors'][wi]['peek'][0] == 'radio', f"a unit with a radio in it shows it under the door ({G()['hallDoors']})")
+    room_at(f'door{wi}'); pg.click('#action'); pg.wait_for_timeout(150); pg.click('#place-menu button[data-item=buy]'); pg.wait_for_timeout(200)
+    room_at(f'door{wi}'); pg.click('#action'); pg.wait_for_timeout(300)
+    found = False
+    for k in [k for k in G()['roomSpots'] if k.startswith('find')]:
+        room_at(k); lab = pg.locator('#action').inner_text()
+        if 'Radio' in lab:
+            pg.click('#action'); pg.wait_for_timeout(150)
+            found = 'Someone asked' in pg.locator('#place-text').inner_text()
+            pg.click('#place-menu button[data-item=keep]'); pg.wait_for_timeout(150); break
+    check(found, 'the card says someone asked for one of these; keep it')
+    sort_unit(lambda t: 'sell')
+    room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250); room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250)
     check(found and any(f['id'] == 'radio' for f in G()['biz']['finds']), 'a radio turned up and is on the shelf')
     check('bring' in pg.locator('#job').inner_text(), f"the chip now says to bring it ({pg.locator('#job').inner_text()})")
     # it's all saved, including the job in progress
