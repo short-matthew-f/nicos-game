@@ -2,7 +2,7 @@ import { Application, Container, CullerPlugin, Graphics, Text, extensions } from
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, doorOf } from './world/map';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, doorOf } from './world/map';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
@@ -25,7 +25,8 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt } from './world/rooms';
+import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, emptyTill, visitGap, design, type Piece } from './jewelry';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -141,10 +142,22 @@ async function main() {
   }
   if (isUnlocked(saved.biz, 'shed')) placeShed(false);
   else { shedOutline = outlineArt(shedBox.x, shedBox.y, shedBox.w, shedBox.h, '🏚️ Work shed', unlockOf('shed').price); shedOutline.zIndex = SHED.y - SHED.h; layer.addChild(shedOutline); }
+  // ---- Bibs and Bobs on the beach: the same, an outline with a price until it's bought
+  const shopRect = { x: SHOP.x, y: SHOP.y, w: SHOP.w, d: SHOP.d };
+  const shopBox = { x: SHOP.x - 10, y: SHOP.y - SHOP.h - 10, w: SHOP.w + 20, h: SHOP.d + SHOP.h + 20 };
+  let shopOutline: Container | null = null;
+  function placeShop(slap: boolean) {
+    shopOutline?.destroy({ children: true }); shopOutline = null;
+    const v = drawBuilding(SHOP); layer.addChild(v);
+    if (!SOLIDS.includes(shopRect)) SOLIDS.push(shopRect);
+    if (slap) slapIn(v, SHOP.x + SHOP.w / 2, SHOP.y + SHOP.d, shopBox);
+  }
+  if (isUnlocked(saved.biz, 'shop')) placeShop(false);
+  else { shopOutline = outlineArt(shopBox.x, shopBox.y, shopBox.w, shopBox.h, '🐚 Bibs and Bobs', unlockOf('shop').price); shopOutline.zIndex = SHOP.y - SHOP.h; layer.addChild(shopOutline); }
   // inside a building: the room, and where Nico is outside (the town only ever sees that)
   type Box = { x: number; y: number; w: number; d: number };
-  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
-    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container> } | null = null;
+  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
+    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container } | null = null;
   let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
@@ -326,8 +339,14 @@ async function main() {
     toast: m => toast(m),
     opened: on => { cardOpen = on ? 'work' : null; },
     skill: sk => showSkill(sk),
+    made: () => redrawRack(),
   });
   const biz = state.biz;
+  // Bibs and Bobs kept selling while Nico was away (up to a few hours' worth; only what's on its shelves)
+  if (isUnlocked(biz, 'shop')) {
+    const away = whileAway(biz, Date.now());
+    if (away.length) setTimeout(() => toast(`🐚 While you were away, Bibs and Bobs sold ${away.length} thing${away.length === 1 ? '' : 's'}! $${biz.shop.till} is waiting in the till.`), 1500);
+  }
   /** What's in the toy shop window: one of each thing sold, then more cars. */
   function windowToys() { const kinds = PRODUCTS.filter(q => biz.sold[q.id]).map(q => q.id); while (kinds.length < Math.min(3, soldAll(biz))) kinds.push('car'); return kinds.slice(0, 3); }
   function showSkill(sk: Skill) { sfx.cheer(); showCard(`skill:${sk.id}`, `🎓 New skill: ${sk.name}!`, sk.text, [], 'Nice!'); }
@@ -376,6 +395,7 @@ async function main() {
   function showParts(p: Place) {
     const buy = (cost: number, then: () => void) => () => { if (state.money < cost) return; state.money -= cost; then(); showMoney(); persist(); sfx.tap(); showParts(p); };
     const ideas = unlockedProducts(biz), used = new Set(ideas.flatMap(q => Object.keys(q.recipe)));   // only parts for ideas Nico has had
+    if (isUnlocked(biz, 'shop')) used.add('twine');   // (and twine, once he has a shop to make jewelry in)
     showCard('parts', p.title, biz.workbench ? `Your parts: ${partsLine()}.` : 'Wheels, axles, bodies and tools. (You\'ll build things on a workbench, in a work shed of your own.)', [
       ...TOOLS.filter(t => !biz.tools.includes(t.id)).map(t => ({ label: t.label, sub: `$${t.price}`, id: `tool:${t.id}`, disabled: state.money < t.price,
         onClick: buy(t.price, () => { biz.tools.push(t.id); toast(`${t.label}! ${t.text}`); }) })),
@@ -384,8 +404,9 @@ async function main() {
         return { label: `🧰 ${q.name[0].toUpperCase()}${q.name.slice(1)} kit`, sub: `$${cost} · ${needLine(q.recipe)}`, id: `kit:${q.id}`, disabled: state.money < cost,
           onClick: buy(cost, () => { for (const [id, n] of kit) add(biz, id, n); toast(`🧰 Everything you need for a ${q.name}!`); }) };
       }) : []),
-      ...PARTS_FOR_SALE.filter(q => used.has(q.id)).map(q => ({ label: item(q.id).label, sub: `$${q.price}`, id: `part:${q.id}`, disabled: state.money < q.price,
+      ...PARTS_FOR_SALE.filter(q => used.has(q.id)).map(q => ({ label: item(q.id).label, sub: `$${q.price}${q.id === 'twine' ? ` · have ${biz.items.twine ?? 0}` : ''}`, id: `part:${q.id}`, disabled: state.money < q.price,
         onClick: buy(q.price, () => add(biz, q.id)) })),
+      ...(isUnlocked(biz, 'shop') ? [{ label: '🧵 Hemp twine ×5', sub: '$5', id: 'part:twine5', disabled: state.money < 5, onClick: buy(5, () => add(biz, 'twine', 5)) }] : []),
     ]);
   }
   const goalEl = document.getElementById('goal')!;
@@ -413,7 +434,7 @@ async function main() {
   // ---- inside the shed: equipment outlines, the workbench
   const shedArt: Record<string, () => Container> = {
     workbench: workbenchArt, bins: binsArt, paint: paintArt,
-    shelves: () => shelvesArt([...biz.finds.map(f => item(f.id).label.split(' ')[0]), ...SHELL_KINDS.filter(k => biz.shells[k.id]).map(() => '🐚')]),
+    shelves: () => shelvesArt([...biz.finds.map(f => item(f.id).label.split(' ')[0]), ...SHELL_KINDS.filter(k => biz.found.includes(k.id)).map(() => '🐚')]),
   };
   function enterShed() {
     const { view, layer: rl } = drawShedRoom(), outlines: Record<string, Container> = {};
@@ -438,7 +459,7 @@ async function main() {
             if (isUnlocked(biz, u.id)) {
               if (u.id === 'workbench') workbenchCard();
               if (u.id === 'bins') showParts(PLACES.find(p => p.building === 'parts')!);
-              if (u.id === 'shelves') { const n = biz.finds.length; showCard('shelves', '🗄️ Your shelves', n ? `${n} thing${n === 1 ? '' : 's'} you've kept, worth about $${shelfValue(biz)}. (The storage office will buy them.) ${SHELL_KINDS.filter(k => biz.shells[k.id]).length} kinds of shell too.` : 'Empty for now: things you keep from storage units and the beach go here.', [], 'Close'); }
+              if (u.id === 'shelves') { const n = biz.finds.length; showCard('shelves', '🗄️ Your shelves', n ? `${n} thing${n === 1 ? '' : 's'} you've kept, worth about $${shelfValue(biz)}. (The storage office will buy them.) ${biz.found.length} kinds of shell too.` : 'Empty for now: things you keep from storage units and the beach go here.', [], 'Close'); }
               if (u.id === 'paint') showCard('paint', '🎨 Paint station', `Every toy you build gets a shiny coat of paint: painted toys sell for $${PAINT_BONUS} more.`, [], 'Nice');
               return;
             }
@@ -456,6 +477,119 @@ async function main() {
       { id: 'leave', x: SHED_EXIT[0], y: SHED_EXIT[1], r: 120, label: '🚪 Leave', run: leaveRoom },
     ];
   }
+  // ---- Bibs and Bobs: the stringing table, the shelves, the till; visitors come in and browse
+  const SHOP_DOOR = doorOf(SHOP);
+  const shopSpot: Spot = { id: 'bibs', x: SHOP_DOOR[0], y: SHOP_DOOR[1], r: 130,
+    label: () => (isUnlocked(biz, 'shop') ? '🚪 Go in' : `✨ Bibs and Bobs · $${unlockOf('shop').price}`),
+    run: () => {
+      if (isUnlocked(biz, 'shop')) { enterShop(); return; }
+      unlockCard('shop', () => {
+        placeShop(true); biz.shop.last = Date.now();
+        if (!freeAt(nico.x, nico.y, SOLIDS, WORLD)) { nico.x = SHOP_DOOR[0]; nico.y = SHOP_DOOR[1] + 20; }
+      });
+    } };
+  const shellColor = (k: string) => SHELL_KINDS.find(q => q.id === k)?.color ?? '#FFFFFF';
+  /** The pieces on the shelves, one per peg. */
+  function rackArt(): Container {
+    const c = new Container();
+    biz.shop.rack.forEach((p, i) => { const g = pieceArt(p.id, p.shells.map(shellColor)); g.position.set(...SHOP_PEGS[i]); g.scale.set(1.5); c.addChild(g); });
+    c.zIndex = SHOP_ROOM.wall - 20; return c;
+  }
+  function redrawRack() { if (room?.kind !== 'shop') return; room.rack?.destroy({ children: true }); room.rack = rackArt(); room.layer.addChild(room.rack); }
+  function enterShop() {
+    const { view, layer: rl } = drawShopRoom(), rack = rackArt();
+    rl.addChild(craftTableArt(), counterArt(), rack);
+    const box = (q: { x: number; y: number; w: number; d: number }) => ({ x: q.x, y: q.y, w: q.w, d: q.d });
+    showRoom({ kind: 'shop', id: 'bibs', w: SHOP_ROOM.w, h: SHOP_ROOM.h, view, layer: rl, rack,
+      solids: [{ x: 0, y: 0, w: SHOP_ROOM.w, d: SHOP_ROOM.wall + 14 }, box(SHOP_SLOTS.table), box(SHOP_SLOTS.counter)] }, [SHOP_EXIT[0], SHOP_EXIT[1] - 70]);
+    sfx.door();
+    visitIn = Math.min(visitIn, 4);   // (someone's along soon)
+  }
+  const pieceName = (p: Piece) => design(p.id).name;
+  function shopSpots(): Spot[] {
+    const t = SHOP_SLOTS.table, c = SHOP_SLOTS.counter;
+    return [
+      { id: 'craft', x: t.x + t.w / 2, y: t.y + t.d + 50, r: 130, label: '🧵 Make jewelry', run: () => {
+        const shellsHave = Object.values(biz.shells).reduce((n, k) => n + k, 0), twine = biz.items.twine ?? 0;
+        showCard('craft', '🧵 The stringing table', `You have ${shellsHave} shell${shellsHave === 1 ? '' : 's'} and ${twine} length${twine === 1 ? '' : 's'} of hemp twine (Parts & Tools sells it). ${biz.shop.rack.length}/${SHOP_RULES.rack} on the shelves. What will you make?`,
+          DESIGNS.map(d => { const why = cantMake(biz, d.id); return { label: `${d.emoji} ${d.name[0].toUpperCase()}${d.name.slice(1)}`, sub: why ?? `${d.beads} shells + twine`, id: `make:${d.id}`, disabled: !!why, onClick: () => work.jewelry(d.id) }; }), 'Not now');
+      } },
+      { id: 'till', x: c.x + c.w / 2, y: c.y + c.d + 50, r: 130, label: () => (biz.shop.till ? `💰 Empty the till ($${biz.shop.till})` : '💰 The till'), run: () => {
+        const n = emptyTill(biz);
+        if (!n) { toast(biz.shop.rack.length ? '💰 Nothing in the till yet: visitors are browsing!' : '💰 Nothing in the till: make some jewelry for the shelves!'); return; }
+        state.money += n; showMoney(); persist(); sfx.cash(Math.max(1, Math.round(n / 4)));
+        toast(`💰 +$${n} from Bibs and Bobs! (${biz.shop.sold} sold so far)`);
+      } },
+      { id: 'shelves', x: 650, y: SHOP_ROOM.wall + 60, r: 110, priority: -0.2, label: '🛍️ Your shelves', run: () => {
+        const r = biz.shop.rack;
+        showCard('rack', '🛍️ On the shelves', r.length ? r.map(p => `${design(p.id).emoji} ${pieceName(p)} $${p.price}`).join(' · ') : 'Nothing yet: make something at the stringing table!', [], 'Close');
+      } },
+      { id: 'leave', x: SHOP_EXIT[0], y: SHOP_EXIT[1], r: 120, label: '🚪 Leave', run: leaveRoom },
+    ];
+  }
+  // visitors: one every so often. Inside the shop you see them walk in, look at the shelves and maybe
+  // buy; out in town, a sale just pops up (the money goes in the till either way)
+  let visitIn = visitGap();
+  interface Shopper { view: PersonView; name: string; x: number; y: number; st: PoseState; to: [number, number][]; look: number; peg: number; said?: Text }
+  const shoppers: Shopper[] = [];
+  const SHOPPER_SPEED = 150;
+  function shopperArrives() {
+    const t = TOWNSFOLK[Math.floor(Math.random() * TOWNSFOLK.length)];
+    const view = new PersonView(t.who); view.setZoom(zoom, resolution); room!.layer.addChild(view.root);
+    const peg = biz.shop.rack.length ? Math.floor(Math.random() * biz.shop.rack.length) : Math.floor(Math.random() * SHOP_PEGS.length);
+    const [bx, by] = browseAt(peg), jitter = (Math.random() - 0.5) * 40;
+    shoppers.push({ view, name: t.name, x: SHOP_EXIT[0], y: SHOP_EXIT[1] - 10, st: neutral('back'), to: [[SHOP_EXIT[0], by + 120], [bx + jitter, by]], look: 3 + Math.random() * 2, peg });
+    sfx.door();
+  }
+  function say(sh: Shopper, text: string) {
+    sh.said?.destroy();
+    const t = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 22, fill: NAVY_TEXT, stroke: { color: '#FFFFFF', width: 6 } } });
+    t.anchor.set(0.5, 1); sh.view.root.parent?.addChild(t); sh.said = t;
+  }
+  const NAVY_TEXT = '#2B3F55';
+  function sold(p: Piece, who: string) {
+    sfx.cash(2);
+    toast(`🐚 ${who} bought your ${pieceName(p)} for $${p.price}! ($${biz.shop.till} in the till at Bibs and Bobs)`);
+    persist();
+  }
+  function stepShop(dt: number) {
+    if (!isUnlocked(biz, 'shop')) return;
+    biz.shop.last = Date.now();
+    visitIn -= dt;
+    if (visitIn <= 0) {
+      visitIn = visitGap();
+      if (room?.kind === 'shop') shopperArrives();
+      else { const p = shopVisit(biz); if (p) sold(p, TOWNSFOLK[Math.floor(Math.random() * TOWNSFOLK.length)].name); }
+    }
+    for (const sh of shoppers) {
+      if (sh.to.length) {
+        const [tx, ty] = sh.to[0], dx = tx - sh.x, dy = ty - sh.y, d = Math.hypot(dx, dy), st = Math.min(d, SHOPPER_SPEED * dt);
+        const vx = d ? dx / d * SHOPPER_SPEED : 0, vy = d ? dy / d * SHOPPER_SPEED : 0;
+        sh.x += d ? dx / d * st : 0; sh.y += d ? dy / d * st : 0;
+        Object.assign(sh.st, chooseView(vx, vy, sh.st)); stepGait(sh.st, SHOPPER_SPEED, vy, dt);
+        if (d < 2) sh.to.shift();
+      } else if (sh.look > 0) {
+        Object.assign(sh.st, { view: 'back' }); stepGait(sh.st, 0, 0, dt);
+        sh.look -= dt;
+        if (sh.look <= 0) {
+          // made up their mind
+          const p = biz.shop.rack.length ? shopVisit(biz, Math.random, sh.peg) : null;
+          if (p) { say(sh, ['I\'ll take it! 💰', 'Ooh, this one! 💰', 'Perfect! 💰'][Math.floor(Math.random() * 3)]); sold(p, sh.name); redrawRack(); }
+          else say(sh, biz.shop.rack.length ? ['So pretty!', 'Maybe next time.', 'Lovely shells!', 'Hmm…'][Math.floor(Math.random() * 4)] : 'Nothing to buy yet!');
+          sh.to.push([SHOP_EXIT[0], sh.y + 120], [SHOP_EXIT[0], SHOP_EXIT[1] + 40]);
+          sh.look = -1;
+        }
+      }
+      sh.view.pose(sh.x, sh.y, sh.st); sh.view.root.zIndex = sh.y;
+      if (sh.said) { sh.said.position.set(sh.x, sh.y - 150); sh.said.zIndex = 99999; }
+    }
+    for (let i = shoppers.length - 1; i >= 0; i--) {
+      const sh = shoppers[i];
+      if (sh.look < 0 && !sh.to.length) { sh.said?.destroy(); sh.view.root.destroy({ children: true }); shoppers.splice(i, 1); }
+    }
+  }
+  /** Leaving the shop: anyone still browsing goes too. */
+  function clearShoppers() { for (const sh of shoppers) { sh.said?.destroy(); sh.view.root.destroy({ children: true }); } shoppers.length = 0; }
   /** The workbench: one button per idea (the hands-on first build, then quick builds once it's designed). */
   function workbenchCard() {
     const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
@@ -472,6 +606,7 @@ async function main() {
   function roomSpots(): Spot[] {
     if (!room) return [];
     if (room.kind === 'shed') return shedSpots();
+    if (room.kind === 'shop') return shopSpots();
     if (room.kind === 'hall') return [
       ...DOOR_NAMES.map((nm, i) => {
         const st = doorState(biz, i), u = st === 'sale' ? doorUnit(biz, i) : null;
@@ -502,7 +637,7 @@ async function main() {
   /** Swap in a room (from the town, or from another room of the same building: the hallway and a unit). */
   function showRoom(next: Omit<NonNullable<typeof room>, 'outside'>, at: [number, number], face: View = 'back') {
     const outside: [number, number] = room ? room.outside : [nico.x, nico.y];
-    if (room) { layer.addChild(nico.view.root); trayView.removeFromParent(); room.view.destroy({ children: true }); }
+    if (room) { clearShoppers(); layer.addChild(nico.view.root); trayView.removeFromParent(); room.view.destroy({ children: true }); }
     room = { ...next, outside };
     app.stage.addChildAt(room.view, app.stage.getChildIndex(world) + 1); room.view.scale.set(zoom);
     world.visible = false; minimap.view.visible = false;
@@ -604,6 +739,7 @@ async function main() {
   }
   function leaveRoom() {
     if (!room) return;
+    clearShoppers();
     if (room.kind === 'unit') { enterHall(biz.unit?.door ?? Number(room.id.slice(4))); return; }   // out of a unit: back in the hallway at its door
     const [ox, oy] = room.outside;
     layer.addChild(nico.view.root); trayView.removeFromParent(); trayView.visible = false; tableTray?.view.destroy(); tableTray = null;
@@ -647,8 +783,8 @@ async function main() {
     persist();
   }
   function showBag() {
-    const kinds = SHELL_KINDS.filter(k => biz.shells[k.id]);
-    const shellLine = kinds.length ? kinds.map(k => `${k.label} ×${biz.shells[k.id]}`).join(', ') : 'none yet: look along the beach!';
+    const kinds = SHELL_KINDS.filter(k => biz.found.includes(k.id));
+    const shellLine = kinds.length ? kinds.map(k => `${k.label} ×${biz.shells[k.id] ?? 0}`).join(', ') : 'none yet: look along the beach!';
     const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ') || 'nothing yet';
     const tools = TOOLS.filter(t => biz.tools.includes(t.id)).map(t => t.label).join(', ') || 'none yet (Parts & Tools)';
     const pics = Object.keys(ANIMAL_KINDS).filter(k => biz.photos[k]);
@@ -733,7 +869,7 @@ async function main() {
       if (advanceJob(job)) payJob();
     },
   };
-  spots.push(jobSpot, digSpot, cameraSpot, shedSpot,
+  spots.push(jobSpot, digSpot, cameraSpot, shedSpot, shopSpot,
     { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
@@ -842,7 +978,7 @@ async function main() {
   const applyZoom = () => {
     zoom = app.screen.height / viewH;
     world.scale.set(zoom); room?.view.scale.set(zoom);
-    for (const n of [nico, ...walkers, ...locals]) n.view.setZoom(zoom, resolution);
+    for (const n of [nico, ...walkers, ...locals, ...shoppers]) n.view.setZoom(zoom, resolution);
     room?.worker?.setZoom(zoom, resolution);
   };
   applyZoom();
@@ -1018,7 +1154,7 @@ async function main() {
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
-    tickDoors(biz, dt); paintDoors(); updateStickers(dt);
+    tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
     splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
     animals.update(dt, [mode === 'drive' ? [car.x, car.y] : here()]);
@@ -1028,8 +1164,9 @@ async function main() {
     const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : room ? [] : [[nico.x, nico.y]]);
     // the beach: shells underfoot, the detector's beeps, old holes filling in
     for (const k of shells.update(dt, mode === 'walk' && !room ? [nico.x, nico.y] : null)) {
-      const first = !biz.shells[k]; biz.shells[k] = (biz.shells[k] ?? 0) + 1; persist(); sfx.shell();
-      const kinds = SHELL_KINDS.filter(q => biz.shells[q.id]).length, sh = SHELL_KINDS.find(q => q.id === k)!;
+      const first = !biz.found.includes(k); if (first) biz.found.push(k);
+      biz.shells[k] = (biz.shells[k] ?? 0) + 1; persist(); sfx.shell();
+      const kinds = biz.found.length, sh = SHELL_KINDS.find(q => q.id === k)!;
       toast(`🐚 ${first ? 'A new kind: ' : ''}${sh.label}! (${kinds} of ${SHELL_KINDS.length} kinds)`);
     }
     for (const h of holes) { h.t -= dt; h.view.alpha = Math.min(1, h.t / 4); if (h.t <= 0) h.view.destroy(); }
@@ -1160,7 +1297,7 @@ async function main() {
       unlocked: [...biz.unlocked], solidAt: (x: number, y: number) => !freeAt(x, y, SOLIDS, WORLD),
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
-      sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
+      sounds: { ...played }, scatters, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { visitIn = 0; }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

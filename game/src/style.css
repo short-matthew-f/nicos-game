@@ -152,6 +152,10 @@ html, body {
 .gridview text.wave { animation: wave .5s ease-in-out 3; transform-box: fill-box; transform-origin: center; }
 .work .strip { margin-top: 8px; min-height: 34px; font-size: 24px; font-weight: 800; background: #F6E7CF; border-radius: 12px; padding: 4px 10px; letter-spacing: 2px; }
 .work .pad { display: flex; gap: 6px; }
+.work .picks.shells { flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+.work .picks.shells button { background: #fff; font-size: 17px; min-height: 48px; display: flex; align-items: center; gap: 6px; }
+.work .picks .dot { width: 22px; height: 22px; border-radius: 11px; border: 3px solid var(--navy); display: inline-block; }
+.blueprint .bead { cursor: pointer; }
 .work .pad button { min-width: 64px; padding: 0 8px; font-size: 26px; }
 @media (max-width: 640px) { .stage.auction { grid-template-columns: 1fr; } .lot .door { height: 70px; } }
 #buttons button[hidden] { display: none; }

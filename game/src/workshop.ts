@@ -8,6 +8,8 @@ import {
 } from './business';
 import { sfx } from './sound';
 import { PLANS, type Slot } from './plans';
+import { design, make, cantMake, pieceValue, bonusOf, type Piece } from './jewelry';
+import { SHELL_KINDS } from './world/beach';
 export { PLANS };
 
 export interface WorkHost {
@@ -18,6 +20,7 @@ export interface WorkHost {
   toast(msg: string): void;
   opened(on: boolean): void;           // pause the world while a screen is up
   skill(s: Skill): void;               // a new skill was earned
+  made?(p: Piece): void;               // a piece of jewelry was hung on the shop's shelves
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -65,6 +68,24 @@ function partArt(kind: string): SVGGElement {
 function slotArt(kind: string): SVGGElement {
   const g = partArt(kind);
   for (const e of Array.from(g.children)) { e.setAttribute('fill', 'none'); e.setAttribute('stroke', '#5B8DB8'); e.setAttribute('stroke-dasharray', '8 6'); e.setAttribute('stroke-width', '3'); }
+  return g;
+}
+/** A shell on the twine, centred on (0, 0): a star, a sand dollar, a spiral, or a ridged fan (scallop, clam, cowrie). */
+function shellGlyph(kind: string, color: string): SVGGElement {
+  const g = s('g') as SVGGElement, line = { stroke: '#2B3F55', 'stroke-width': 3 };
+  if (kind === 'starfish') {
+    const pts = Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 11 : 27; return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`; }).join(' ');
+    g.append(s('polygon', { points: pts, fill: color, ...line, 'stroke-linejoin': 'round' }), s('circle', { cx: 0, cy: 0, r: 4, fill: '#F9C846' }));
+  } else if (kind === 'sanddollar') {
+    g.append(s('circle', { cx: 0, cy: 0, r: 23, fill: color, ...line }));
+    for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; g.append(s('ellipse', { cx: Math.cos(a) * 10, cy: Math.sin(a) * 10, rx: 3, ry: 5, fill: '#C9B98E', transform: `rotate(${a * 180 / Math.PI + 90} ${Math.cos(a) * 10} ${Math.sin(a) * 10})` })); }
+  } else if (kind === 'spiral') {
+    g.append(s('ellipse', { cx: 0, cy: 0, rx: 17, ry: 25, fill: color, ...line }),
+      s('path', { d: 'M-12,8 L12,2 M-12,-4 L12,-10 M-8,-15 L8,-19', stroke: '#C79A62', 'stroke-width': 3, fill: 'none' }));
+  } else {
+    g.append(s('path', { d: 'M0,22 L-25,-4 A26,26 0 0 1 25,-4 Z', fill: color, ...line, 'stroke-linejoin': 'round' }));
+    for (const a of [-40, -20, 0, 20, 40]) { const r = a * Math.PI / 180; g.append(s('line', { x1: 0, y1: 18, x2: Math.sin(r) * 22, y2: -6 - Math.cos(r) * 14, stroke: '#2B3F55', 'stroke-width': 1.5, opacity: 0.45 })); }
+  }
   return g;
 }
 const at = (g: SVGGraphicsElement, x: number, y: number, sc = 1) => { g.style.transform = `translate(${x}px, ${y}px) scale(${sc})`; };
@@ -339,5 +360,59 @@ export class Workshop {
       btn.textContent = 'Done'; btn.onclick = () => this.close();
     }, 'primary');
     btn.dataset.step = '1';
+  }
+
+  // ------------------------------------------------------------ Bibs and Bobs: string shells onto twine
+  /** for tests: the shells strung so far */
+  strung: string[] = [];
+  jewelry(id: string) {
+    const b = this.host.biz, d = design(id);
+    if (cantMake(b, id)) return;
+    this.show('jewelry', `Make a ${d.name}`, `Tap your shells to string ${d.beads} onto the twine. Tap one on the twine to take it off. Matching sets and patterns sell for more!`);
+    this.strung = [];
+    const svg = s('svg', { viewBox: '0 0 600 250', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 250, rx: 18, fill: '#FFF4DA' }));
+    const spot = (i: number): [number, number] => { const u = (i + 0.5) / d.beads; return [50 + u * 500, 40 + Math.sin(Math.PI * u) * 150]; };
+    const path = Array.from({ length: 41 }, (_, k) => { const u = k / 40; return `${k ? 'L' : 'M'}${(30 + u * 540).toFixed(1)},${(40 + Math.sin(Math.PI * ((30 + u * 540 - 50) / 500)) * 150).toFixed(1)}`; }).join(' ');
+    svg.append(s('path', { d: path, fill: 'none', stroke: '#C9A46A', 'stroke-width': 5, 'stroke-linecap': 'round' }));
+    const beads = s('g') as SVGGElement; svg.append(beads);
+    const col = (k: string) => SHELL_KINDS.find(q => q.id === k)?.color ?? '#FFFFFF';
+    this.stage.append(svg);
+    const strip = h('div', 'strip'); this.stage.append(strip);
+    const picks = h('div', 'picks shells'); this.stage.append(picks);
+    const left = (k: string) => (b.shells[k] ?? 0) - this.strung.filter(q => q === k).length;
+    const tie = this.button('🧵 Tie it off', () => finish(), 'primary'); tie.dataset.tie = '1';
+    const redo = this.button('Start over', () => { this.strung = []; draw(); }); redo.dataset.redo = '1';
+    const draw = () => {
+      beads.replaceChildren();
+      for (let i = 0; i < d.beads; i++) {
+        const [x, y] = spot(i), k = this.strung[i];
+        const c = k ? shellGlyph(k, col(k)) : s('circle', { cx: 0, cy: 0, r: 18, fill: 'none', stroke: '#5B8DB8', 'stroke-width': 3, 'stroke-dasharray': '6 5' }) as SVGGraphicsElement;
+        at(c, x, y);
+        if (k) { c.classList.add('bead'); c.dataset.bead = String(i); c.addEventListener('click', () => { this.strung.splice(i, 1); sfx.tap(); draw(); }); }
+        beads.append(c);
+      }
+      const bonus = bonusOf(this.strung), full = this.strung.length === d.beads;
+      strip.textContent = this.strung.length ? `Worth $${pieceValue(d, this.strung)}${bonus && full ? ` · ${bonus.label} +$${bonus.amount}!` : ''}  (${this.strung.length}/${d.beads})` : `0/${d.beads} shells`;
+      picks.replaceChildren();
+      for (const k of SHELL_KINDS) {
+        if (!(b.shells[k.id] > 0)) continue;
+        const bt = h('button'); bt.type = 'button'; bt.dataset.shell = k.id; bt.disabled = full || left(k.id) <= 0;
+        bt.innerHTML = `<span class="dot" style="background:${k.color}"></span>${k.label} ×${left(k.id)}`;
+        bt.addEventListener('click', () => { if (this.strung.length >= d.beads || left(k.id) <= 0) return; this.strung.push(k.id); sfx.snap(); draw(); });
+        picks.append(bt);
+      }
+      tie.disabled = !full;
+    };
+    const finish = () => {
+      const p = make(b, id, this.strung);
+      if (!p) return;
+      this.host.save(); sfx.cheer(); this.host.made?.(p);
+      this.sub.textContent = `${d.emoji} A ${d.name}! It's on the shelves for $${p.price}.`;
+      picks.replaceChildren(); this.actions.replaceChildren();
+      const again = this.button('Make another', () => this.jewelry(id)); again.dataset.again = '1'; again.disabled = !!cantMake(b, id);
+      this.button('Done', () => this.close(), 'primary').dataset.done = '1';
+    };
+    draw();
   }
 }

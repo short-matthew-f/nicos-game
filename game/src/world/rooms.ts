@@ -283,3 +283,89 @@ export function paintArt(): Container {
   for (let i = 0; i < 5; i++) g.circle(s.x + 28 + i * 36, front + 26 + (i % 2) * 10, 7).fill(['#E5484D', '#2F7FD8', '#F9C846', '#3BB273', '#F06A8A'][i]);   // splats
   c.addChild(g); c.zIndex = F; return c;
 }
+
+// ---- Bibs and Bobs, Nico's beach shop (jewelry.ts): shelves of shell jewelry on the back wall,
+// the stringing table where he makes it, and the counter with the till. Visitors browse the shelves.
+export const SHOP_ROOM = { w: 1200, h: 820, wall: 260 };
+export const SHOP_EXIT: [number, number] = [SHOP_ROOM.w / 2, SHOP_ROOM.h - 30];
+export const SHOP_SLOTS = {
+  table: { x: 80, y: 540, w: 300, d: 50, h: 60 },     // the stringing table (waist-high, like the workbench)
+  counter: { x: 830, y: 540, w: 290, d: 60, h: 60 },  // the counter and the till
+};
+/** The pegs on the shelves, two rows of four: each holds one piece. */
+export const SHOP_PEGS: [number, number][] = [0, 1].flatMap(r => [0, 1, 2, 3].map(i => [370 + i * 155, 66 + r * 92] as [number, number]));
+/** Where a visitor stands to look at peg i. */
+export const browseAt = (i: number): [number, number] => [SHOP_PEGS[i % SHOP_PEGS.length][0], SHOP_ROOM.wall + 50];
+export function drawShopRoom(): { view: Container; layer: Container } {
+  const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = SHOP_ROOM;
+  g.rect(-3000, -3000, w + 6000, h + 6000).fill('#2B2320');
+  for (let y = wall; y < h; y += 40) g.rect(0, y, w, 40).fill(((y - wall) / 40) % 2 ? '#F2E6CF' : '#EADBBE').rect(0, y + 38, w, 2).fill('#D8C59F');   // whitewashed boards
+  g.rect(0, 0, w, wall).fill('#8FD3E0');
+  for (let x = 0; x < w; x += 60) g.rect(x, 0, 4, wall).fill({ color: '#FFFFFF', alpha: 0.25 });   // beach-hut planks
+  g.rect(0, wall - 12, w, 12).fill('#2F9FB8');
+  // the sign, and a window onto the sea
+  g.roundRect(40 - BAND, 40 - BAND, 250 + 2 * BAND, 90 + 2 * BAND, 14).fill('#FFFFFF').roundRect(40, 40, 250, 90, 12).fill('#F28C38');
+  g.roundRect(950 - BAND, 36 - BAND, 210 + 2 * BAND, 130 + 2 * BAND, 10).fill('#FFFFFF').roundRect(950, 36, 210, 130, 8).fill('#BFE3F5')
+   .rect(950, 110, 210, 56).fill('#4FB3D9').rect(1052, 36, 6, 130).fill('#FFFFFF');
+  // the display shelves: two boards with pegs
+  for (const r of [0, 1]) {
+    const y = 66 + r * 92;
+    g.roundRect(320, y - 8, 620, 12, 4).fill('#B9895A');
+    for (let i = 0; i < 4; i++) g.circle(370 + i * 155, y - 2, 5).fill('#7A5236');
+  }
+  g.roundRect(SHOP_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the door
+  const t = new Text({ text: 'BIBS AND BOBS', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#FFFFFF', stroke: { color: NAVY, width: 5 } } });
+  t.anchor.set(0.5); t.position.set(165, 85);
+  view.addChild(g, t, layer);
+  return { view, layer };
+}
+/** One piece of shell jewelry, hanging from (0, 0): a bracelet's loop, a necklace's U, or a wind
+ * chime's strings under a bit of driftwood. `colors`: each shell's colour, in order along the twine. */
+export function pieceArt(id: string, colors: string[]): Graphics {
+  const g = new Graphics(), TW = '#C9A46A', bead = (x: number, y: number, c: string) => g.circle(x, y, 8).fill('#FFFFFF').circle(x, y, 6).fill(c);
+  if (id === 'bracelet') {
+    g.ellipse(0, 26, 24, 20).stroke({ width: 3, color: TW });
+    colors.forEach((c, i) => { const a = Math.PI / 2 + (i - (colors.length - 1) / 2) * 0.75; bead(Math.cos(a) * 24, 26 + Math.sin(a) * 20, c); });
+  } else if (id === 'necklace') {
+    g.moveTo(-34, 0).bezierCurveTo(-34, 70, 34, 70, 34, 0).stroke({ width: 3, color: TW });
+    colors.forEach((c, i) => { const u = (i + 1) / (colors.length + 1), a = Math.PI * u; bead(-Math.cos(a) * 31, Math.sin(a) * 50, c); });
+  } else {
+    g.roundRect(-40, 0, 80, 9, 4).fill('#9C7A55');
+    const strings = [-28, 0, 28];
+    for (const x of strings) g.moveTo(x, 6).lineTo(x, 74).stroke({ width: 2, color: TW });
+    colors.forEach((c, i) => bead(strings[i % 3], 22 + Math.floor(i / 3) * 16, c));
+  }
+  return g;
+}
+/** The stringing table: waist-high, with bowls of shells and a spool of twine on top. */
+export function craftTableArt(): Container {
+  const s = SHOP_SLOTS.table, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - BENCH, depth = 34;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  const legs = [s.x + 14, s.x + s.w - 32];
+  for (const lx of legs) g.roundRect(lx - BAND, front, 18 + 2 * BAND, BENCH + BAND, 5).fill('#FFFFFF');
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + 12 + 2 * BAND, 9).fill('#FFFFFF');
+  for (const lx of legs) g.roundRect(lx, front, 18, BENCH, 4).fill('#7A5236');
+  g.roundRect(s.x, front - depth, s.w, depth, 8).fill('#F2D6A2').rect(s.x, front - 2, s.w, 12).fill('#D9B27A');
+  ['#F4A6A0', '#E8C99A', '#B9C7D6'].forEach((col, i) => {   // bowls of shells
+    const x = s.x + 50 + i * 70, y = front - depth + 6;
+    g.ellipse(x, y, 26, 11).fill('#FFFFFF').ellipse(x, y, 23, 9).fill('#5B8FD6');
+    for (const dx of [-9, 0, 9]) g.circle(x + dx, y - 4 - (dx === 0 ? 3 : 0), 6).fill(col);
+  });
+  g.roundRect(s.x + 240, front - depth - 18, 30, 30, 6).fill('#FFFFFF').roundRect(s.x + 243, front - depth - 15, 24, 24, 5).fill('#C9A46A')
+   .rect(s.x + 243, front - depth - 6, 24, 3).fill('#9C7A55');   // the twine spool
+  c.addChild(g); c.zIndex = F; return c;
+}
+/** The counter, with the till on it. */
+export function counterArt(): Container {
+  const s = SHOP_SLOTS.counter, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - 74, depth = 36;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + 74 + 2 * BAND, 9).fill('#FFFFFF');
+  g.roundRect(s.x, front, s.w, 74, 6).fill('#2F9FB8').rect(s.x, front + 30, s.w, 8).fill({ color: '#FFFFFF', alpha: 0.5 });
+  g.roundRect(s.x, front - depth, s.w, depth + 4, 6).fill('#F2D6A2');
+  const tx = s.x + s.w - 120, ty = front - depth + 4;   // the till
+  g.roundRect(tx - BAND, ty - 46 - BAND, 84 + 2 * BAND, 50 + 2 * BAND, 8).fill('#FFFFFF').roundRect(tx, ty - 46, 84, 50, 7).fill('#E5484D')
+   .roundRect(tx + 10, ty - 40, 64, 16, 4).fill('#BFF0C8');
+  for (let i = 0; i < 3; i++) g.rect(tx + 12 + i * 22, ty - 18, 16, 8).fill('#FFFFFF');
+  c.addChild(g); c.zIndex = F; return c;
+}

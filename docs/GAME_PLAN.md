@@ -72,9 +72,11 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - Beach: shells and a metal detector. Forest: a camera, a photo album and the ranger. Pool: the water slide, swimming and a floating ring.
 - Burger Barn interior: order at the counter, carry the tray to a table, eat.
 
+- Bibs and Bobs, the beach shop: string shells into jewelry, visitors buy it, and it keeps selling while Nico is away.
+
 ## Next
 - Ice cream shop interior (same room system), then other insides (Toy Shop, Parts & Tools) if Nico wants them.
-- Parked: the kite, house cleaning, and hiring a worker. The worker needs a decision on how time works (only while the game is open, or also while it's closed).
+- Parked: the kite, house cleaning, and hiring a worker. The worker could reuse the shop's answer to how time works: it runs while the game is open, plus a capped catch-up on load.
 
 ## Waiting on
 - Nico playing the new zones and Burger Barn; the iPad frame rate in the forest.

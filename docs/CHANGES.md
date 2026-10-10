@@ -662,3 +662,31 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - The stuck part is revealed with a mask.
   - The part not stuck yet is mirrored across the fold and drawn as the sticker's white back, with a soft shadow and a crease along the fold, as if lifted and folded over.
   - Then the white flash runs round the edge.
+
+### Bibs and Bobs, the beach shop (2026-10-10)
+Nico: "a purchasable beach side store where he can make necklaces and bracelets out of shells to sell... passive income." The user named it "Bibs and Bobs". They added that he should go inside and play a mini game to make things, the things should show on the shelves, and people should come in, visit and sometimes buy. Hemp twine comes from the hardware store.
+- **A sticker unlock** ($25, `unlocks.ts`): a dashed outline at the top of the sand, east of the beach parking lot (`SHOP` in `map.ts`). It sits outside `BUILDINGS`, like the shed, so it never catches fire.
+  - Shells and buried treasure never spawn under it or on its step.
+  - A palm that stood in front of it was moved.
+  - It shows on the minimap with 🐚. The shed now shows on the minimap too.
+- **🧵 Hemp twine** is a part sold at Parts & Tools ($1, or 5 for $5). It shows once the shop is owned and never turns up in storage units (`where: 'shop'`).
+- **Inside:** the back wall has eight pegs on two shelf boards. There's a stringing table on the left and a counter with the till on the right.
+- **The stringing mini game** (`Workshop.jewelry`):
+  - Nico chooses a bracelet (4 shells), a necklace (7) or a wind chime (10).
+  - He taps his shells to string them along the twine, and taps one on the twine to take it off.
+  - The price shows as he goes: the base price, plus each shell's value (rarer shells are worth more), plus a pattern bonus. All one kind is a matching set (+$2), two kinds alternating is a pattern (+$2), and the same both ways is a mirror (+$1).
+  - "Tie it off" uses the shells and one length of twine, and hangs the piece on the shelves.
+- **Visitors** (`jewelry.ts`, `visit`):
+  - Someone arrives every 20 to 40 s and buys about one time in six, so roughly one sale every three minutes.
+  - Inside the shop you see townsfolk walk in, look at a piece, and say "So pretty!" or "I'll take it! 💰". If they buy, that piece leaves the shelf.
+  - Out in town, a sale just pops up as a toast.
+  - The money waits in the till until Nico taps it.
+- **Sales while away** (the parked time question, answered for this feature): on load, `whileAway` replays the visitors for the time since the shop was last open, up to 3 hours. Sales can never exceed what's on the shelves, and a toast says what sold.
+- **Shell collection:** "kinds found" is now its own record (`biz.found`), because making jewelry uses shells up. Old saves fill it from the shells in hand, with no version bump.
+- **Tests:**
+  - Pricing and patterns; making a piece and the refusals.
+  - Twine never appears in units.
+  - Visitors buy what they looked at; the till; away catch-up and its cap; the save.
+  - A greedy hour (every shell picked up, the best pieces made) earns about $2.40 a minute. The test fails above $6, and a mutation check confirmed it catches a raised buy chance.
+  - The layout test now covers both the shed and the shop.
+  - e2e: buy the shop, buy twine, string a pattern bracelet ($9), a visitor buys it, empty the till, and things sell during an hour away (201 checks).

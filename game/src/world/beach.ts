@@ -6,7 +6,7 @@ import { Container, Graphics } from 'pixi.js';
 import { NAVY, BAND } from './draw';
 import { shoreY, SAND_W } from './zones';
 import { freeAt } from '../player';
-import { SOLIDS, WORLD } from './map';
+import { SOLIDS, WORLD, SHOP } from './map';
 
 export const SHELL_KINDS = [
   { id: 'scallop', label: 'Scallop', color: '#F4A6A0', rare: 0.3 },
@@ -33,7 +33,8 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 export function sandSpot(r: () => number = rnd): [number, number] {
   for (let tries = 0; tries < 200; tries++) {
     const x = 200 + r() * (WORLD.w - 500), y = shoreY(x) - 50 - r() * (SAND_W - 130);
-    if (y > 60 && freeAt(x, y, SOLIDS, WORLD)) return [Math.round(x), Math.round(y)];
+    const nearShop = x > SHOP.x - 60 && x < SHOP.x + SHOP.w + 60 && y > SHOP.y - SHOP.h && y < SHOP.y + SHOP.d + 110;   // (never under Bibs and Bobs or on its step)
+    if (y > 60 && !nearShop && freeAt(x, y, SOLIDS, WORLD)) return [Math.round(x), Math.round(y)];
   }
   return [3300, 4700];
 }

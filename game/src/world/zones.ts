@@ -89,7 +89,7 @@ export const ZONE_PROPS: ZoneProp[] = [
   { kind: 'umbrella', x: 1700, y: 4980, color: '#F9A826' }, { kind: 'towel', x: 1600, y: 5030, color: '#F06A8A' },
   { kind: 'sandcastle', x: 2300, y: 4920 }, { kind: 'lifeguard', x: 3400, y: 4720 },
   { kind: 'umbrella', x: 3900, y: 4650, color: '#3BB273' }, { kind: 'towel', x: 4000, y: 4700, color: '#F9C846' },
-  { kind: 'palm', x: 2100, y: 4790 }, { kind: 'palm', x: 3700, y: 4560 }, { kind: 'palm', x: 5000, y: 4310 }, { kind: 'palm', x: 5850, y: 3950 },
+  { kind: 'palm', x: 2100, y: 4790 }, { kind: 'palm', x: 3830, y: 4540 }, { kind: 'palm', x: 5000, y: 4310 }, { kind: 'palm', x: 5850, y: 3950 },
   { kind: 'umbrella', x: 5450, y: 4220, color: '#2F7FD8' }, { kind: 'sandcastle', x: 6300, y: 3730 },
   { kind: 'lighthouse', x: 7230, y: 2700 },
   // the pool park

@@ -1,11 +1,12 @@
 import { unlockOf, PAINT_BONUS } from './unlocks';
+import { freshShop, type Shop } from './jewelry';
 
 // The business loop (v2): flip storage units for money and parts, buy a workbench, build
 // the toy car, test it, sell it. Data first, like places.ts and jobs.ts: every price and
 // item here is a one-line edit. The game only calls the small pure functions at the end.
 
 export type ItemKind = 'part' | 'find';
-export interface Item { id: string; label: string; kind: ItemKind; value: [number, number]; where?: 'beach' }   // value: what it sells for, lo..hi; where: only found there (not in storage units)
+export interface Item { id: string; label: string; kind: ItemKind; value: [number, number]; where?: 'beach' | 'shop' }   // value: what it sells for, lo..hi; where: only found there (not in storage units)
 
 export const ITEMS: Item[] = [
   // parts for the toy car (also sold at Parts & Tools)
@@ -16,6 +17,7 @@ export const ITEMS: Item[] = [
   { id: 'gear', label: '⚙️ Gear', kind: 'part', value: [1, 3] },
   { id: 'battery', label: '🔋 Battery', kind: 'part', value: [2, 4] },
   { id: 'bulb', label: '💡 Light bulb', kind: 'part', value: [1, 2] },
+  { id: 'twine', label: '🧵 Hemp twine', kind: 'part', value: [1, 1], where: 'shop' },   // (bought, never in a unit; shell jewelry at Bibs and Bobs: jewelry.ts)
   // things people leave in storage units
   { id: 'teddy', label: '🧸 Old teddy', kind: 'find', value: [2, 5] },
   { id: 'radio', label: '📻 Radio', kind: 'find', value: [4, 9] },
@@ -51,6 +53,7 @@ export const item = (id: string) => ITEMS.find(i => i.id === id)!;
 export const PARTS_FOR_SALE: { id: string; price: number }[] = [
   { id: 'wheel', price: 2 }, { id: 'axle', price: 3 }, { id: 'body', price: 5 },
   { id: 'tin', price: 4 }, { id: 'gear', price: 3 }, { id: 'battery', price: 4 }, { id: 'bulb', price: 2 },
+  { id: 'twine', price: 1 },
 ];
 
 // ---- products: each one is an idea Nico can design (build + test once), then make more of
@@ -140,7 +143,7 @@ export function makeUnit(seed: number, name: string, must?: string): Unit {
   const r = rng(seed), pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
   const sz = pick(SIZES), n = sz.n[0] + Math.floor(r() * (sz.n[1] - sz.n[0] + 1));
   const roll = (it: Item) => ({ id: it.id, value: it.value[0] + Math.floor(r() * (it.value[1] - it.value[0] + 1)) });
-  const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find' && !i.where))));
+  const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part' && !i.where)) : pick(ITEMS.filter(i => i.kind === 'find' && !i.where))));
   if (must && !contents.some(c => c.id === must)) contents[contents.length - 1] = roll(item(must));   // (someone asked for one)
   const [lo, hi] = guess({ contents } as Unit, true);
   const price = Math.max(5, Math.round((lo + (hi - lo) * (0.25 + r() * 0.5)) * (0.8 + r() * 0.3)));   // (around what it's worth: a small edge, not a money machine)
@@ -266,8 +269,10 @@ export interface Biz {
   photos: Record<string, number>;  // best photo of each animal (1-3 stars)
   unlocked: string[];              // things bought and stuck onto the world (unlocks.ts)
   shown: string[];                 // animals whose photo the ranger has paid for
+  found: string[];                 // shell kinds ever found (shells get used up making jewelry)
+  shop: Shop;                      // Bibs and Bobs, the beach shop (jewelry.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [] });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop() });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>

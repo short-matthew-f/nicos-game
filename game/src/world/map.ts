@@ -77,6 +77,8 @@ export const BUILDINGS: Building[] = [
  * then a building he can go into. Not in BUILDINGS (it isn't there at first), but kept clear of
  * lamps and props either way. */
 export const SHED: Building = { id: 'shed', label: 'WORK SHED', x: 60, y: 1950, w: 280, d: 160, h: 200, wall: '#B5654F', roof: '#6B4E3A', trim: '#F2D6A2', kind: 'barn' };
+/** Bibs and Bobs, Nico's beach shop (an unlockable too): at the top of the sand, its door onto the beach. */
+export const SHOP: Building = { id: 'bibs', label: 'BIBS AND BOBS', x: 3430, y: 4370, w: 300, d: 150, h: 210, wall: '#FFE3B3', roof: '#2F9FB8', trim: '#FFFFFF', kind: 'shop' };
 
 /** Areas on the ground (not solid; things on them may be). */
 export const LOTS = [
@@ -240,7 +242,7 @@ export function propSolid(p: Prop): Rect | null {
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 /** Buildings as drawn (front wall and roof included), for keeping props out of them. */
 const drawnRect = (b: Building): Rect => ({ x: b.x - 10, y: b.y - b.h - 10, w: b.w + 20, d: b.d + b.h + 50 });
-const busy: Rect[] = [...[...BUILDINGS, SHED].map(drawnRect), (() => { const [dx, dy] = doorOf(SHED); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; })(), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
+const busy: Rect[] = [...[...BUILDINGS, SHED, SHOP].map(drawnRect), ...[SHED, SHOP].map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
   ...ROAD_SEGS.map(r => roadRect(r, SIDEWALK)),
   // keep a clear lane from each door down toward the street
   ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }),

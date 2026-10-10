@@ -2,6 +2,7 @@
 // VERSION and add a step to migrate(), so a change of plan never wipes Nico's progress.
 import { freshBiz, freshDoors, HALL, ITEMS, type Biz } from './business';
 import { migrateUnlocks } from './unlocks';
+import { freshShop, DESIGNS, SHOP, type Shop } from './jewelry';
 
 export const VERSION = 6;
 export const START_MONEY = 20;
@@ -79,6 +80,8 @@ function cleanBiz(raw: unknown): Biz {
     tools: strs(b.tools), shells: counts(b.shells), photos: counts(b.photos), shown: strs(b.shown), unlocked: strs(b.unlocked),
     doors: cleanDoors(b.doors, count(b.seed) || f.seed), unit: cleanUnit(b.unit),
     stock: counts(b.stock), sold: counts(b.sold), flips: count(b.flips), seed: count(b.seed) || f.seed,
+    found: [...new Set([...strs(b.found), ...Object.keys(counts(b.shells))])],   // (a save from before the shop: what's in hand was found)
+    shop: cleanShop(b.shop),
   };
   migrateUnlocks(out);   // (a save with a workbench already has its shed)
   return out;
@@ -124,4 +127,14 @@ function cleanUnit(raw: unknown): Biz['unit'] {
   if (!items.length) return null;
   const n = (x: unknown) => (typeof x === 'number' && isFinite(x) && x >= 0 ? x : 0);
   return { door: u.door, name: typeof u.name === 'string' ? u.name : 'A', paid: n(u.paid), got: n(u.got), items };
+}
+
+function cleanShop(raw: unknown): Shop {
+  const f = freshShop();
+  if (!raw || typeof raw !== 'object') return f;
+  const o = raw as Partial<Shop>;
+  const n = (x: unknown) => (typeof x === 'number' && isFinite(x) && x >= 0 ? x : 0);
+  const rack = (Array.isArray(o.rack) ? o.rack : []).filter(p => p && DESIGNS.some(d => d.id === p.id) && Array.isArray(p.shells) && p.shells.every(s => typeof s === 'string') && n(p.price) > 0)
+    .slice(0, SHOP.rack).map(p => ({ id: p.id, shells: [...p.shells], price: Math.floor(p.price) }));
+  return { rack, till: Math.floor(n(o.till)), sold: Math.floor(n(o.sold)), last: n(o.last) };
 }

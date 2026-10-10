@@ -76,11 +76,15 @@ describe('farm animals', () => {
   });
 });
 
-import { SHED } from '../src/world/map';
-describe('the work shed', () => {
+import { SHED, SHOP } from '../src/world/map';
+import { onBeach } from '../src/world/beach';
+describe.each([['the work shed', SHED], ['Bibs and Bobs', SHOP]])('%s', (_, SHED) => {
   it('has room to go up: nothing in its space or its doorway, off the roads, and its door opens onto free ground', () => {
     const drawnShed = { x: SHED.x, y: SHED.y - SHED.h, w: SHED.w, d: SHED.d + SHED.h };
     const [dx, dy] = doorOf(SHED), lane = { x: dx - 50, y: dy - 10, w: 100, d: 60 };
+    for (const l of LOTS) expect(hit(l, drawnShed), l.id).toBe(false);
+    for (const [x, y] of PINES) expect(hit(drawnShed, { x: x - 70, y: y - 270, w: 140, d: 300 }), `pine ${x},${y}`).toBe(false);
+    if (SHED === SHOP) { expect(onBeach(dx, dy + 30)).toBe(true); expect(freeAt(dx, dy + 120, SOLIDS, WORLD)).toBe(true); }   // (a beach shop: its door opens onto the sand)
     for (const p of PROPS) { const r = propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 }; expect(hit(drawnShed, r) || hit(lane, r), `${p.kind} ${p.x},${p.y}`).toBe(false); }
     for (const [x, y] of TREES) expect(hit(drawnShed, { x: x - 20, y: y - 18, w: 40, d: 20 }), `tree ${x},${y}`).toBe(false);
     for (const b of BUILDINGS) expect(hit(drawn(b), drawnShed), b.id).toBe(false);
