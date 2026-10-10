@@ -207,6 +207,26 @@ with sync_playwright() as p:
     check(G()['play'] == 'bench' and pg.locator('#action').inner_text() == 'Stand up', 'sitting on the bench, Stand up offered')
     drag(0, 80, 300)
     check(G()['mode'] == 'walk', 'the stick stands him up')
+    # odd jobs: Mr. Brooks has a "!" job; take it, do the steps, get paid
+    def near(who):
+        t = next(x for x in G()['townsfolk'] if x['who'] == who)
+        pg.evaluate(f"()=>window.__game.place({t['x'] + 40}, {t['y'] + 10})"); pg.wait_for_timeout(150)
+    m0 = G()['money']
+    near('mrbrooks')
+    check('❗' in pg.locator('#action').inner_text(), f"Mr. Brooks has a job (❗) ({pg.locator('#action').inner_text()})")
+    pg.click('#action'); pg.wait_for_timeout(150)
+    pg.click('#place-menu button[data-item="accept"]'); pg.wait_for_timeout(150)
+    check(G()['job'] and G()['job']['id'] == 'package' and pg.locator('#job').is_visible(), 'taking the job shows it in the top bar')
+    for _ in range(2):
+        jb = G()['job']; pg.evaluate(f"()=>window.__game.place({jb['at'][0]}, {jb['at'][1]})"); pg.wait_for_timeout(150)
+        check(G()['action'] == 'job', f"at the job's next place, its step is offered ({pg.locator('#action').inner_text()})")
+        pg.click('#action'); pg.wait_for_timeout(150)
+    near('mrbrooks')
+    check(pg.locator('#action').inner_text().startswith('Finish job'), 'back to Mr. Brooks: Finish job')
+    pg.click('#action'); pg.wait_for_timeout(150)
+    check(G()['money'] == m0 + 6 and G()['job'] is None and not pg.locator('#job').is_visible(), f"paid $6 and the job is done ({m0} -> {G()['money']})")
+    near('mrbrooks')
+    check('❗' not in pg.locator('#action').inner_text(), 'no new job from him straight away')
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

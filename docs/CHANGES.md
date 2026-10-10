@@ -310,3 +310,23 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Streetlamps:** only on the north side of the east-west roads (a lamp south of a road drew up across it, as if it stood in the road), 120 px tall instead of 150, and no doubled lamps at corners. Door lanes are kept clear of lamps; this was caught by Maya's and Leo's route tests at the school and ice cream doors.
 - The STORAGE sign was navy on navy, so its trim is now cream.
 - **Tests:** Vitest 170, e2e 66.
+
+## 2026-10-09 (overnight): odd jobs (a way to earn money)
+- Until now money only went down. **Five odd jobs** (`jobs.ts`, data), each from a townsperson:
+  - Mrs. Kim: water three flower beds by her house ($5).
+  - Mr. Brooks: carry a package from the hospital to the fire station ($6).
+  - Sam: find his cat Whiskers, hiding in one of five places ($5).
+  - Ava: kick the soccer ball over to her ($4).
+  - Maya: fetch her library book from school ($3).
+- **How it works:**
+  - Anyone with a job shows a "!" bubble, and their button says "Talk to … ❗". The offer card has "Sure! +$N" or "Not now".
+  - The current step shows in the top bar (📋). A gold star on the minimap marks where to go: a place, or the person to go back to. At each place the action button offers the step ("Water flowers", "Pick up package"…), then "Finish job ✔" back with them pays out.
+  - Tapping the 📋 chip offers to give the job up.
+  - A job comes back after a cooldown (90–120 s), so the money can keep coming.
+  - Only one job at a time. Jobs aren't saved; money is.
+- **Spot priority:** a job step at a shop door (the package at the hospital) has to beat the door's own "Go in". Spots now have a `priority`, which is tested.
+- Building cards are now a general `showCard` (title, text, choices, way out), shared by shops and job offers.
+- **Tests:**
+  - Vitest 175: every job's giver exists and it pays; every place a job sends you is walkable (caught a cat spot inside a park bench); steps run in order; several-place steps pick one.
+  - e2e 73: the ❗ offer, accepting, the chip, each step offered at its place, Finish job, paid $6, no new job straight away.
+  - Mutation: no cooldown went red.

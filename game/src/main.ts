@@ -21,6 +21,8 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
+import { jobFor, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
+import { drawCat, drawBubble } from './world/critters';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -139,11 +141,29 @@ async function main() {
 
   // ---- buildings: walk up to a door to see what's there
   const placeEl = document.getElementById('place')!, menuEl = document.getElementById('place-menu')!;
+  const leave = document.getElementById('place-close')!;
   let openPlace: Place | null = null;
+  let cardOpen: string | null = null;   // what card is showing: a building id, or 'job:<id>'
+  interface CardButton { label: string; sub?: string; id?: string; disabled?: boolean; onClick: () => void }
+  /** A card with a title, a line of text, some choices and a way out. */
+  function showCard(id: string, title: string, text: string, buttons: CardButton[], leaveLabel = 'Leave') {
+    cardOpen = id;
+    document.getElementById('place-title')!.textContent = title;
+    document.getElementById('place-text')!.textContent = text;
+    leave.textContent = leaveLabel;
+    menuEl.replaceChildren();
+    for (const bt of buttons) {
+      const b = document.createElement('button'); b.type = 'button'; if (bt.id) b.dataset.item = bt.id;
+      b.innerHTML = `<span>${bt.label}</span>` + (bt.sub ? `<span class="price">${bt.sub}</span>` : '');
+      b.disabled = !!bt.disabled;
+      b.addEventListener('click', () => { closePlace(); bt.onClick(); });
+      menuEl.appendChild(b);
+    }
+    placeEl.hidden = false;
+  }
   function showPlace(p: Place) {
+    showCard(p.building, p.title, p.text, []);
     openPlace = p;
-    document.getElementById('place-title')!.textContent = p.title;
-    document.getElementById('place-text')!.textContent = p.text;
     menuEl.replaceChildren();
     for (const item of p.menu ?? []) {
       const b = document.createElement('button'); b.type = 'button'; b.dataset.item = item.id;
@@ -157,16 +177,14 @@ async function main() {
       });
       menuEl.appendChild(b);
     }
-    placeEl.hidden = false;
   }
-  function closePlace() { placeEl.hidden = true; openPlace = null; }
+  function closePlace() { placeEl.hidden = true; openPlace = null; cardOpen = null; }
   // close on Leave, or on a tap anywhere outside the card (never get stuck in a building).
   // pointerup as well as click: some touches on iOS never produce a click.
-  const leave = document.getElementById('place-close')!;
   leave.addEventListener('click', closePlace);
   leave.addEventListener('pointerup', closePlace);
   placeEl.addEventListener('pointerdown', e => { if (e.target === placeEl) closePlace(); });
-  window.addEventListener('keydown', e => { if (e.key === 'Escape' && openPlace) closePlace(); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && cardOpen) closePlace(); });
 
   const spots: Spot[] = [
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
@@ -179,16 +197,59 @@ async function main() {
     }),
   ];
   // ---- people Nico knows, on their routines; walk up to one to say hi
-  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number }
+  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean } }
   const locals: Local[] = TOWNSFOLK.map(t => {
     const view = new PersonView(t.who);
     layer.addChild(view.root);
     const r = t.route[0];
     return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0 };
   });
-  for (const l of locals) spots.push({
-    id: l.t.who, x: 0, y: 0, r: 90, label: `Say hi to ${l.t.name}`,
-    run: () => { toast(`${l.t.name}: “${l.t.lines[l.said++ % l.t.lines.length]}”`); },
+  // ---- odd jobs: people with a job show a "!"; talk to them to take it on
+  let job: Active | null = null;
+  const jobWait: Record<string, number> = {};   // seconds until a job is offered again
+  const offers = (who: string) => { const j = jobFor(who); return !job && j && !(jobWait[j.id] > 0) ? j : null; };
+  const finishing = (who: string) => !!job && job.job.giver === who && jobStep(job).kind === 'return';
+  function payJob() {
+    if (!job) return;
+    const j = job.job, name = locals.find(l => l.t.who === j.giver)?.t.name ?? '';
+    state.money += j.reward; showMoney(); persist();
+    toast(`${name}: “${j.thanks}” +$${j.reward}`);
+    jobWait[j.id] = j.cooldown; job = null;
+  }
+  function talkTo(l: Local) {
+    if (finishing(l.t.who)) { payJob(); return; }
+    const j = offers(l.t.who);
+    if (j) {
+      showCard(`job:${j.id}`, l.t.name, j.ask, [{ label: 'Sure!', sub: `+$${j.reward}`, id: 'accept', onClick: () => { job = startJob(j); toast(`📋 ${j.title}`); } }], 'Not now');
+      return;
+    }
+    toast(`${l.t.name}: “${l.t.lines[l.said++ % l.t.lines.length]}”`);
+  }
+  for (const l of locals) {
+    spots.push({
+      id: l.t.who, x: 0, y: 0, r: 90,
+      label: () => finishing(l.t.who) ? `Finish job ✔` : offers(l.t.who) ? `Talk to ${l.t.name} ❗` : `Say hi to ${l.t.name}`,
+      run: () => talkTo(l),
+    });
+    if (jobFor(l.t.who)) { const b = drawBubble(); b.position.set(0, -172); b.scale.set(1.25); b.visible = false; l.view.root.addChild(b); l.bubble = b; }
+  }
+  const jobSpot: Spot = {
+    id: 'job', x: 0, y: 0, r: 80, priority: 1, label: () => (job && jobStep(job).kind === 'go' ? (jobStep(job) as { label: string }).label : ''),
+    when: () => !!job && jobStep(job).kind === 'go',
+    run: () => {
+      if (!job) return;
+      const label = (jobStep(job) as { label: string }).label;
+      toast(label.startsWith('Water') ? '💧 Watered!' : `✔ ${label}`);
+      if (advanceJob(job)) payJob();
+    },
+  };
+  spots.push(jobSpot);
+  const cat = drawCat(); cat.visible = false; layer.addChild(cat);
+  const jobEl = document.getElementById('job')!;
+  jobEl.addEventListener('click', () => {
+    if (!job) return;
+    const j = job.job;
+    showCard('job:quit', j.title, `Right now: ${jobStep(job).note}.`, [{ label: 'Give up the job', id: 'quit', onClick: () => { toast('Job dropped.'); job = null; } }], 'Keep going');
   });
   function stepLocal(l: Local, dt: number) {
     const reached = stepRoute(l.t, l.w, dt);
@@ -294,7 +355,7 @@ async function main() {
     if (fpsAcc > 500) { fps = Math.round(1000 * fpsN / fpsAcc); fpsEl.textContent = `${fps} fps`; fpsAcc = 0; fpsN = 0; }
     if (Math.hypot(input.vx, input.vy) > 0) hint.style.opacity = '0';
 
-    const frozen = openPlace !== null;   // a building's card is open
+    const frozen = cardOpen !== null;   // a card is open (a building, a job offer)
     boost = Math.max(0, boost - dt);
     const fast = boost > 0 ? BOOST.speed : 1;
     if (mode === 'play' && play) {
@@ -412,6 +473,22 @@ async function main() {
 
     siren.update(dt, truckOut ? Math.hypot(truck.pos[0] - cx, truck.pos[1] - cy) : null);
 
+    // jobs: the next step's spot, the ball step, the cat, the "!" bubbles, the HUD chip
+    for (const id in jobWait) jobWait[id] -= dt;
+    for (const l of locals) if (l.bubble) l.bubble.visible = !!offers(l.t.who) || finishing(l.t.who);
+    let jobAt: [number, number] | null = null;
+    if (job) {
+      const giver = locals.find(l => l.t.who === job!.job.giver)!;
+      jobAt = jobTarget(job, [giver.w.x, giver.w.y]);
+      const st = jobStep(job);
+      if (st.kind === 'go') { jobSpot.x = jobAt[0]; jobSpot.y = jobAt[1]; }
+      if (st.kind === 'ball' && Math.hypot(ball.x - giver.w.x, ball.y - giver.w.y) < 130) payJob();
+      cat.visible = !!job && job.job.id === 'cat' && job.step === 0;
+      if (cat.visible) { cat.position.set(jobAt[0], jobAt[1] - 6); cat.zIndex = jobAt[1]; }
+    } else cat.visible = false;
+    jobEl.hidden = !job;
+    if (job) { const t = `📋 ${jobStep(job).note}`; if (jobEl.textContent !== t) jobEl.textContent = t; }
+
     // minimap: top-left, under the money
     const mr = moneyEl.getBoundingClientRect();
     minimap.view.position.set(mr.left + 6, mr.bottom + 16);
@@ -420,6 +497,7 @@ async function main() {
       ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
       ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
+      ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
       { x: mode === 'drive' ? car.x : nico.x, y: mode === 'drive' ? car.y : nico.y, color: '#F08A3C', r: 5, ring: true },
     ]);
 
@@ -429,7 +507,7 @@ async function main() {
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score },
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
-      mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
+      mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       truck: { out: truck.out, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,

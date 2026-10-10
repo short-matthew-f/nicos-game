@@ -7,14 +7,15 @@ export interface Spot {
   label: string | (() => string);
   run: () => void;
   when?: () => boolean;              // only offered while this is true
+  priority?: number;                 // beats nearer spots with a lower priority (a job step at a door)
 }
 
-/** The closest usable spot within reach of (x, y), or null. */
+/** The closest usable spot within reach of (x, y), or null (higher priority wins first). */
 export function nearest(spots: Spot[], x: number, y: number): Spot | null {
-  let best: Spot | null = null, bd = Infinity;
+  let best: Spot | null = null, bd = Infinity, bp = -Infinity;
   for (const s of spots) {
-    const d = Math.hypot(s.x - x, s.y - y);
-    if (d <= s.r && d < bd && (!s.when || s.when())) { best = s; bd = d; }
+    const d = Math.hypot(s.x - x, s.y - y), p = s.priority ?? 0;
+    if (d <= s.r && (p > bp || (p === bp && d < bd)) && (!s.when || s.when())) { best = s; bd = d; bp = p; }
   }
   return best;
 }
