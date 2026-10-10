@@ -443,6 +443,11 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>window.__game.place({deer['x'] - 120}, {deer['y']})"); pg.wait_for_timeout(700)
     d2 = next(a for a in G()['animals'] if a['kind'] == 'deer')
     check(math.dist((d2['x'], d2['y']), (deer['x'] - 120, deer['y'])) > math.dist((deer['x'], deer['y']), (deer['x'] - 120, deer['y'])) + 40, f"a deer runs off when Nico comes close ({deer['x']:.0f},{deer['y']:.0f} -> {d2['x']:.0f},{d2['y']:.0f})")
+    # the garage can always bring the car home, wherever it's got to
+    pg.evaluate("()=>window.__game.placeCar(6200, 1300, 1)"); pg.wait_for_timeout(100)
+    door('garage'); pg.click('[data-item=carhome]'); pg.wait_for_timeout(200)
+    pk = G()['parked']; cr = G()['car']
+    check(math.dist((cr['x'], cr['y']), (pk['x'], pk['y'])) < 2 and abs(cr['h'] - pk['h']) < 0.01, f"Bring my car home: back on the driveway ({cr['x']:.0f},{cr['y']:.0f})")
     # the beach: buy a metal detector, follow the beeps, dig; pick up shells; the backpack
     pg.evaluate("()=>{window.__game.setBiz({tools: [], shells: {}, finds: []}); window.__game.setMoney(50)}")
     door('parts'); pg.click('[data-item="tool:detector"]'); pg.wait_for_timeout(200); pg.keyboard.press('Escape')

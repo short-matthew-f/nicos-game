@@ -589,3 +589,6 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - The shin is a second sprite drawn with the leg's own art (`bk`/`fk`, cloned in `person.ts`), so no new art or Python change was needed.
   - The shin parts only exist while knees are bent, so walking and the 97 Python parity poses are unchanged (tested).
   - Used for sitting on the Burger Barn stools.
+
+## 2026-10-10: bring the car home
+- **Nico:** his car was missing. The garage card now always has **🚗 Bring my car home**, which puts it back on the home driveway, facing the road, wherever it's ended up. (The minimap shows the car as a red dot while you're on foot.)

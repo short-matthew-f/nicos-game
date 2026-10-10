@@ -343,17 +343,22 @@ async function main() {
         } }] : []);
     },
     garage: p => {
+      // the car home button: it's always here, whatever else the garage has (the car can end up anywhere)
+      const carHome = { label: '🚗 Bring my car home', sub: 'onto the driveway', id: 'carhome', onClick: () => {
+        Object.assign(car, { ...PARKED_CAR, speed: 0 }); carView.position.set(car.x, car.y); turnCar(car.h); persist();
+        toast('🚗 Your car is back on the driveway!');
+      } };
       const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
       const made = PRODUCTS.filter(q => biz.stock[q.id]).map(q => `${q.emoji}×${biz.stock[q.id]}`).join(' ');
       const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(made ? [`Ready to sell: ${made}`] : [])];
-      if (!biz.workbench) { showCard('garage', p.title, `Your garage. There's room in here for a workbench: Parts & Tools sells them. ${lines.join(' ')}`, []); return; }
+      if (!biz.workbench) { showCard('garage', p.title, `Your garage. There's room in here for a workbench: Parts & Tools sells them. ${lines.join(' ')}`, [carHome]); return; }
       // one button per idea: the hands-on first build, then quick builds once it's designed
-      showCard('garage', '🛠️ Your workbench', lines.join(' '), unlockedProducts(biz).map(q => {
+      showCard('garage', '🛠️ Your workbench', lines.join(' '), [carHome, ...unlockedProducts(biz).map(q => {
         const ready = has(biz, q.recipe), proven = biz.designs.includes(q.id);
         return proven
           ? { label: `${q.emoji} Build a ${q.name}`, sub: ready ? `${PLANS[q.id].steps.length} quick steps` : `need ${needLine(q.recipe)}`, id: `quick:${q.id}`, disabled: !ready, onClick: () => work.quick(q.id) }
           : { label: `${q.emoji} Build the ${q.name}`, sub: ready ? 'your first one!' : `need ${needLine(q.recipe)}`, id: `build:${q.id}`, disabled: !ready, onClick: () => work.build(q.id) };
-      }));
+      })]);
     },
     toys: p => {
       const have = PRODUCTS.filter(q => biz.stock[q.id]);
