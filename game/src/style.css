@@ -88,7 +88,7 @@ html, body {
 #detector i { display: inline-block; width: 6px; border-radius: 2px; background: #C9D3DC; }
 #detector i.on { background: #3BB273; }
 #detector[hidden] { display: none; }
-#bag { font-size: 22px; min-width: 48px; }
+#bag, #who { font-size: 22px; min-width: 48px; }
 
 /* ---- the workshop screens (auction, unit, build, ramp) */
 .work .panel {

@@ -696,6 +696,13 @@ with sync_playwright() as p:
     check(len(G()['biz']['bakery']['rack']) == 3, 'a customer walked in and bought a cookie')
     pg.screenshot(path='/tmp/bakery_in.png')
     pg.evaluate("()=>window.__game.exitRooms()")
+    # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
+    pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
+    ws = [t['who'] for t in G()['townsfolk']]
+    check(G()['player'] == 'primo' and 'nico' in ws and 'primo' not in ws and G()['nico']['art'], f"playing as Primo; Nico walks Primo's rounds ({ws})")
+    drag(80, 0, 600); check(G()['nico']['amp'] < 0.3 and not errs, 'Primo walks fine')
+    pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:nico"]'); pg.wait_for_timeout(300)
+    check(G()['player'] == 'nico' and 'primo' in [t['who'] for t in G()['townsfolk']], 'back to Nico')
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')

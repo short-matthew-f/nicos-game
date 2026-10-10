@@ -24,7 +24,7 @@ import { neutral, type PoseState, type View } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, freeAt, stepGait, GAIT_SCALE, WALK_SPEED } from './player';
 import { startUpdates, BUILD_ID } from './update';
-import { load, save as writeSave, VERSION, type Save } from './state';
+import { load, save as writeSave, VERSION, PLAYABLE, type Save } from './state';
 import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
@@ -141,6 +141,7 @@ async function main() {
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
   let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
+  let player = saved.player ?? 'nico';   // who he's playing as (playAs)
   const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false };
   let aroundIn = 0, lastFoot = 0, squash = 0, shake = 0, windowsIn = 0, lastDt = 0;
   const nv = [0, 0], cam = { x: NaN, y: NaN };   // Nico's velocity (eased); where the camera's looking (it trails a little)
@@ -196,7 +197,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock, ...(player !== 'nico' ? { player } : {}) });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -1030,12 +1031,38 @@ async function main() {
     }),
   ];
   // ---- people Nico knows, on their routines; walk up to one to say hi
-  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean }; trip: [number, number][]; met: [number, number] | null; climb?: { b: typeof BUILDINGS[number]; t: number; dur: number } | null }
+  interface Local { t: Townie; orig: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number; bubble?: { visible: boolean }; trip: [number, number][]; met: [number, number] | null; climb?: { b: typeof BUILDINGS[number]; t: number; dur: number } | null }
   const locals: Local[] = TOWNSFOLK.map(t => {
     const view = new PersonView(t.who);
     layer.addChild(view.root);
     const r = t.route[0];
-    return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0, trip: [], met: null };
+    return { t, orig: t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0, trip: [], met: null };
+  });
+  // ---- play as a friend (Nico: switch between Nico, James, Primo and Tempo). Whoever you play as hands
+  // their routine to Nico: play as James and Nico walks James's rounds (and says hi like he would)
+  const NICO_LINES = ["Hey! It's me, Nico!", 'Want to come to my bakery?', 'I found a starfish on the beach!', 'Race you to the playground!'];
+  /** Give someone a new look (a new PersonView in the same place, the job bubble moved over). */
+  function relook(o: { view: PersonView; bubble?: { visible: boolean } }, who: string) {
+    const old = o.view, parent = old.root.parent, v = new PersonView(who);
+    v.setZoom(zoom, resolution); if (low) v.setLow(true);
+    v.root.visible = old.root.visible; v.root.zIndex = old.root.zIndex; v.root.position.copyFrom(old.root.position);
+    if (o.bubble) { const b = o.bubble as unknown as Container; b.removeFromParent(); v.root.addChild(b); }
+    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v;
+  }
+  function playAs(who: string) {
+    for (const l of locals) {
+      const want = l.orig.who === who ? { ...l.orig, who: 'nico', name: 'Nico', lines: NICO_LINES } : l.orig;
+      if (l.t.who !== want.who) { l.t = want; relook(l, want.who); }
+    }
+    if (nico.view.who !== who) relook(nico, who);
+    player = who;
+  }
+  document.getElementById('who')!.addEventListener('click', () => {
+    if (mode !== 'walk') { toast(mode === 'drive' ? 'Park the car first!' : 'Finish what you\'re doing first!'); return; }
+    showCard('who', '👤 Who do you want to play as?', 'Whoever you pick, Nico takes their place walking round town.', PLAYABLE.map(([w, name]) => ({
+      label: name, sub: w === player ? 'playing' : '', id: `who:${w}`, disabled: w === player || (!!job && job.job.giver === w),
+      onClick: () => { playAs(w); persist(); sfx.sparkle(); dust.puff(nico.x, nico.y - 40, '#FFFFFF', 8, 120, 14); toast(`👤 Now playing as ${name}!`); },
+    })), 'Close');
   });
   // ---- odd jobs: people with a job show a "!"; talk to them to take it on
   const jobWait: Record<string, number> = {};   // seconds until a job is offered again
@@ -1264,6 +1291,7 @@ async function main() {
     console.info('[nico] low-quality mode: fps was', fps);
   }
 
+  if (player !== 'nico') playAs(player);   // (playing as a friend, from the save: once everything's set up)
   app.ticker.add(t => {
     const dt = Math.min(t.deltaMS / 1000, 0.05);
     fpsAcc += t.deltaMS; fpsN++;
@@ -1402,7 +1430,7 @@ async function main() {
 
     for (const l of locals) {
       stepLocal(l, dt);
-      const sp = spots.find(p => p.id === l.t.who)!; sp.x = l.w.x; sp.y = l.w.y;
+      const sp = spots.find(p => p.id === l.orig.who)!; sp.x = l.w.x; sp.y = l.w.y;   // (their spot keeps its first name, whoever's walking the route)
     }
 
     // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
@@ -1585,7 +1613,7 @@ async function main() {
       unlocked: [...biz.unlocked], solidAt: (x: number, y: number) => !freeAt(x, y, SOLIDS, WORLD),
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
-      sounds: { ...played }, scatters, awayFor: (sec: number) => { biz.shop.last = biz.bakery.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { for (const k in visitIn) visitIn[k] = 0; }, baking: { ...work.baking }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
+      sounds: { ...played }, scatters, player, awayFor: (sec: number) => { biz.shop.last = biz.bakery.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { for (const k in visitIn) visitIn[k] = 0; }, baking: { ...work.baking }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

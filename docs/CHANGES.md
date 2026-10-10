@@ -792,3 +792,11 @@ Nico: "he wants to be able to decorate his house."
   - four rugs: red and yellow, ocean, forest, candy.
   - Saved in `biz.home`; the colours are data in `decor.ts`.
 - e2e: buy a beanbag and a TV, play games and beat a level, space wallpaper (228 checks).
+
+### Play as a friend (2026-10-10)
+Nico wanted to switch between Nico, James and Primo; Tempo is in too.
+- **The 👤 button** (next to the backpack) picks who you play: Nico, James, Primo or Tempo. Not while driving or in the middle of something.
+- **Whoever you play as hands their routine to Nico:** play as Primo and Nico is the one swinging and climbing Burger Barn; play as Tempo and Nico runs along the beach, saying Nico things.
+- The choice is saved (`Save.player`, optional), and it's applied once the game is set up.
+- People keep their tap spot under their first name, whoever's walking the route. That fixed a crash on the first try.
+- e2e: play as Primo, Nico walks Primo's rounds, back to Nico (231 checks).
