@@ -697,3 +697,18 @@ Nico: "a purchasable beach side store where he can make necklaces and bracelets 
   - The photos are reference only and are not in the repo.
 - He runs up and down the beach: the sandcastle, outside Bibs and Bobs, and the pier.
 - The townsfolk route test now checks the roads as built (segments), not as endless lines, so a beach route can cross below where the south road ends.
+
+### Day and night (2026-10-10)
+The user: "a day and night cycle might be nice. The city could have some street lamps that create a glow around them. The moon could come out. The forest could be a little spooky."
+- **The clock** (`world/night.ts`, `DAY`): a day is 12 minutes of play, about 7 of daylight and 3 of night, with a warm sunset and sunrise in between. It's saved (`Save.clock`, optional, no version bump), and a new game starts mid-morning.
+- **The dark:** a multiply tint over the world: white by day, warm orange at sunset, moonlit blue at night. The forest gets an extra layer of dark, with feathered edges.
+- **The lights:** additive glows drawn on top of the dark, so it doesn't dim them:
+  - every street lamp (a glow round the bulb and a pool of light on the ground);
+  - most building windows, the same ones every night (`windowSpots` was pulled out of `drawBuilding` for this);
+  - the campfire (flickering), the lighthouse lamp with a turning beam, and the pool's underwater lights;
+  - two soft headlight beams ahead of every car, including Nico's;
+  - a soft light round Nico, so he's easy to see in the dark.
+- **The moon** rises on the left at dusk, crosses the top of the screen and sets at dawn: a glowing disc with craters, drawn over the world on screen.
+- **A little spooky:** pairs of eyes glint between the forest pines, blink, and fade away when Nico comes close. Fog drifts through the woods, and fireflies dance round the campground.
+- Night first tried headlights as hard-edged triangles on the car body: they were dimmed by the dark and looked cut out. They're now soft glows in the light layer. The forest's dark had a hard straight edge, so it's now four feathered layers.
+- e2e: night is full dark and still running, the clock turns, back to day. The away-sales check now uses a debug hook (`awayFor`) that runs the same catch-up as loading; a reload saved "now" over the test's "an hour ago" (205 checks).

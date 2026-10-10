@@ -5,6 +5,7 @@ extensions.add(CullerPlugin);
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, doorOf } from './world/map';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
+import { Night, DAY } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
@@ -98,6 +99,8 @@ async function main() {
   pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : here(); if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
+  // day and night: the dark and the lights go over everything, the moon over the world on screen
+  const night = new Night(); world.addChild(night.view); app.stage.addChildAt(night.moon, app.stage.getChildIndex(world) + 1);
   const animals = new Animals(); for (const a of animals.list) { a.view.cullable = true; layer.addChild(a.view); }
   // the beach: shells to pick up, treasure to find with the metal detector
   const shells = new Shells(); for (const v of shells.views) { v.cullable = true; layer.addChild(v); }
@@ -129,6 +132,7 @@ async function main() {
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
+  let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
   // ---- the work shed in the garden: an outline with a price until it's bought, then a building
   // (solid from the start if it's already his, before a saved position is checked)
   const shedRect = { x: SHED.x, y: SHED.y, w: SHED.w, d: SHED.d };
@@ -178,7 +182,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -343,10 +347,12 @@ async function main() {
   });
   const biz = state.biz;
   // Bibs and Bobs kept selling while Nico was away (up to a few hours' worth; only what's on its shelves)
-  if (isUnlocked(biz, 'shop')) {
+  function catchUp(wait = 1500) {
+    if (!isUnlocked(biz, 'shop')) return;
     const away = whileAway(biz, Date.now());
-    if (away.length) setTimeout(() => toast(`🐚 While you were away, Bibs and Bobs sold ${away.length} thing${away.length === 1 ? '' : 's'}! $${biz.shop.till} is waiting in the till.`), 1500);
+    if (away.length) setTimeout(() => toast(`🐚 While you were away, Bibs and Bobs sold ${away.length} thing${away.length === 1 ? '' : 's'}! $${biz.shop.till} is waiting in the till.`), wait);
   }
+  catchUp();
   /** What's in the toy shop window: one of each thing sold, then more cars. */
   function windowToys() { const kinds = PRODUCTS.filter(q => biz.sold[q.id]).map(q => q.id); while (kinds.length < Math.min(3, soldAll(biz))) kinds.push('car'); return kinds.slice(0, 3); }
   function showSkill(sk: Skill) { sfx.cheer(); showCard(`skill:${sk.id}`, `🎓 New skill: ${sk.name}!`, sk.text, [], 'Nice!'); }
@@ -1155,6 +1161,10 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
+    clock = (clock + dt / DAY.length) % 1;
+    night.update(clock, dt, here(), { w: app.screen.width, h: app.screen.height });
+    night.headlights([[car.x, car.y, car.h], ...cars.map(c => [c.pos[0], c.pos[1], c.loop.heading(c.s)] as [number, number, number])], CAR.len, CAR.wid);
+    if (room) night.moon.visible = false;
     for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
     splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
     animals.update(dt, [mode === 'drive' ? [car.x, car.y] : here()]);
@@ -1297,7 +1307,7 @@ async function main() {
       unlocked: [...biz.unlocked], solidAt: (x: number, y: number) => !freeAt(x, y, SOLIDS, WORLD),
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
-      sounds: { ...played }, scatters, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { visitIn = 0; }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
+      sounds: { ...played }, scatters, awayFor: (sec: number) => { biz.shop.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { visitIn = 0; }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

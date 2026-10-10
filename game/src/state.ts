@@ -16,6 +16,7 @@ export interface Save {
   driving: boolean;
   biz: Biz;                                       // the business: parts, finds, workbench, toy cars
   job: SavedJob | null;                           // the odd job in progress (the game checks the id still exists)
+  clock?: number | null;                          // the time of day, 0..1 (night.ts); null: a fresh morning
 }
 /** A job in progress: which one ('want:<giver>:<item>' for an item request), which step, and
  * the spot picked for each step. */
@@ -58,6 +59,7 @@ export function migrate(raw: unknown): Save {
     driving: o.driving === true,
     biz: cleanBiz(o.biz),
     job: cleanJob(o.job),
+    ...(typeof o.clock === 'number' && isFinite(o.clock) ? { clock: ((o.clock % 1) + 1) % 1 } : {}),
   };
 }
 

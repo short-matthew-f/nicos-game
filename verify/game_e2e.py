@@ -582,6 +582,14 @@ with sync_playwright() as p:
     door('toys'); sub = pg.locator('[data-item="sell:car"] .price').inner_text()
     check(sub == '$35', f"painted toy cars sell for $5 more ({sub})")
     pg.keyboard.press('Escape'); pg.evaluate("()=>window.__game.exitRooms()")
+    # day and night: the clock turns, lamps and windows light up, the moon comes out
+    check(G()['dark'] == 0, 'it starts in the daytime')
+    pg.evaluate('()=>window.__game.setClock(0.8)'); pg.wait_for_timeout(400)
+    check(G()['dark'] == 1 and G()['fps'] > 0, f"set the clock to night: full dark, still running ({G()['fps']} fps)")
+    c0 = G()['clock']; pg.wait_for_timeout(1500)
+    check(G()['clock'] > c0, 'the clock keeps turning')
+    pg.evaluate('()=>window.__game.setClock(0.2)'); pg.wait_for_timeout(300)
+    check(G()['dark'] == 0, 'and back to day')
     # Bibs and Bobs: a beach shop (outline + price till it's bought). Buy twine, string shells, visitors buy
     pg.evaluate("()=>{window.__game.setBiz({shells:{clam:4, starfish:2, scallop:3}, found:['clam','starfish','scallop'], items:{}}); window.__game.setMoney(60)}")
     at('bibs'); pg.wait_for_timeout(150)
@@ -623,8 +631,8 @@ with sync_playwright() as p:
     check(G()['money'] == 39 and G()['biz']['shop']['till'] == 0, f"emptied the till: +$9 ({G()['money']})")
     # sales while away: an hour's worth of visitors, caught up on load
     pg.evaluate("()=>window.__game.exitRooms()")
-    pg.evaluate("()=>window.__game.setBiz({shop:{rack:Array.from({length:8}, () => ({id:'bracelet', shells:['clam','clam','clam','clam'], price:7})), till:0, sold:1, last:Date.now() - 3600e3}})")
-    pg.reload(); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000); pg.wait_for_timeout(2200)
+    pg.evaluate("()=>window.__game.setBiz({shop:{rack:Array.from({length:8}, () => ({id:'bracelet', shells:['clam','clam','clam','clam'], price:7})), till:0, sold:1, last:Date.now()}})")
+    pg.evaluate('()=>window.__game.awayFor(3600)'); pg.wait_for_timeout(300)   # (the same catch-up as loading the game)
     bz = G()['biz']; t = pg.locator('#toast').inner_text()
     check(bz['shop']['till'] > 0 and len(bz['shop']['rack']) < 8 and 'While you were away' in t, f"came back after an hour: things sold ({8 - len(bz['shop']['rack'])}, ${bz['shop']['till']}), and a toast says so ({t})")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept

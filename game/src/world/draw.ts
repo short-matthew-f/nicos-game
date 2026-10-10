@@ -86,6 +86,21 @@ function shade(hex: string, k: number): string {
   return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(v => f(v).toString(16).padStart(2, '0')).join('');
 }
 
+/** Where a building's front windows are: each one's centre x and top y (the glass is 56 x 40, from
+ * (cx - 28, wy + 6)). The night lights them up (night.ts). */
+export function windowSpots(b: Building): [number, number][] {
+  if (b.id === 'storage' || b.id === 'garage') return [];
+  const front = b.y + b.d - b.h, doorW = 66, doorX = b.x + b.w / 2 - doorW / 2;
+  const n = Math.max(1, Math.floor((b.w - 80) / 130)), rows = b.h > 200 ? 2 : 1, rowH = (b.h - 20) / rows;
+  const out: [number, number][] = [];
+  for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) {
+    const cx = b.x + (b.w / (n + 1)) * (i + 1), wy = front + 26 + r * rowH;
+    const byDoor = Math.abs(cx - (doorX + doorW / 2)) < 80 && r === rows - 1;
+    if (byDoor || b.bays?.some(x => Math.abs(cx - x) < 120) && r === rows - 1) continue;
+    out.push([cx, wy]);
+  }
+  return out;
+}
 export function drawBuilding(b: Building): Container {
   const c = new Container();
   const g = new Graphics();
@@ -100,18 +115,13 @@ export function drawBuilding(b: Building): Container {
   const winC = '#CFE6F7', frame = b.trim ?? '#FFFFFF';
   const doorW = 66, doorH = Math.min(165, b.h - 40);
   const doorX = b.x + b.w / 2 - doorW / 2;
-  const n = Math.max(1, Math.floor((b.w - 80) / 130));
-  const rows = b.h > 200 ? 2 : 1, rowH = (b.h - 20) / rows;
   if (b.id === 'storage') rollUpDoors(g, b, front);
   else if (b.id === 'garage') {   // one big roll-up door for the car
     const w = b.w * 0.62, x = b.x + (b.w - w) / 2, y = front + 34, h = b.h - 34;
     g.roundRect(x - 6, y - 6, w + 12, h + 6, 6).fill('#FFFFFF').roundRect(x, y, w, h, 4).fill('#B8C3CF');
     for (let k = y + 14; k < y + h - 4; k += 16) g.rect(x, k, w, 3).fill('#9AA3B0');
   }
-  else for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) {
-    const cx = b.x + (b.w / (n + 1)) * (i + 1), wy = front + 26 + r * rowH;
-    const byDoor = Math.abs(cx - (doorX + doorW / 2)) < 80 && r === rows - 1;
-    if (byDoor || b.bays?.some(x => Math.abs(cx - x) < 120) && r === rows - 1) continue;
+  else for (const [cx, wy] of windowSpots(b)) {
     g.roundRect(cx - 34, wy, 68, 52, 6).fill(frame).roundRect(cx - 28, wy + 6, 56, 40, 4).fill(winC)
      .rect(cx - 1.5, wy + 6, 3, 40).fill(frame);
   }
