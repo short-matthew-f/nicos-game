@@ -289,3 +289,9 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Places:** the ice cream shop sells a cone ($2), a root beer float ($3) and a sundae ($4), each with a speed boost.
 - **Routes:** James walks the middle block and stops in at Burger Barn. Primo plays at the swings, past the slide and round the fountain.
 - **Layout tests** (`test/layout.test.ts`): no building as drawn covers a road or sidewalk or leaves the world; buildings don't overlap; every door opens onto walkable ground; trees and props stay off roads, out of buildings and off the field; equipment is on the sand, the pond in the park, the goals at the field ends. These caught a bush inside the garage and lamps on a road. Vitest 153, e2e 61.
+
+## 2026-10-09 (overnight): soccer, ducks, benches
+- **Soccer ball** (`world/ball.ts`): walk into it to kick it. Faster means harder, and a hard kick hops it into the air. Nico's car knocks it too, and so do James and Primo if they walk into it. It rolls with friction, bounces off walls and posts, and a goal counts when it crosses a goal line between the posts. A toast shows "⚽ GOAL! 1 – 0" and the ball goes back to the centre spot.
+- **Ducks** (`world/ducks.ts`): three mallards paddle slow loops round the pond, bobbing, and face the way they swim.
+- **Benches:** walk up and tap "Sit". He sits facing out; "Stand up" or the stick gets him up.
+- **Tests:** Vitest 158 (kick direction and strength, out of reach, rolls to a stop, wall bounce, scores between the posts but not wide). e2e 66 (kick, dribble into the goal and score, Sit, Stand up offered, the stick stands him up).

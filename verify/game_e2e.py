@@ -185,6 +185,28 @@ with sync_playwright() as p:
         g = G(); p = next(t for t in g['townsfolk'] if t['who'] == 'primo')
         check(g['play'] == 'swing' and abs(g['nico']['x'] - p['x']) > 50, f"Nico takes the other swing, next to Primo ({g['nico']['x']:.0f} vs {p['x']:.0f})")
         drag(80, 0, 300)
+    # soccer: walk into the ball to kick it; put it past a goal line between the posts to score
+    b0 = G()['ball']
+    pg.evaluate(f"()=>window.__game.place({b0['x'] - 120}, {b0['y']})"); pg.wait_for_timeout(150)
+    pg.keyboard.down('d'); pg.wait_for_timeout(700); pg.keyboard.up('d'); pg.wait_for_timeout(200)
+    b1 = G()['ball']
+    check(b1['x'] > b0['x'] + 60 and b1['vx'] > 0, f"walking into the ball kicks it ({b0['x']:.0f} -> {b1['x']:.0f})")
+    gr = G()['spots']   # (goals aren't spots; use the field's right goal from the ball's row)
+    pg.evaluate("()=>window.__game.placeBall(window.__game.ball.x + 600, window.__game.ball.y)")
+    pg.evaluate("()=>{const b=window.__game.ball; window.__game.place(b.x - 40, b.y)}"); pg.wait_for_timeout(100)
+    pg.keyboard.down('d'); pg.wait_for_timeout(1500); pg.keyboard.up('d')
+    try:
+        pg.wait_for_function("window.__game.score.left + window.__game.score.right > 0", timeout=6000); scored = True
+    except Exception: scored = False
+    check(scored and 'GOAL' in pg.locator('#toast').inner_text(), f"dribbling it into the goal scores ({G()['score']})")
+    # benches: sit down, the stick stands you back up
+    bench = next(k for k in G()['spots'] if k.startswith('bench'))
+    at(bench); pg.wait_for_timeout(200)
+    check(G()['action'] == bench and pg.locator('#action').inner_text() == 'Sit', 'next to a bench: Sit')
+    pg.click('#action'); pg.wait_for_timeout(500)
+    check(G()['play'] == 'bench' and pg.locator('#action').inner_text() == 'Stand up', 'sitting on the bench, Stand up offered')
+    drag(0, 80, 300)
+    check(G()['mode'] == 'walk', 'the stick stands him up')
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

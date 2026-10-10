@@ -5,6 +5,8 @@ import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { Siren } from './sound';
 import { Minimap } from './minimap';
+import { BallView, kick, roll, kickoff } from './world/ball';
+import { Ducks } from './world/ducks';
 import { loadArt, PersonView } from './rig/person';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
@@ -57,6 +59,11 @@ async function main() {
   const cars = makeTraffic(3);
   for (const c of cars) layer.addChild(c.view);
   const lead = leaders(cars);
+  const ball = kickoff(), ballView = new BallView();
+  layer.addChild(ballView.root);
+  let goalReset = 0; const score = { left: 0, right: 0 };
+  const ducks = new Ducks();
+  for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
   const siren = new Siren();
@@ -105,7 +112,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench'; t: number; from: [number, number]; seat: number } | null = null;
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
   function startSwing() {
@@ -118,11 +125,14 @@ async function main() {
   function stopPlay() {
     if (!play) return;
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
+    if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
     Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
   }
   const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
+  const standUp: Spot = { id: 'stand', x: 0, y: 0, r: Infinity, label: 'Stand up', run: stopPlay };
+  function sitOnBench(bx: number, by: number) { mode = 'play'; play = { kind: 'bench', t: 0, from: [bx, by], seat: 0 }; }
 
   // ---- buildings: walk up to a door to see what's there
   const placeEl = document.getElementById('place')!, menuEl = document.getElementById('place-menu')!;
@@ -159,6 +169,7 @@ async function main() {
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
     { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
     { id: 'swing', x: (seatX(0) + seatX(1)) / 2, y: SWINGS.y + 25, r: 110, label: 'Swing', run: startSwing },
+    ...PROPS.filter(p => p.kind === 'bench').map((p, i) => ({ id: `bench${i}`, x: p.x, y: p.y + 30, r: 70, label: 'Sit', run: () => sitOnBench(p.x, p.y) })),
     ...PLACES.map(p => {
       const [x, y] = doorOf(BUILDINGS.find(b => b.id === p.building)!);
       return { id: p.building, x, y, r: 70, label: p.action ?? 'Go in', run: () => showPlace(p) };
@@ -287,6 +298,10 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'bench') {
+        // sitting on the bench, facing out: hips on the seat, legs dangling
+        b = { x: play.from[0], y: play.from[1] - 2, view: 'front', face: 1, amp: 0, crouch: 1, hold: 0, sit: 0, z: play.from[1] + 1, sy: 1 };
+        if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
       } else {
         const sw = swingAt(play.t, play.seat);
         seats[play.seat].set(sw.chain); b = sw.body;
@@ -340,6 +355,22 @@ async function main() {
       const sp = spots.find(p => p.id === l.t.who)!; sp.x = l.w.x; sp.y = l.w.y;
     }
 
+    // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
+    if (goalReset > 0) { goalReset -= dt; if (goalReset <= 0) Object.assign(ball, kickoff()); }
+    else {
+      if (mode === 'walk') kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast);
+      if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) break;
+      for (const l of locals) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
+      const g = roll(ball, dt, SOLIDS, WORLD);
+      if (g) {
+        if (g < 0) score.right++; else score.left++;
+        toast(`⚽ GOAL! ${score.left} – ${score.right}`);
+        goalReset = 1.6;
+      }
+    }
+    ballView.draw(ball, dt);
+    ducks.update(dt);
+
     // traffic brakes for Nico on foot, and for every part of his car
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
@@ -360,7 +391,7 @@ async function main() {
     // action button
     spots[0].x = car.x; spots[0].y = car.y;
     action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
-      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : null) : nearest(spots, nico.x, nico.y));
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : null) : nearest(spots, nico.x, nico.y));
     boostEl.hidden = boost <= 0;
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
@@ -391,6 +422,8 @@ async function main() {
     Object.assign(game, {
       townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, art: l.view.artLoaded() })),
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
+      ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score },
+      placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       truck: { out: truck.out, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
