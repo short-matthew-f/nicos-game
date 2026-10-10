@@ -73,6 +73,11 @@ export const BUILDINGS: Building[] = [
   ...ZONE_BUILDINGS.map(b => ({ ...b, kind: (b.id === 'barn' ? 'barn' : 'shop') as Building['kind'] })),
 ];
 
+/** Nico's work shed, in the back garden below his house: an outline until he buys it (unlocks.ts),
+ * then a building he can go into. Not in BUILDINGS (it isn't there at first), but kept clear of
+ * lamps and props either way. */
+export const SHED: Building = { id: 'shed', label: 'WORK SHED', x: 60, y: 1950, w: 280, d: 160, h: 200, wall: '#B5654F', roof: '#6B4E3A', trim: '#F2D6A2', kind: 'barn' };
+
 /** Areas on the ground (not solid; things on them may be). */
 export const LOTS = [
   { id: 'playground', x: 1950, y: 1250, w: 950, d: 320, fill: '#EBD9A8' },  // sand
@@ -132,7 +137,7 @@ export const PROPS: Prop[] = [
   // front gardens: a mailbox and flowers at each house
   ...[50, 390, 730].flatMap(x => [{ kind: 'mailbox' as const, x: x + 40, y: 470 }, { kind: 'flowers' as const, x: x + 210, y: 445, color: ['#F06A8A', '#F9C846', '#B48AE6'][(x / 340) | 0] }]),
   { kind: 'mailbox', x: 160, y: 1650 }, { kind: 'flowers', x: 400, y: 1640, color: '#F06A8A' },
-  { kind: 'flowers', x: 130, y: 1900, color: '#F9C846' }, { kind: 'flowers', x: 300, y: 1900, color: '#B48AE6' }, { kind: 'bush', x: 220, y: 2040 },
+  { kind: 'flowers', x: 470, y: 1880, color: '#F9C846' }, { kind: 'flowers', x: 560, y: 1930, color: '#B48AE6' }, { kind: 'bush', x: 440, y: 2060 },   // (moved over for the work shed)
   { kind: 'mailbox', x: 100, y: 2930 }, { kind: 'mailbox', x: 440, y: 2930 }, { kind: 'mailbox', x: 270, y: 3400 },
   { kind: 'bush', x: 1030, y: 470 }, { kind: 'bush', x: 360, y: 2900 }, { kind: 'bush', x: 720, y: 2880 },
   // the hospital car park: an ambulance and two cars
@@ -235,7 +240,7 @@ export function propSolid(p: Prop): Rect | null {
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 /** Buildings as drawn (front wall and roof included), for keeping props out of them. */
 const drawnRect = (b: Building): Rect => ({ x: b.x - 10, y: b.y - b.h - 10, w: b.w + 20, d: b.d + b.h + 50 });
-const busy: Rect[] = [...BUILDINGS.map(drawnRect), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
+const busy: Rect[] = [...[...BUILDINGS, SHED].map(drawnRect), (() => { const [dx, dy] = doorOf(SHED); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; })(), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
   ...ROAD_SEGS.map(r => roadRect(r, SIDEWALK)),
   // keep a clear lane from each door down toward the street
   ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }),

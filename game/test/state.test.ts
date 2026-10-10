@@ -12,7 +12,7 @@ describe('save', () => {
   });
   it('round-trips', () => {
     const s = mem();
-    const biz = { ...freshBiz(), items: { wheel: 4 }, finds: [{ id: 'radio', value: 7 }], workbench: true, designs: ['car'], stock: { car: 2 }, sold: { car: 1 }, flips: 3, skills: ['appraiser'], seed: 9 };
+    const biz = { ...freshBiz(), items: { wheel: 4 }, finds: [{ id: 'radio', value: 7 }], workbench: true, unlocked: ['shed', 'workbench'], designs: ['car'], stock: { car: 2 }, sold: { car: 1 }, flips: 3, skills: ['appraiser'], seed: 9 };
     const job = { id: 'want:maya:radio', step: 0, at: [null] };
     save({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true, biz, job }, s);
     expect(load(s)).toEqual({ v: VERSION, money: 7, nico: { x: 1, y: 2 }, car: { x: 3, y: 4, h: 1 }, driving: true, biz, job });

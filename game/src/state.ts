@@ -1,6 +1,7 @@
 // The save: one small versioned object in localStorage. When the shape changes, bump
 // VERSION and add a step to migrate(), so a change of plan never wipes Nico's progress.
 import { freshBiz, freshDoors, HALL, ITEMS, type Biz } from './business';
+import { migrateUnlocks } from './unlocks';
 
 export const VERSION = 6;
 export const START_MONEY = 20;
@@ -73,12 +74,14 @@ function cleanBiz(raw: unknown): Biz {
   const items = counts(b.items);
   const strs = (x: unknown) => (Array.isArray(x) ? x.filter((s): s is string => typeof s === 'string') : []);
   const finds = Array.isArray(b.finds) ? b.finds.filter(f => f && typeof f.id === 'string' && count(f.value) > 0).map(f => ({ id: f.id, value: count(f.value) })) : [];
-  return {
+  const out: Biz = {
     items, finds, workbench: b.workbench === true, designs: strs(b.designs), skills: strs(b.skills),
-    tools: strs(b.tools), shells: counts(b.shells), photos: counts(b.photos), shown: strs(b.shown),
+    tools: strs(b.tools), shells: counts(b.shells), photos: counts(b.photos), shown: strs(b.shown), unlocked: strs(b.unlocked),
     doors: cleanDoors(b.doors, count(b.seed) || f.seed), unit: cleanUnit(b.unit),
     stock: counts(b.stock), sold: counts(b.sold), flips: count(b.flips), seed: count(b.seed) || f.seed,
   };
+  migrateUnlocks(out);   // (a save with a workbench already has its shed)
+  return out;
 }
 
 export function load(store: Pick<Storage, 'getItem'> | null = safeStorage()): Save {

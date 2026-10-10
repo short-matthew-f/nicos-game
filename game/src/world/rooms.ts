@@ -195,3 +195,43 @@ export function findArt(emoji: string): Container {
   const t = new Text({ text: emoji, style: { fontSize: 46 } }); t.anchor.set(0.5); t.position.set(0, -38);
   c.addChild(g, t); return c;
 }
+
+// ---- Nico's work shed: wooden floor, a window, and a place for each piece of equipment (each one a
+// sticker outline until he buys it: unlocks.ts)
+export const SHED_ROOM = { w: 1200, h: 820, wall: 230 };
+export const SHED_EXIT: [number, number] = [SHED_ROOM.w / 2, SHED_ROOM.h - 30];
+/** Where each piece of equipment stands: its footprint (x, y, w, d) and how tall it's drawn (h). */
+export const SHED_SLOTS: Record<string, { x: number; y: number; w: number; d: number; h: number }> = {
+  workbench: { x: 420, y: 400, w: 360, d: 90, h: 110 },
+};
+export function drawShedRoom(): { view: Container; layer: Container } {
+  const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = SHED_ROOM;
+  g.rect(-3000, -3000, w + 6000, h + 6000).fill('#2B2320');
+  for (let y = wall; y < h; y += 40) g.rect(0, y, w, 40).fill(((y - wall) / 40) % 2 ? '#C9965F' : '#BE8A54').rect(0, y + 38, w, 2).fill('#9E7444');   // floorboards
+  g.rect(0, 0, w, wall).fill('#A8754A');
+  for (let x = 0; x < w; x += 60) g.rect(x, 0, 4, wall).fill({ color: '#000000', alpha: 0.1 });   // wall planks
+  g.rect(0, wall - 12, w, 12).fill('#7A5236');
+  g.roundRect(w / 2 - 110 - BAND, 40 - BAND, 220 + 2 * BAND, 120 + 2 * BAND, 10).fill('#FFFFFF').roundRect(w / 2 - 110, 40, 220, 120, 8).fill('#BFE3F5')
+   .rect(w / 2 - 3, 40, 6, 120).fill('#FFFFFF').rect(w / 2 - 110, 97, 220, 6).fill('#FFFFFF');   // a window
+  g.roundRect(SHED_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the door
+  view.addChild(g, layer);
+  return { view, layer };
+}
+/** The workbench: a thick wooden top on legs, a vise, a few tools hanging off the back. */
+export function workbenchArt(): Container {
+  const s = SHED_SLOTS.workbench, c = new Container(), g = new Graphics(), top = s.y - s.h;
+  g.ellipse(s.x + s.w / 2 + 10, s.y + s.d - 4, s.w / 2 + 10, 16).fill({ color: NAVY, alpha: 0.18 });
+  // the sticker edge round each piece (the top, the legs, the shelf), not one box round the lot
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, 42 + 2 * BAND, 10).fill('#FFFFFF');
+  for (const lx of [s.x + 16, s.x + s.w - 36]) g.roundRect(lx - BAND, top + 30, 20 + 2 * BAND, s.h + s.d - 34 + BAND, 6).fill('#FFFFFF');
+  g.roundRect(s.x + 30 - BAND, top + 60 - BAND, s.w - 60 + 2 * BAND, 14 + 2 * BAND, 6).fill('#FFFFFF');
+  for (const lx of [s.x + 16, s.x + s.w - 36]) g.roundRect(lx, top + 30, 20, s.h + s.d - 34, 4).fill('#7A5236');
+  g.roundRect(s.x, top, s.w, 40, 8).fill('#D9A066').rect(s.x, top + 34, s.w, 8).fill('#B9895A');
+  g.roundRect(s.x + 30, top + 60, s.w - 60, 14, 4).fill('#B9895A');   // a shelf underneath
+  g.roundRect(s.x + s.w - 80, top - 22, 50, 24, 4).fill('#5B78AA').rect(s.x + s.w - 60, top - 34, 10, 14).fill('#9AA6B2');   // the vise
+  g.roundRect(s.x + 40, top - 14, 70, 12, 4).fill('#E5484D').rect(s.x + 108, top - 12, 26, 8).fill('#9AA6B2');               // a hammer
+  g.roundRect(s.x + 160, top - 10, 60, 8, 3).fill('#2F7FD8');                                                                // a screwdriver
+  c.addChild(g); c.zIndex = s.y + s.d;
+  return c;
+}

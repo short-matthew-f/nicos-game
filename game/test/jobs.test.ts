@@ -21,7 +21,7 @@ describe('odd jobs', () => {
   it('steps go in order and the last one finishes the job', () => {
     const j = JOBS.find(j => j.id === 'water')!, a = start(j);
     expect(current(a).kind).toBe('go');
-    expect(target(a, [0, 0])).toEqual([130, 1915]);
+    expect(target(a, [0, 0])).toEqual([470, 1895]);
     expect(advance(a)).toBe(false); expect(advance(a)).toBe(false); expect(advance(a)).toBe(false);
     expect(current(a).kind).toBe('return');
     expect(target(a, [5, 6])).toEqual([5, 6]);   // back to whoever asked

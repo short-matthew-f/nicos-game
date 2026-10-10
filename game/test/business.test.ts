@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ITEMS, item, STARTER, WORKBENCH, PARTS_FOR_SALE, CAR_RECIPE, CAR_SALE, RAMP, SKILLS,
+  ITEMS, item, STARTER, PARTS_FOR_SALE, CAR_RECIPE, CAR_SALE, RAMP, SKILLS,
   makeUnit, guess, sellOne, doorState, doorUnit, buyDoor, decide, tickDoors, HALL, DOOR_NAMES, shelfValue, goalPlace, worth, sellPrice, freshBiz, has, missing, add, use, unlocks, carPrice, nextGoal,
 } from '../src/business';
-import { START_MONEY } from '../src/state';
+import { START_MONEY, migrate, VERSION } from '../src/state';
+import { unlockOf, unlock, canUnlock, isUnlocked, UNLOCKS } from '../src/unlocks';
 import { PRODUCTS, product, unlockedProducts, partsCost, priceOf, runProgram, ROBOT_LEVEL, type Move } from '../src/business';
 import { PLANS } from '../src/plans';
 import { photoStars } from '../src/business';
@@ -25,7 +26,7 @@ describe('the economy closes from the starting money', () => {
   it('workbench + the rest of the parts are reachable with the first unit, a few jobs and coins', () => {
     const afterStarter = START_MONEY - STARTER.price + STARTER.contents.filter(c => item(c.id).kind === 'find').reduce((s, c) => s + c.value, 0);
     const wheels = STARTER.contents.filter(c => c.id === 'wheel').length;
-    const need = WORKBENCH.price + recipeCost({ wheel: wheels });
+    const need = unlockOf('shed').price + unlockOf('workbench').price + recipeCost({ wheel: wheels });   // the shed and its bench, then the rest of the parts
     const jobs = JOBS.map(j => j.reward).sort((a, b) => b - a);
     const coins = COIN_SPOTS.length * COIN.value;
     // three jobs (not all five) plus the coins get there
@@ -109,9 +110,11 @@ describe('what Nico owns', () => {
     const b = freshBiz(), seen: string[] = [];
     const step = (m: number) => { const g = nextGoal(b, m); seen.push(g ?? 'done'); return g; };
     expect(step(20)).toMatch(/storage/);
-    b.flips = 1; expect(step(5)).toMatch(/Save up/);
-    expect(step(WORKBENCH.price)).toMatch(/Buy a workbench/);
-    b.workbench = true; expect(step(0)).toMatch(/parts/);
+    b.flips = 1; expect(step(5)).toMatch(/Save up.*shed/);
+    expect(step(unlockOf('shed').price)).toMatch(/Build your work shed/);
+    unlock(b, 'shed', 99); expect(step(0)).toMatch(/Save up.*workbench/);
+    expect(step(unlockOf('workbench').price)).toMatch(/workbench in your shed/);
+    unlock(b, 'workbench', 99); expect(b.workbench).toBe(true); expect(step(0)).toMatch(/parts/);
     add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body'); expect(step(0)).toMatch(/Build/);
     b.designs.push('car'); b.stock.car = 1; use(b, CAR_RECIPE); expect(step(0)).toMatch(/Sell/);
     b.stock.car = 0; b.sold.car = 1; expect(step(0)).toMatch(/New idea.*robot/);   // selling the car brings the next idea
@@ -172,9 +175,10 @@ describe('what Nico owns', () => {
   it('the goal star points at the right building', () => {
     const b = freshBiz();
     expect(goalPlace(b, 0)).toBe('storage'); b.flips = 1;
-    expect(goalPlace(b, 0)).toBeNull(); expect(goalPlace(b, WORKBENCH.price)).toBe('parts'); b.workbench = true;
+    expect(goalPlace(b, 0)).toBeNull(); expect(goalPlace(b, unlockOf('shed').price)).toBe('shed'); unlock(b, 'shed', 99);
+    expect(goalPlace(b, unlockOf('workbench').price)).toBe('shed'); unlock(b, 'workbench', 99);
     expect(goalPlace(b, 0)).toBe('parts'); add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body');
-    expect(goalPlace(b, 0)).toBe('garage'); b.designs.push('car'); b.stock.car = 1;
+    expect(goalPlace(b, 0)).toBe('shed'); b.designs.push('car'); b.stock.car = 1;
     expect(goalPlace(b, 0)).toBe('toys'); b.sold.car = 1; b.stock.car = 0;
     expect(goalPlace(b, 0)).toBe('parts');   // the robot's parts
     b.sold.robot = 1; b.designs.push('robot');
@@ -229,5 +233,23 @@ describe('photos', () => {
     expect(photoStars(1.2, 0, false)).toBeNull();
     expect(photoStars(0, 0, true)).toBe(2);
     expect(photoStars(0.9, 0, true)).toBe(1);   // never less than one
+  });
+});
+
+describe('unlocks (bought and stuck onto the world)', () => {
+  it('each costs something, can only be bought once, and things inside the shed need the shed first', () => {
+    const b = freshBiz();
+    for (const u of UNLOCKS) expect(u.price, u.id).toBeGreaterThan(0);
+    expect(canUnlock(b, 'workbench')).toBe(false);
+    expect(unlock(b, 'shed', unlockOf('shed').price - 1)).toBe(false);
+    expect(unlock(b, 'shed', 99)).toBe(true); expect(unlock(b, 'shed', 99)).toBe(false);
+    expect(canUnlock(b, 'workbench')).toBe(true);
+    for (const u of UNLOCKS) if (u.after) expect(UNLOCKS.some(q => q.id === u.after), u.id).toBe(true);
+  });
+  it("a save from before the shed that has a workbench gets its shed and bench (Nico's save)", () => {
+    const old = { v: VERSION, money: 50, biz: { ...freshBiz(), workbench: true, unlocked: undefined } };
+    const b = migrate(old).biz;
+    expect(isUnlocked(b, 'shed')).toBe(true); expect(isUnlocked(b, 'workbench')).toBe(true);
+    expect(migrate({ v: VERSION, money: 5, biz: { ...freshBiz(), unlocked: ['shed', 42] } }).biz.unlocked).toEqual(['shed']);
   });
 });

@@ -2,8 +2,10 @@ import { Application, Container, CullerPlugin, Graphics, Text, extensions } from
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, doorOf } from './world/map';
-import { drawGround, drawWorld } from './world/draw';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, doorOf } from './world/map';
+import { drawGround, drawWorld, drawBuilding } from './world/draw';
+import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
+import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { FireScene } from './world/fire';
@@ -23,7 +25,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS } from './world/rooms';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -31,7 +33,7 @@ import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
 import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
-import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp, photoStars, RANGER_PAYS, DOOR_NAMES, doorUnit, doorState, buyDoor, decide, tickDoors, ensureWanted, peekOf, guess, sellPrice, unlocks, type Choice, type Skill } from './business';
+import { PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp, photoStars, RANGER_PAYS, DOOR_NAMES, doorUnit, doorState, buyDoor, decide, tickDoors, ensureWanted, peekOf, guess, sellPrice, unlocks, type Choice, type Skill } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -126,10 +128,23 @@ async function main() {
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
+  // ---- the work shed in the garden: an outline with a price until it's bought, then a building
+  // (solid from the start if it's already his, before a saved position is checked)
+  const shedRect = { x: SHED.x, y: SHED.y, w: SHED.w, d: SHED.d };
+  const shedBox = { x: SHED.x - 10, y: SHED.y - SHED.h - 10, w: SHED.w + 20, h: SHED.d + SHED.h + 20 };
+  let shedView: Container | null = null, shedOutline: Container | null = null;
+  function placeShed(slap: boolean) {
+    shedOutline?.destroy({ children: true }); shedOutline = null;
+    shedView = drawBuilding(SHED); layer.addChild(shedView);
+    if (!SOLIDS.includes(shedRect)) SOLIDS.push(shedRect);
+    if (slap) slapIn(shedView, SHED.x + SHED.w / 2, SHED.y + SHED.d, shedBox);
+  }
+  if (isUnlocked(saved.biz, 'shed')) placeShed(false);
+  else { shedOutline = outlineArt(shedBox.x, shedBox.y, shedBox.w, shedBox.h, '🏚️ Work shed', unlockOf('shed').price); shedOutline.zIndex = SHED.y - SHED.h; layer.addChild(shedOutline); }
   // inside a building: the room, and where Nico is outside (the town only ever sees that)
   type Box = { x: number; y: number; w: number; d: number };
-  let room: { kind: 'diner' | 'hall' | 'unit'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
-    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container> } | null = null;
+  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
+    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container> } | null = null;
   let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
@@ -339,17 +354,7 @@ async function main() {
         Object.assign(car, { ...PARKED_CAR, speed: 0 }); carView.position.set(car.x, car.y); turnCar(car.h); persist();
         toast('🚗 Your car is back on the driveway!');
       } };
-      const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
-      const made = PRODUCTS.filter(q => biz.stock[q.id]).map(q => `${q.emoji}×${biz.stock[q.id]}`).join(' ');
-      const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(made ? [`Ready to sell: ${made}`] : [])];
-      if (!biz.workbench) { showCard('garage', p.title, `Your garage. There's room in here for a workbench: Parts & Tools sells them. ${lines.join(' ')}`, [carHome]); return; }
-      // one button per idea: the hands-on first build, then quick builds once it's designed
-      showCard('garage', '🛠️ Your workbench', lines.join(' '), [carHome, ...unlockedProducts(biz).map(q => {
-        const ready = has(biz, q.recipe), proven = biz.designs.includes(q.id);
-        return proven
-          ? { label: `${q.emoji} Build a ${q.name}`, sub: ready ? `${PLANS[q.id].steps.length} quick steps` : `need ${needLine(q.recipe)}`, id: `quick:${q.id}`, disabled: !ready, onClick: () => work.quick(q.id) }
-          : { label: `${q.emoji} Build the ${q.name}`, sub: ready ? 'your first one!' : `need ${needLine(q.recipe)}`, id: `build:${q.id}`, disabled: !ready, onClick: () => work.build(q.id) };
-      })]);
+      showCard('garage', p.title, `Your garage: where your car lives.${isUnlocked(biz, 'shed') ? ' Building happens in your work shed, out back.' : ''}`, [carHome]);
     },
     toys: p => {
       const have = PRODUCTS.filter(q => biz.stock[q.id]);
@@ -371,9 +376,7 @@ async function main() {
   function showParts(p: Place) {
     const buy = (cost: number, then: () => void) => () => { if (state.money < cost) return; state.money -= cost; then(); showMoney(); persist(); sfx.tap(); showParts(p); };
     const ideas = unlockedProducts(biz), used = new Set(ideas.flatMap(q => Object.keys(q.recipe)));   // only parts for ideas Nico has had
-    showCard('parts', p.title, biz.workbench ? `Your parts: ${partsLine()}.` : 'Wheels, axles, bodies and tools. A toy car needs a workbench to build it on.', [
-      ...(!biz.workbench ? [{ label: '🛠️ Workbench', sub: `$${WORKBENCH.price}`, id: 'workbench', disabled: state.money < WORKBENCH.price,
-        onClick: buy(WORKBENCH.price, () => { biz.workbench = true; toast('🛠️ Workbench bought! It\'s in your garage.'); }) }] : []),
+    showCard('parts', p.title, biz.workbench ? `Your parts: ${partsLine()}.` : 'Wheels, axles, bodies and tools. (You\'ll build things on a workbench, in a work shed of your own.)', [
       ...TOOLS.filter(t => !biz.tools.includes(t.id)).map(t => ({ label: t.label, sub: `$${t.price}`, id: `tool:${t.id}`, disabled: state.money < t.price,
         onClick: buy(t.price, () => { biz.tools.push(t.id); toast(`${t.label}! ${t.text}`); }) })),
       ...(biz.workbench ? ideas.filter(q => missing(biz, q.recipe).length).map(q => {
@@ -386,9 +389,79 @@ async function main() {
     ]);
   }
   const goalEl = document.getElementById('goal')!;
+  /** The buy card for an unlockable: what it is, what it does, the price. */
+  function unlockCard(id: string, then: () => void) {
+    const u = unlockOf(id);
+    showCard(`unlock:${id}`, u.label, u.text, [
+      { label: '✨ Buy it', sub: `$${u.price}`, id: 'unlock', disabled: u.price > state.money, onClick: () => {
+        if (!unlock(biz, id, state.money)) return;
+        state.money -= u.price; showMoney(); sfx.sparkle(); sfx.snap(); then(); persist();
+        toast(`${u.label}: it's yours!`);
+      } },
+    ], 'Not now');
+  }
+  const SHED_DOOR = doorOf(SHED);
+  const shedSpot: Spot = { id: 'shed', x: SHED_DOOR[0], y: SHED_DOOR[1], r: 130,
+    label: () => (isUnlocked(biz, 'shed') ? '🚪 Go in' : `✨ Work shed · $${unlockOf('shed').price}`),
+    run: () => {
+      if (isUnlocked(biz, 'shed')) { enterShed(); return; }
+      unlockCard('shed', () => {
+        placeShed(true);
+        if (!freeAt(nico.x, nico.y, SOLIDS, WORLD)) { nico.x = SHED_DOOR[0]; nico.y = SHED_DOOR[1] + 20; }   // (never stuck inside it)
+      });
+    } };
+  // ---- inside the shed: equipment outlines, the workbench
+  const shedArt: Record<string, () => Container> = { workbench: workbenchArt };
+  function enterShed() {
+    const { view, layer: rl } = drawShedRoom(), outlines: Record<string, Container> = {};
+    for (const u of UNLOCKS.filter(q => q.room === 'shed')) {
+      const sl = SHED_SLOTS[u.id]; if (!sl) continue;
+      if (isUnlocked(biz, u.id)) rl.addChild(shedArt[u.id]());
+      else { const o = outlineArt(sl.x - 10, sl.y - sl.h - 10, sl.w + 20, sl.h + sl.d + 20, u.label, u.price); o.zIndex = sl.y - sl.h; o.visible = canUnlock(biz, u.id); rl.addChild(o); outlines[u.id] = o; }
+    }
+    const solids: Box[] = [{ x: 0, y: 0, w: SHED_ROOM.w, d: SHED_ROOM.wall + 14 }];
+    const solidOf = (id: string) => { const sl = SHED_SLOTS[id]; return { x: sl.x, y: sl.y, w: sl.w, d: sl.d }; };
+    for (const u of UNLOCKS) if (u.room === 'shed' && isUnlocked(biz, u.id) && SHED_SLOTS[u.id]) solids.push(solidOf(u.id));
+    showRoom({ kind: 'shed', id: 'shed', w: SHED_ROOM.w, h: SHED_ROOM.h, view, layer: rl, solids, outlines }, [SHED_EXIT[0], SHED_EXIT[1] - 70]);
+    sfx.door();
+  }
+  function shedSpots(): Spot[] {
+    return [
+      ...UNLOCKS.filter(u => u.room === 'shed' && SHED_SLOTS[u.id] && (isUnlocked(biz, u.id) || canUnlock(biz, u.id))).map(u => {
+        const sl = SHED_SLOTS[u.id];
+        return { id: u.id, x: sl.x + sl.w / 2, y: sl.y + sl.d + 50, r: 130,
+          label: isUnlocked(biz, u.id) ? (u.id === 'workbench' ? '🛠️ Use the workbench' : u.label) : `✨ ${u.label} · $${u.price}`,
+          run: () => {
+            if (isUnlocked(biz, u.id)) { if (u.id === 'workbench') workbenchCard(); return; }
+            unlockCard(u.id, () => {
+              if (room?.kind !== 'shed') return;
+              room.outlines?.[u.id]?.destroy({ children: true });
+              const a = shedArt[u.id](); room.layer.addChild(a);
+              slapIn(a, sl.x + sl.w / 2, sl.y + sl.d, { x: sl.x - 10, y: sl.y - sl.h - 10, w: sl.w + 20, h: sl.h + sl.d + 20 });
+              room.solids.push({ x: sl.x, y: sl.y, w: sl.w, d: sl.d });
+              if (nico.y < sl.y + sl.d + 20 && nico.y > sl.y - 10) nico.y = sl.y + sl.d + 40;   // (step back out of its way)
+            });
+          } };
+      }),
+      { id: 'leave', x: SHED_EXIT[0], y: SHED_EXIT[1], r: 120, label: '🚪 Leave', run: leaveRoom },
+    ];
+  }
+  /** The workbench: one button per idea (the hands-on first build, then quick builds once it's designed). */
+  function workbenchCard() {
+    const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
+    const made = PRODUCTS.filter(q => biz.stock[q.id]).map(q => `${q.emoji}×${biz.stock[q.id]}`).join(' ');
+    const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(made ? [`Ready to sell: ${made}`] : [])];
+    showCard('workbench', '🛠️ Your workbench', lines.join(' '), unlockedProducts(biz).map(q => {
+      const ready = has(biz, q.recipe), proven = biz.designs.includes(q.id);
+      return proven
+        ? { label: `${q.emoji} Build a ${q.name}`, sub: ready ? `${PLANS[q.id].steps.length} quick steps` : `need ${needLine(q.recipe)}`, id: `quick:${q.id}`, disabled: !ready, onClick: () => work.quick(q.id) }
+        : { label: `${q.emoji} Build the ${q.name}`, sub: ready ? 'your first one!' : `need ${needLine(q.recipe)}`, id: `build:${q.id}`, disabled: !ready, onClick: () => work.build(q.id) };
+    }));
+  }
   /** What Nico can do inside the room he's in. */
   function roomSpots(): Spot[] {
     if (!room) return [];
+    if (room.kind === 'shed') return shedSpots();
     if (room.kind === 'hall') return [
       ...DOOR_NAMES.map((nm, i) => {
         const st = doorState(biz, i), u = st === 'sale' ? doorUnit(biz, i) : null;
@@ -650,7 +723,7 @@ async function main() {
       if (advanceJob(job)) payJob();
     },
   };
-  spots.push(jobSpot, digSpot, cameraSpot,
+  spots.push(jobSpot, digSpot, cameraSpot, shedSpot,
     { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
@@ -935,7 +1008,7 @@ async function main() {
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
-    tickDoors(biz, dt); paintDoors();
+    tickDoors(biz, dt); paintDoors(); updateStickers(dt);
     for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
     splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
     animals.update(dt, [mode === 'drive' ? [car.x, car.y] : here()]);
@@ -1040,7 +1113,7 @@ async function main() {
     const goal = nextGoal(biz, state.money), gp = goalPlace(biz, state.money);
     goalEl.hidden = !goal || !!job;   // one thing at a time: an odd job's chip takes the place of the goal
     if (goal && goalEl.textContent !== goal) goalEl.textContent = goal;
-    const goalAt = gp && !job ? doorOf(BUILDINGS.find(b => b.id === gp)!) : null;
+    const goalAt = gp && !job ? (gp === 'shed' ? SHED_DOOR : doorOf(BUILDINGS.find(b => b.id === gp)!)) : null;
 
     // minimap: top-left, under the money
     const mr = moneyEl.getBoundingClientRect();
@@ -1073,6 +1146,8 @@ async function main() {
       shells: shells.spots.filter(q => q.gone <= 0).map(q => ({ x: q.x, y: q.y, kind: q.kind })), buried: treasure.spots.map(([x, y]) => ({ x, y })), signal,
       use: (id: string) => { spots.find(q => q.id === id)?.run(); },   // (tests: use a spot by name, whoever else is standing near it)
       hallDoors: DOOR_NAMES.map((_, i) => { const st = doorState(biz, i); return { state: st, peek: st === 'sale' ? peekOf(doorUnit(biz, i), wanted()) : [], price: st === 'sale' ? doorUnit(biz, i).price : 0 }; }),
+      exitRooms: () => { for (let i = 0; i < 3 && room; i++) leaveRoom(); },
+      unlocked: [...biz.unlocked], solidAt: (x: number, y: number) => !freeAt(x, y, SOLIDS, WORLD),
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,

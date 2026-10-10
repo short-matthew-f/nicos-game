@@ -1,3 +1,5 @@
+import { unlockOf } from './unlocks';
+
 // The business loop (v2): flip storage units for money and parts, buy a workbench, build
 // the toy car, test it, sell it. Data first, like places.ts and jobs.ts: every price and
 // item here is a one-line edit. The game only calls the small pure functions at the end.
@@ -45,8 +47,7 @@ export const TOOLS = [
 ];
 export const item = (id: string) => ITEMS.find(i => i.id === id)!;
 
-// ---- the shops
-export const WORKBENCH = { price: 25 };
+// ---- the shops (the work shed and workbench are unlockables now: unlocks.ts)
 export const PARTS_FOR_SALE: { id: string; price: number }[] = [
   { id: 'wheel', price: 2 }, { id: 'axle', price: 3 }, { id: 'body', price: 5 },
   { id: 'tin', price: 4 }, { id: 'gear', price: 3 }, { id: 'battery', price: 4 }, { id: 'bulb', price: 2 },
@@ -263,9 +264,10 @@ export interface Biz {
   tools: string[];                 // 'detector', ...
   shells: Record<string, number>;  // shells collected, by kind
   photos: Record<string, number>;  // best photo of each animal (1-3 stars)
+  unlocked: string[];              // things bought and stuck onto the world (unlocks.ts)
   shown: string[];                 // animals whose photo the ranger has paid for
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [] });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [] });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>
@@ -304,24 +306,25 @@ export const currentIdea = (b: Biz) => unlockedProducts(b).find(p => !b.sold[p.i
 /** Where the next goal is (a building id), for the minimap star; null when it's not a place. */
 export function goalPlace(b: Biz, money: number): string | null {
   if (b.flips === 0) return 'storage';
-  if (!b.workbench) return money >= WORKBENCH.price ? 'parts' : null;
+  for (const id of ['shed', 'workbench']) if (!b.unlocked.includes(id)) return money >= unlockOf(id).price ? 'shed' : null;
   const p = currentIdea(b);
   if (!p) return null;
-  if (!b.designs.includes(p.id)) return missing(b, p.recipe).length ? 'parts' : 'garage';
-  return b.stock[p.id] ? 'toys' : 'garage';
+  if (!b.designs.includes(p.id)) return missing(b, p.recipe).length ? 'parts' : 'shed';
+  return b.stock[p.id] ? 'toys' : 'shed';
 }
 
 /** The next thing to do, for the goal chip (null when every idea has been made and sold). */
 export function nextGoal(b: Biz, money: number): string | null {
   if (b.flips === 0) return '📦 Check out the storage units (bottom right of town)';
-  if (!b.workbench) return money >= WORKBENCH.price ? `🛠️ Buy a workbench at Parts & Tools ($${WORKBENCH.price})` : `💰 Save up $${WORKBENCH.price} for a workbench (jobs, coins, storage units)`;
+  if (!b.unlocked.includes('shed')) { const p = unlockOf('shed').price; return money >= p ? `🏚️ Build your work shed, behind your house ($${p})` : `💰 Save up $${p} for a work shed (jobs, coins, storage units)`; }
+  if (!b.unlocked.includes('workbench')) { const p = unlockOf('workbench').price; return money >= p ? `🛠️ Put a workbench in your shed ($${p})` : `💰 Save up $${p} for a workbench`; }
   const p = currentIdea(b);
   if (!p) return null;
   const fresh = p.after && !b.designs.includes(p.id) ? '💡 New idea! ' : '';
   if (!b.designs.includes(p.id)) {
     const need = missing(b, p.recipe);
     if (need.length) return `${fresh}🔩 Get ${p.name} parts: ${need.map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ')} (Parts & Tools)`;
-    return `${fresh}${p.emoji} Build the ${p.name} at your workbench (your garage)`;
+    return `${fresh}${p.emoji} Build the ${p.name} at your workbench (your shed)`;
   }
-  return b.stock[p.id] ? `🧸 Sell your ${p.name} at the Toy Shop` : `${p.emoji} Build a ${p.name} at your workbench`;
+  return b.stock[p.id] ? `🧸 Sell your ${p.name} at the Toy Shop` : `${p.emoji} Build a ${p.name} at your workbench (your shed)`;
 }

@@ -21,8 +21,8 @@ export const JOBS: Job[] = [
     ask: 'My back is aching today. Could you water the flowers by my house? I\'ll give you $5.',
     thanks: 'They look so happy now. Thank you, dear!',
     steps: [
-      { kind: 'go', label: 'Water flowers', note: 'water the flowers (1 of 3)', at: [130, 1915] },
-      { kind: 'go', label: 'Water flowers', note: 'water the flowers (2 of 3)', at: [300, 1915] },
+      { kind: 'go', label: 'Water flowers', note: 'water the flowers (1 of 3)', at: [470, 1895] },
+      { kind: 'go', label: 'Water flowers', note: 'water the flowers (2 of 3)', at: [560, 1945] },
       { kind: 'go', label: 'Water flowers', note: 'water the flowers (3 of 3)', at: [400, 1655] },
       { kind: 'return', note: 'tell Mrs. Kim' },
     ] },

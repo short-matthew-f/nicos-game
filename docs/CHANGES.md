@@ -626,3 +626,25 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - The chicken homes that sat outside the farmyard were moved in.
   - Test: two minutes of Nico chasing them round the farm, and every cow and chicken stays penned. Mutation-checked: without the pen rules, the test fails.
 - **Nico didn't notice the Dig button:** it only appeared within 56 px. Now it shows within 110 px (`DETECT.dig`), and the first time the meter fills on each treasure a hint pops up: "📡 It's right here! Tap ⛏️ Dig!"
+
+## 2026-10-10: sticker unlocks and the work shed (part 1)
+- **The user's idea:** "a bunch of the things in the game have to be unlocked with a purchase, and they get 'added to the world' like applying a sticker... You could show an outline where it will be." Also: "he's itching for a workshop... a work shed next to his house... buy equipment and tools."
+- **`src/unlocks.ts`:** unlockables as data (`UNLOCKS`: id, label, price, which room it goes in, what it needs first). Bought ones are in `biz.unlocked`.
+- **`world/stickers.ts`:**
+  - Until bought, a thing is a **dashed white outline** with its name and a **price tag**.
+  - Buying **slaps it on like a sticker**: it drops in 35% bigger and tilted, squashes, wobbles, and a white flash runs round its edge, with a sparkle sound.
+  - It pivots round its own foot, so it lands in place. A building's art is drawn in world coordinates, so without that it would have flown in from the corner of the map.
+- **The work shed ($15)** stands in the back garden below Nico's house (`SHED` in `map.ts`).
+  - Two flowers and a bush moved over, and Mrs. Kim's watering spots moved with them.
+  - Its space and doorway are kept clear of lamps: a lamp had been standing right in the doorway.
+  - It's solid once bought. If Nico is standing where it lands, he's moved to the door.
+  - **Go in** leads to the shed's room: a wooden floor, plank walls and a window.
+- **Inside: the workbench ($15)** is the first equipment sticker. Building moved there from the garage, and Parts & Tools no longer sells a workbench. The garage keeps "Bring my car home".
+- **The goal chip:** "Build your work shed, behind your house ($15)", then "Put a workbench in your shed ($15)", then parts and building. The star points at the shed.
+- **Nico's save:** a save that already has a workbench gets the shed and the bench, already standing (`migrateUnlocks`, tested).
+- **Economy:** the shed and bench cost $30, against the old $25 workbench. The "reachable with three jobs plus coins" test still holds.
+- **Tests:**
+  - unlocks: prices, buy once, the bench needs the shed first, the migration;
+  - layout: nothing in the shed's space or doorway (mutation-checked: without the filter a lamp blocks the door).
+- **e2e (180):** the outline and its price, walk-through until bought, buy, then solid and "Go in"; inside, the bench outline, buy, use; the build flows now go through the shed. Mutation-checked: when the shed isn't made solid, a check fails.
+- **Not yet:** the shed isn't on the minimap; the minimap is drawn once at start-up.
