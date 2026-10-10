@@ -22,6 +22,9 @@ export const PLACES: Place[] = [
   { building: 'fire', title: 'Fire Station', text: 'The firefighters are polishing the truck. When the alarm rings, it races out!' },
   { building: 'parts', title: 'Parts & Tools', action: 'Shop', text: 'Wheels, axles, bodies and tools.' },
   { building: 'toys', title: 'Toy Shop', text: 'Shelves and shelves of toys. One day, yours could be on them.' },
+  { building: 'barn', title: 'The farm', text: 'The farmer waves from the hay loft. "Mind the chickens, they\'re in charge here!"' },
+  { building: 'poolhouse', title: 'Pool', text: 'The lifeguard says the pool opens very soon. "Bring your swimsuit!"' },
+  { building: 'cabin', title: 'Ranger station', action: 'Visit the ranger', text: 'Maps, binoculars and a big book of animals.' },
   { building: 'storage', title: 'Storage Units', action: 'Auction', text: 'Storage unit auctions.' },
 ];
 

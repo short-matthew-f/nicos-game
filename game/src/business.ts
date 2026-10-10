@@ -37,6 +37,7 @@ export const ITEMS: Item[] = [
 /** Tools Nico can buy at Parts & Tools for the activities round town. */
 export const TOOLS = [
   { id: 'detector', label: '📡 Metal detector', price: 12, text: 'Beeps faster near buried treasure on the beach.' },
+  { id: 'camera', label: '📷 Camera', price: 10, text: 'Photograph the animals: the forest has the shyest ones.' },
 ];
 export const item = (id: string) => ITEMS.find(i => i.id === id)!;
 
@@ -155,6 +156,16 @@ export function lineup(seed: number, firstTime: boolean, want?: string | null): 
   if (want) for (const u of units) if (u.contents.some(c => c.id === want)) u.peek = [want, ...u.peek.filter(p => p !== want)].slice(0, 2);
   return units;
 }
+/** Stars for a photo: how close to the middle of the frame (0 = dead centre, 1 = the edge), and
+ * whether the animal was running (blurry). Null if it's out of the frame. */
+export function photoStars(offX: number, offY: number, running: boolean): number | null {
+  const r = Math.max(Math.abs(offX), Math.abs(offY));
+  if (r > 1) return null;
+  const stars = r < 0.35 ? 3 : r < 0.7 ? 2 : 1;
+  return Math.max(1, stars - (running ? 1 : 0));
+}
+export const RANGER_PAYS = 3;   // $ for each animal's photo, the first time you show it
+
 /** A beach find dug up: its value, rolled now. */
 export function dugUp(b: Biz, id: string, r: () => number = Math.random): number {
   const [lo, hi] = item(id).value, value = lo + Math.floor(r() * (hi - lo + 1));
@@ -196,8 +207,10 @@ export interface Biz {
   seed: number;                    // which auction lineup is up
   tools: string[];                 // 'detector', ...
   shells: Record<string, number>;  // shells collected, by kind
+  photos: Record<string, number>;  // best photo of each animal (1-3 stars)
+  shown: string[];                 // animals whose photo the ranger has paid for
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, tools: [], shells: {} });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, tools: [], shells: {}, photos: {}, shown: [] });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>

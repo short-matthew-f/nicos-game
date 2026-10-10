@@ -6,7 +6,7 @@ import { NAVY, BAND } from './draw';
 import { moveCircle, freeAt } from '../player';
 import { SOLIDS, WORLD } from './map';
 
-export type AnimalKind = 'cow' | 'chicken' | 'deer' | 'rabbit' | 'gull' | 'crab';
+export type AnimalKind = 'cow' | 'chicken' | 'deer' | 'rabbit' | 'gull' | 'crab' | 'fox';
 interface Kind { speed: number; run: number; shy: number; roam: number; label: string }
 export const KINDS: Record<AnimalKind, Kind> = {
   cow: { speed: 30, run: 0, shy: 0, roam: 220, label: '🐄 Cow' },
@@ -15,6 +15,7 @@ export const KINDS: Record<AnimalKind, Kind> = {
   rabbit: { speed: 90, run: 360, shy: 180, roam: 260, label: '🐇 Rabbit' },
   gull: { speed: 50, run: 300, shy: 160, roam: 300, label: '🐦 Seagull' },
   crab: { speed: 45, run: 140, shy: 110, roam: 160, label: '🦀 Crab' },
+  fox: { speed: 75, run: 420, shy: 330, roam: 320, label: '🦊 Fox' },   // rare and very shy: photograph it from far off
 };
 
 /** Who lives where: kind and home (they roam around it). */
@@ -24,6 +25,7 @@ export const HERDS: [AnimalKind, number, number][] = [
   ['deer', 5600, 1500], ['deer', 6000, 1800], ['deer', 7300, 1300], ['deer', 5500, 400],
   ['rabbit', 5900, 1200], ['rabbit', 6900, 1700], ['rabbit', 5300, 1900], ['rabbit', 7600, 1100],
   ['gull', 1300, 5080], ['gull', 2600, 4880], ['gull', 4600, 4520], ['gull', 5900, 3900], ['gull', 6800, 3200],
+  ['fox', 6300, 600], ['fox', 7700, 2000],
   ['crab', 1100, 5150], ['crab', 3000, 4930], ['crab', 4900, 4480], ['crab', 6400, 3640],
 ];
 
@@ -68,6 +70,15 @@ function art(kind: AnimalKind): Graphics {
       g.ellipse(0, -12, 16 + B, 9 + B).fill(W).circle(12, -22, 7 + B).fill(W);
       g.ellipse(0, -12, 16, 9).fill('#FFFFFF').ellipse(-4, -14, 11, 5).fill('#B8C3CF').circle(12, -22, 7).fill('#FFFFFF');
       g.poly([18, -22, 28, -20, 18, -18]).fill('#F2B632').circle(14, -24, 1.6).fill('#2B3F55').rect(-2, -4, 2, 5).fill('#F2B632').rect(3, -4, 2, 5).fill('#F2B632');
+      break;
+    case 'fox':
+      g.ellipse(2, 2, 28, 6).fill({ color: NAVY, alpha: 0.18 });
+      g.ellipse(-30, -30, 18 + B, 10 + B).fill(W).roundRect(-24 - B, -46 - B, 46 + 2 * B, 24 + 2 * B, 11).fill(W).circle(26, -44, 13 + B).fill(W);
+      for (const lx of [-18, -6, 8, 16]) g.roundRect(lx - B, -24, 6 + 2 * B, 24 + B, 3).fill(W);
+      for (const lx of [-18, -6, 8, 16]) g.roundRect(lx, -24, 6, 22, 3).fill('#7A3B23');
+      g.ellipse(-30, -30, 18, 10).fill('#E07A3A').ellipse(-42, -30, 7, 6).fill('#FFFFFF');
+      g.roundRect(-24, -46, 46, 24, 10).fill('#E07A3A').circle(26, -44, 13).fill('#E07A3A').poly([28, -40, 44, -38, 30, -32]).fill('#FFFFFF');
+      g.poly([18, -52, 20, -66, 28, -54]).fill('#E07A3A').poly([28, -54, 34, -66, 36, -52]).fill('#E07A3A').circle(30, -46, 2).fill('#2B3F55').circle(44, -38, 2).fill('#2B3F55');
       break;
     case 'crab':
       g.ellipse(0, 2, 18, 4).fill({ color: NAVY, alpha: 0.18 });

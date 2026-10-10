@@ -25,11 +25,11 @@ import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './pl
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
-import { Animals } from './world/animals';
+import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
 import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
-import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp } from './business';
+import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp, photoStars, RANGER_PAYS } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -170,7 +170,8 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera'; t: number; from: [number, number]; seat: number } | null = null;
+  let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
   function startSwing() {
@@ -184,10 +185,39 @@ async function main() {
     if (!play) return;
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
+    if (play.kind === 'camera') viewfinder.hidden = true;
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
     Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
   }
+  // the camera: aim with the stick, snap; the best photo of each animal goes in the album
+  const viewfinder = document.getElementById('viewfinder')!, flashEl = viewfinder.querySelector('.flash') as HTMLElement;
+  const CAM = { zoomH: 600, reach: 800, aimSpeed: 650, frame: 0.56 };   // view height while aiming, how far it can look, frame size (of the screen)
+  function startCamera() {
+    mode = 'play'; play = { kind: 'camera', t: 0, from: [nico.x, nico.y], seat: 0 };
+    aim = [nico.x, nico.y - 40]; viewfinder.hidden = false; hint.style.opacity = '0';
+  }
+  function snap() {
+    if (play?.kind !== 'camera') return;
+    sfx.shutter(); flashEl.classList.remove('go'); void flashEl.offsetWidth; flashEl.classList.add('go');
+    const fw = app.screen.width * CAM.frame / 2 / zoom, fh = app.screen.height * CAM.frame / 2 / zoom;
+    const best: Record<string, number> = {};
+    for (const a of animals.list) {
+      const st = photoStars((a.x - aim[0]) / fw, (a.y - 35 - aim[1]) / fh, a.scared > 0);
+      if (st !== null) best[a.kind] = Math.max(best[a.kind] ?? 0, st);
+    }
+    const kinds = Object.keys(best);
+    if (!kinds.length) { toast('📷 Nothing in the picture. Aim at an animal!'); return; }
+    const lines = kinds.map(k => {
+      const was = biz.photos[k] ?? 0; biz.photos[k] = Math.max(was, best[k]);
+      return `${ANIMAL_KINDS[k as keyof typeof ANIMAL_KINDS].label} ${'★'.repeat(best[k])}${'☆'.repeat(3 - best[k])}${!was ? ' (new!)' : best[k] > was ? ' (better!)' : ''}`;
+    });
+    persist(); toast(`📷 ${lines.join('  ·  ')}`);
+  }
+  document.getElementById('vf-close')!.addEventListener('click', () => stopPlay());
+  const snapSpot: Spot = { id: 'snap', x: 0, y: 0, r: Infinity, label: '📸 Snap!', run: snap };
+  const cameraSpot: Spot = { id: 'camera', x: 0, y: 0, r: Infinity, priority: -0.5, label: '📷 Camera', run: startCamera,
+    when: () => mode === 'walk' && biz.tools.includes('camera') && animals.list.some(a => Math.hypot(a.x - nico.x, a.y - nico.y) < CAM.reach) };
   const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
   const standUp: Spot = { id: 'stand', x: 0, y: 0, r: Infinity, label: 'Stand up', run: stopPlay };
   function sitOnBench(bx: number, by: number) { mode = 'play'; play = { kind: 'bench', t: 0, from: [bx, by], seat: 0 }; }
@@ -270,6 +300,16 @@ async function main() {
       ]);
     },
     parts: p => showParts(p),
+    cabin: p => {
+      const pics = Object.keys(biz.photos), fresh = pics.filter(k => !biz.shown.includes(k)), all = Object.keys(ANIMAL_KINDS).length;
+      showCard('cabin', p.title, pics.length
+        ? `"You've photographed ${pics.length} of the ${all} animals round here. ${fresh.length ? 'Let me see the new ones!' : 'Keep looking: the fox is the shyest of all.'}"`
+        : '"Hello! I\'m the ranger. If you ever get a camera, bring me photos of the animals: I\'ll pay for each new one."', fresh.length ? [
+        { label: '📷 Show your photos', sub: `+$${fresh.length * RANGER_PAYS}`, id: 'showphotos', onClick: () => {
+          biz.shown.push(...fresh); state.money += fresh.length * RANGER_PAYS; showMoney(); persist(); sfx.coin();
+          toast(`Ranger: "Wonderful! ${fresh.map(k => ANIMAL_KINDS[k as keyof typeof ANIMAL_KINDS].label).join(', ')}!" +$${fresh.length * RANGER_PAYS}`);
+        } }] : []);
+    },
     garage: p => {
       const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
       const made = PRODUCTS.filter(q => biz.stock[q.id]).map(q => `${q.emoji}×${biz.stock[q.id]}`).join(' ');
@@ -336,7 +376,9 @@ async function main() {
     const shellLine = kinds.length ? kinds.map(k => `${k.label} ×${biz.shells[k.id]}`).join(', ') : 'none yet: look along the beach!';
     const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ') || 'nothing yet';
     const tools = TOOLS.filter(t => biz.tools.includes(t.id)).map(t => t.label).join(', ') || 'none yet (Parts & Tools)';
-    showCard('bag', '🎒 Your backpack', `🐚 Shells (${kinds.length} of ${SHELL_KINDS.length} kinds): ${shellLine}.  🏠 On your shelf: ${shelf}.  🧰 Tools: ${tools}.`, [], 'Close');
+    const pics = Object.keys(ANIMAL_KINDS).filter(k => biz.photos[k]);
+    const photoLine = pics.length ? pics.map(k => `${ANIMAL_KINDS[k as keyof typeof ANIMAL_KINDS].label} ${'★'.repeat(biz.photos[k])}`).join(', ') : 'none yet (a camera from Parts & Tools)';
+    showCard('bag', '🎒 Your backpack', `🐚 Shells (${kinds.length} of ${SHELL_KINDS.length} kinds): ${shellLine}.  📷 Photos (${pics.length} of ${Object.keys(ANIMAL_KINDS).length} animals): ${photoLine}.  🏠 On your shelf: ${shelf}.  🧰 Tools: ${tools}.`, [], 'Close');
   }
   document.getElementById('bag')!.addEventListener('click', showBag);
   const detectorEl = document.getElementById('detector')!;
@@ -416,7 +458,7 @@ async function main() {
       if (advanceJob(job)) payJob();
     },
   };
-  spots.push(jobSpot, digSpot);
+  spots.push(jobSpot, digSpot, cameraSpot);
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
   const jobEl = document.getElementById('job')!;
   jobEl.addEventListener('click', () => {
@@ -586,6 +628,12 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'camera') {
+        // standing still, camera up; the stick moves where it's pointing (not too far off)
+        aim[0] += input.vx * CAM.aimSpeed * dt; aim[1] += input.vy * CAM.aimSpeed * dt;
+        const dx = aim[0] - nico.x, dy = aim[1] - nico.y, d = Math.hypot(dx, dy);
+        if (d > CAM.reach) { aim[0] = nico.x + dx / d * CAM.reach; aim[1] = nico.y + dy / d * CAM.reach; }
+        b = { x: play.from[0], y: play.from[1], view: nico.st.view, face: nico.st.face, amp: 0, crouch: 0, hold: 1, sit: 0, z: play.from[1], sy: 1 };
       } else if (play.kind === 'dig') {
         // crouched over the hole, scooping (a bob of the arms), then up with whatever's there
         b = { x: play.from[0], y: play.from[1], view: 'front', face: 1, amp: 0.4, crouch: 1, hold: 0, sit: 0, z: play.from[1], sy: 1 };
@@ -717,16 +765,17 @@ async function main() {
 
     // action button
     spots[0].x = car.x; spots[0].y = car.y;
+    cameraSpot.x = nico.x; cameraSpot.y = nico.y;
     action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
-      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : null) : nearest(spots, nico.x, nico.y));
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : null) : nearest(spots, nico.x, nico.y));
     boostEl.hidden = boost <= 0;
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
     // camera follows Nico (or his car, looking ahead), clamped to the world; eases the zoom
-    const wantH = overview ? Math.max(WORLD.h, WORLD.w * app.screen.height / app.screen.width) : mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
+    const wantH = overview ? Math.max(WORLD.h, WORLD.w * app.screen.height / app.screen.width) : mode === 'drive' ? VIEW_H_DRIVE : play?.kind === 'camera' ? CAM.zoomH : VIEW_H;
     if (Math.abs(viewH - wantH) > 0.5) { viewH += (wantH - viewH) * Math.min(1, dt * 3); applyZoom(); }
-    const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : nico.x;
-    const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : nico.y - 40;
+    const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[0] : nico.x;
+    const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[1] : nico.y - 40;
     const vw = app.screen.width / zoom, vh = app.screen.height / zoom;
     const cx = Math.min(WORLD.w - vw / 2, Math.max(vw / 2, fx));
     const cy = Math.min(WORLD.h - vh / 2, Math.max(vh / 2, fy));
@@ -795,6 +844,7 @@ async function main() {
       animals: animals.list.map(a => ({ kind: a.kind, x: a.x, y: a.y, scared: a.scared > 0 })),
       shells: shells.spots.filter(q => q.gone <= 0).map(q => ({ x: q.x, y: q.y, kind: q.kind })), buried: treasure.spots.map(([x, y]) => ({ x, y })), signal,
       use: (id: string) => { spots.find(q => q.id === id)?.run(); },   // (tests: use a spot by name, whoever else is standing near it)
+      photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,

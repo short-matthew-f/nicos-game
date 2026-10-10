@@ -6,6 +6,7 @@ import {
 import { START_MONEY } from '../src/state';
 import { PRODUCTS, product, unlockedProducts, partsCost, priceOf, runProgram, ROBOT_LEVEL, type Move } from '../src/business';
 import { PLANS } from '../src/plans';
+import { photoStars } from '../src/business';
 import { JOBS } from '../src/jobs';
 import { COIN_SPOTS, COIN } from '../src/world/life';
 
@@ -184,5 +185,16 @@ describe('products', () => {
     expect(runProgram(['L']).result).toBe('bump');          // off the edge
     expect(runProgram(['U']).result).toBe('short');
     expect(runProgram(['U', 'U', 'R', 'R', 'R', 'D', 'R', 'R', 'U', 'U']).path.at(-1)).toEqual(ROBOT_LEVEL.star);
+  });
+});
+
+describe('photos', () => {
+  it('centred is three stars, near the edge one, outside the frame none; a running animal comes out blurry', () => {
+    expect(photoStars(0, 0, false)).toBe(3);
+    expect(photoStars(0.5, -0.2, false)).toBe(2);
+    expect(photoStars(0.9, 0.9, false)).toBe(1);
+    expect(photoStars(1.2, 0, false)).toBeNull();
+    expect(photoStars(0, 0, true)).toBe(2);
+    expect(photoStars(0.9, 0, true)).toBe(1);   // never less than one
   });
 });

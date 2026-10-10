@@ -155,3 +155,19 @@ html, body {
 .work .pad button { min-width: 64px; padding: 0 8px; font-size: 26px; }
 @media (max-width: 640px) { .stage.auction { grid-template-columns: 1fr; } .lot .door { height: 70px; } }
 #buttons button[hidden] { display: none; }
+
+/* the camera's viewfinder: a frame in the middle (56% of the screen), corner brackets, a flash */
+#viewfinder { position: fixed; inset: 0; pointer-events: none; }
+#viewfinder[hidden] { display: none; }
+#viewfinder .frame { position: absolute; left: 22%; top: 22%; width: 56%; height: 56%; box-shadow: 0 0 0 100vmax rgba(43,63,85,.28);
+  background:
+    linear-gradient(#fff, #fff) top left / 40px 6px no-repeat, linear-gradient(#fff, #fff) top left / 6px 40px no-repeat,
+    linear-gradient(#fff, #fff) top right / 40px 6px no-repeat, linear-gradient(#fff, #fff) top right / 6px 40px no-repeat,
+    linear-gradient(#fff, #fff) bottom left / 40px 6px no-repeat, linear-gradient(#fff, #fff) bottom left / 6px 40px no-repeat,
+    linear-gradient(#fff, #fff) bottom right / 40px 6px no-repeat, linear-gradient(#fff, #fff) bottom right / 6px 40px no-repeat; }
+#viewfinder .frame::after { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 3px solid rgba(255,255,255,.8); border-radius: 50%; }
+#viewfinder .flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+#viewfinder .flash.go { animation: flash .35s ease-out; }
+@keyframes flash { from { opacity: .85; } to { opacity: 0; } }
+#vf-close { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); pointer-events: auto;
+  min-height: 48px; padding: 0 18px; border: 0; border-radius: 14px; font: inherit; font-size: 17px; font-weight: 800; background: #fff; color: var(--navy); box-shadow: 0 3px 0 rgba(43,63,85,.25); touch-action: manipulation; }

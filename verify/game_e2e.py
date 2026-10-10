@@ -448,6 +448,28 @@ with sync_playwright() as p:
     pg.click('#bag'); pg.wait_for_timeout(200)
     check('backpack' in pg.locator('#place-title').inner_text() and '1 of 6' in pg.locator('#place-text').inner_text(), f"the backpack lists the shells ({pg.locator('#place-text').inner_text()[:80]})")
     pg.keyboard.press('Escape')
+    # the forest: buy a camera, photograph a deer from a distance, show the ranger
+    pg.evaluate("()=>{window.__game.setBiz({photos: {}, shown: []}); window.__game.setMoney(30)}")
+    door('parts'); pg.click('[data-item="tool:camera"]'); pg.wait_for_timeout(200); pg.keyboard.press('Escape')
+    check('camera' in G()['biz']['tools'], 'bought a camera')
+    deer = next(a for a in G()['animals'] if a['kind'] == 'deer')
+    for dx in (-450, 450, 0):
+        pg.evaluate(f"()=>window.__game.place({deer['x'] + dx}, {deer['y'] + (300 if dx == 0 else 0)})"); pg.wait_for_timeout(150)
+        if G()['action'] == 'camera': break
+    check(G()['action'] == 'camera' and '📷' in pg.locator('#action').inner_text(), f"near an animal: the camera's offered ({G()['action']})")
+    pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['play'] == 'camera' and pg.locator('#viewfinder').is_visible() and 'Snap' in pg.locator('#action').inner_text(), 'camera up: a viewfinder, and Snap!')
+    pg.evaluate("()=>window.__game.aimAt(200, 200)"); pg.wait_for_timeout(100); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['photos'] == {} and 'Nothing' in pg.locator('#toast').inner_text(), 'pointing at nothing: no photo')
+    d = next(a for a in G()['animals'] if a['kind'] == 'deer' and math.dist((a['x'], a['y']), (deer['x'], deer['y'])) < 400)
+    pg.evaluate(f"()=>window.__game.aimAt({d['x']}, {d['y'] - 35})"); pg.wait_for_timeout(1200)
+    d = min((a for a in G()['animals'] if a['kind'] == 'deer'), key=lambda a: math.dist((a['x'], a['y']), (d['x'], d['y'])))
+    pg.evaluate(f"()=>window.__game.aimAt({d['x']}, {d['y'] - 35})"); pg.click('#action'); pg.wait_for_timeout(300)
+    check(G()['photos'].get('deer', 0) >= 2, f"aimed at the deer: a photo with stars ({G()['photos']}; {pg.locator('#toast').inner_text()})")
+    pg.click('#vf-close'); pg.wait_for_timeout(300)
+    check(G()['mode'] == 'walk' and not pg.locator('#viewfinder').is_visible(), 'put the camera away')
+    m0 = G()['money']; door('cabin'); pg.click('[data-item=showphotos]'); pg.wait_for_timeout(200)
+    check(G()['money'] == m0 + 3 * len(G()['photos']) and 'deer' in G()['biz']['shown'], f"the ranger pays for new photos ({m0} -> {G()['money']})")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')

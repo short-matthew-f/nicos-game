@@ -547,3 +547,12 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - storage units never contain beach finds;
   - the priority rules.
 - **e2e:** buy the detector, a weak signal from far away, full signal and Dig on top, dig something up, go quiet off the sand, pick up a shell, the backpack lists it (142 checks).
+
+## 2026-10-10: the forest: a camera and wildlife photos (Nico's idea)
+- **📷 Camera:** $10 at Parts & Tools. With an animal within 800 px, the action button offers **📷 Camera**. It's the lowest priority, so doors and people still win when Nico's at them.
+- **Aiming:** the view zooms in (600 px tall) behind a viewfinder: a frame over the middle 56% of the screen, with the rest dimmed. The stick moves where the camera points, up to 800 px from Nico, while he stands still. The action button is **📸 Snap!** (a flash and a shutter sound), and "✕ Put the camera away" exits.
+- **Stars** (`photoStars`): 3 stars in the middle third of the frame, 2 nearer the edge, 1 at the edge. One fewer if the animal is running, since it comes out blurry. Shy animals bolt when Nico gets close, so the zoom is how you get the good shots.
+- **Album:** the best photo of each of the 7 animals is kept in `biz.photos` and listed in the 🎒 backpack.
+- **Fox:** new, two of them in the forest. Very shy: it flees from 330 px.
+- **The ranger** (the cabin now has a door, as do the barn and the pool house) pays $3 for each animal's photo the first time you show it.
+- **Tests:** star scoring. e2e: buy the camera, the camera is offered near a deer, the viewfinder and Snap appear, nothing in frame gives no photo, the deer in frame gives 2+ stars, put it away, the ranger pays (149 checks).

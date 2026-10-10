@@ -68,6 +68,7 @@ const effects = {
   shell: () => { audio.tone('sine', 1568, 1568, 0.12, 0.07); audio.tone('sine', 2093, 2093, 0.2, 0.06, 0.07); },
   beep: (level = 1) => audio.tone('square', 700 + level * 140, 700 + level * 140, 0.05, 0.035),
   dig: () => { audio.noise(0.25, 0.25, 1200); audio.noise(0.25, 0.2, 1000); },
+  shutter: () => { audio.noise(0.04, 0.4, 6000); audio.noise(0.06, 0.3, 3000); },
   // the workshop
   pop: () => { audio.tone('sine', 300, 900, 0.09, 0.12); audio.noise(0.05, 0.12, 4000); },            // a box opens
   sparkle: () => { [1319, 1568, 1976, 2637].forEach((f, i) => audio.tone('triangle', f, f, 0.16, 0.06, i * 0.06)); },   // a rare find
