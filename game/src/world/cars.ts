@@ -46,13 +46,13 @@ function busArt(): Container {
 export const BUS = { len: 150 * CAR_SCALE, wid: 62 * CAR_SCALE, dwell: 3.5 };
 
 /** A car with its shadow; turn(h) points it (the shadow stays offset down-right). */
-export function carSprite(color: string, taxi = false, stripe?: string): { view: Container; turn: (h: number) => void } {
+export function carSprite(color: string, taxi = false, stripe?: string): { view: Container; turn: (h: number) => void; lean: (dx: number, dy: number) => void } {
   const view = new Container();
   const body = carArt(color, taxi, stripe);
   const shadow = new Graphics().roundRect(-CAR.len / 2, -CAR.wid / 2, CAR.len, CAR.wid, 18 * CAR_SCALE).fill({ color: NAVY, alpha: 0.18 });
   shadow.position.set(6, 10);
   view.addChild(shadow, body);
-  return { view, turn: h => { body.rotation = shadow.rotation = h; } };
+  return { view, turn: h => { body.rotation = shadow.rotation = h; }, lean: (dx, dy) => { body.position.set(dx, dy); } };   // (lean: the body shifts over its shadow)
 }
 
 export class Car {

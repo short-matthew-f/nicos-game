@@ -5,7 +5,8 @@ extensions.add(CullerPlugin);
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, TREES, PINES, doorOf } from './world/map';
 import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
-import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
+import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
+import { Dust } from './world/dust';
 import { Night, DAY, inForest } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
@@ -101,6 +102,7 @@ async function main() {
   let scatters = 0;   // every flock take-off in town (for tests)
   pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : here(); if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
+  const dust = new Dust(); world.addChild(dust.view);   // (over the ground and the things on it, under the clouds)
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   // day and night: the dark and the lights go over everything, the moon over the world on screen
   const night = new Night(); world.addChild(night.view); app.stage.addChildAt(night.moon, app.stage.getChildIndex(world) + 1);
@@ -137,7 +139,10 @@ async function main() {
   const state = { money: saved.money, biz: saved.biz };
   let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
   const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false };
-  let aroundIn = 0, lastFoot = 0;
+  let aroundIn = 0, lastFoot = 0, squash = 0, shake = 0;
+  const nv = [0, 0], cam = { x: NaN, y: NaN };   // Nico's velocity (eased); where the camera's looking (it trails a little)
+  // a sticker hitting the world: a thump, a ring of dust along its bottom, a little jolt
+  landed.on = (box, parent) => { sfx.thud(); shake = 0.3; if (parent === layer) dust.land(box.x, box.y + box.h - 10, box.w); };
   // ---- the work shed in the garden: an outline with a price until it's bought, then a building
   // (solid from the start if it's already his, before a saved position is checked)
   const shedRect = { x: SHED.x, y: SHED.y, w: SHED.w, d: SHED.d };
@@ -182,7 +187,8 @@ async function main() {
 
   const car: CarState = { ...PARKED_CAR, speed: 0 };
   if (saved.car && carFits(saved.car.x, saved.car.y, saved.car.h, SOLIDS, WORLD)) Object.assign(car, saved.car, { speed: 0 });
-  const { view: carView, turn: turnCar } = carSprite(MY_CAR.color, false, MY_CAR.stripe);
+  const { view: carView, turn: turnCar, lean: leanCar } = carSprite(MY_CAR.color, false, MY_CAR.stripe);
+  const lean = [0, 0], lastCar = { h: 0, speed: 0 };
   layer.addChild(carView);
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
@@ -1124,18 +1130,27 @@ async function main() {
       }
     }
     if (mode === 'walk' && !frozen) {
-      const vx = input.vx * WALK_SPEED * fast, vy = input.vy * WALK_SPEED * fast;
-      const sp = Math.hypot(input.vx, input.vy);
+      // weight: he gets going and slows down over a moment, instead of starting and stopping dead
+      const tvx = input.vx * WALK_SPEED * fast, tvy = input.vy * WALK_SPEED * fast, ease = 1 - Math.exp(-dt * (tvx || tvy ? 14 : 18));
+      nv[0] += (tvx - nv[0]) * ease; nv[1] += (tvy - nv[1]) * ease;
+      const vx = nv[0], vy = nv[1], [ox, oy] = [nico.x, nico.y];
       [nico.x, nico.y] = room ? moveCircle(nico.x, nico.y, vx * dt, vy * dt, room.solids, { w: room.w, h: room.h - 20 })
         : moveCircle(nico.x, nico.y, vx * dt, vy * dt, SOLIDS, WORLD);
-      Object.assign(nico.st, chooseView(vx, vy, nico.st));
+      const sp = dt ? Math.hypot(nico.x - ox, nico.y - oy) / dt / WALK_SPEED : 0;   // (how fast he really went: no walking on the spot into a wall)
+      Object.assign(nico.st, chooseView(tvx, tvy, nico.st));
       if (room && carrying) nico.st.hold = 1;   // carrying the tray in both hands
       stepGait(nico.st, sp * WALK_SPEED * fast, vy, dt);
       nico.view.pose(nico.x, nico.y, nico.st);
       // a footstep each time a foot comes down: what it sounds like depends on what he's walking on
       const foot = Math.floor(nico.st.phase / (CYCLE / 2));
-      if (foot !== lastFoot && nico.st.amp > 0.4 && sp > 0.2) footstep(room ? roomSurface(room.kind) : surfaceAt(nico.x, nico.y));
+      if (foot !== lastFoot && nico.st.amp > 0.4 && sp > 0.2) {
+        const ground = room ? roomSurface(room.kind) : surfaceAt(nico.x, nico.y);
+        footstep(ground); squash = 1;
+        if (ground === 'sand') dust.puff(nico.x + (foot % 2 ? 10 : -10), nico.y, '#E8D5A0', 2, 40, 8);   // (sand kicked up)
+      }
       lastFoot = foot;
+      squash = Math.max(0, squash - dt * 9);
+      nico.view.root.scale.y *= 1 - 0.035 * squash; nico.view.root.scale.x *= 1 + 0.02 * squash;   // (a little squash as each foot lands)
       if (room) { trayView.position.set(nico.x, nico.y - 66); trayView.zIndex = nico.y + 1; }
     } else if (mode === 'drive') {
       const prevH = car.h;
@@ -1145,6 +1160,13 @@ async function main() {
     }
     carView.position.set(car.x, car.y);
     turnCar(car.h);
+    { // weight: the body leans out on turns and pitches when it speeds up or brakes, over its shadow
+      const turnRate = dt ? (((car.h - lastCar.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI) / dt : 0, accel = dt ? (car.speed - lastCar.speed) / dt : 0;
+      const side = Math.max(-5, Math.min(5, -turnRate * car.speed * 0.012)), fwd = Math.max(-5, Math.min(5, -accel * 0.012));
+      lean[0] += (side - lean[0]) * Math.min(1, dt * 8); lean[1] += (fwd - lean[1]) * Math.min(1, dt * 8);
+      leanCar(Math.cos(car.h) * lean[1] - Math.sin(car.h) * lean[0], Math.sin(car.h) * lean[1] + Math.cos(car.h) * lean[0]);
+      lastCar.h = car.h; lastCar.speed = car.speed;
+    }
     carView.zIndex = car.y + CAR.wid * 0.4;
 
     // test walkers: wander along sidewalks, pick a new direction now and then
@@ -1188,7 +1210,7 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
-    clock = (clock + dt / DAY.length) % 1;
+    clock = (clock + dt / DAY.length) % 1; dust.update(dt);
     if ((aroundIn -= dt) <= 0) {   // what's round Nico, for the birds, the wind in the trees and the waves (twice a second)
       aroundIn = 0.5; const [ax, ay] = here(), near = (p: [number, number]) => Math.abs(p[0] - ax) < 600 && Math.abs(p[1] - ay) < 500;
       around.trees = TREES.filter(near).length + PINES.filter(near).length; around.shore = Math.max(0, shoreY(ax) - ay); around.forest = inForest(ax, ay);
@@ -1266,9 +1288,13 @@ async function main() {
     const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[1] : nico.y - 40;
     const vw = app.screen.width / zoom, vh = app.screen.height / zoom;
     const bw = room ? room.w : WORLD.w, bh = room ? room.h : WORLD.h;   // (inside: the room's walls; a small room just sits in the middle)
-    const cx = vw >= bw ? bw / 2 : Math.min(bw - vw / 2, Math.max(vw / 2, fx));
-    const cy = vh >= bh ? bh / 2 : Math.min(bh - vh / 2, Math.max(vh / 2, fy));
-    world.position.set(app.screen.width / 2 - cx * zoom, app.screen.height / 2 - cy * zoom);
+    // (it trails a moment behind, so moving feels like moving; a jump of more than a screen just cuts)
+    if (!(Math.abs(fx - cam.x) < 900 && Math.abs(fy - cam.y) < 700)) { cam.x = fx; cam.y = fy; }
+    else { const k = 1 - Math.exp(-dt * 9); cam.x += (fx - cam.x) * k; cam.y += (fy - cam.y) * k; }
+    const cx = vw >= bw ? bw / 2 : Math.min(bw - vw / 2, Math.max(vw / 2, cam.x));
+    const cy = vh >= bh ? bh / 2 : Math.min(bh - vh / 2, Math.max(vh / 2, cam.y));
+    shake = Math.max(0, shake - dt); const sh = shake > 0 ? 7 * shake / 0.3 : 0;   // (a thump: the screen jolts and settles)
+    world.position.set(app.screen.width / 2 - cx * zoom + (Math.random() - 0.5) * sh, app.screen.height / 2 - cy * zoom + (Math.random() - 0.5) * sh);
     room?.view.position.copyFrom(world.position);
 
     siren.update(dt, truckOut ? Math.hypot(truck.pos[0] - cx, truck.pos[1] - cy) : null);

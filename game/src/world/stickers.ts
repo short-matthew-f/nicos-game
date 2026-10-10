@@ -31,6 +31,8 @@ interface Sticking { c: Container; t: number; mask: Graphics; flap: Graphics; fl
 const active: Sticking[] = [];
 export const FOLD = 0.8, FLASH = 0.35;   // s: folding down from the corner, then the flash round the edge
 export const SLAP = FOLD + FLASH;
+/** Called the moment a sticker is fully down (for a thump, a puff of dust, a little shake). */
+export const landed: { on: (box: { x: number; y: number; w: number; h: number }, layer: Container | null) => void } = { on: () => {} };
 
 /** The part of polygon `poly` where f(p) <= 0 (one Sutherland-Hodgman pass). */
 function clip(poly: Pt[], f: (p: Pt) => number): Pt[] {
@@ -79,7 +81,7 @@ export function update(dt: number) {
       }
       a.flash.alpha = 0;
     } else {
-      if (a.c.mask) { a.c.mask = null; a.mask.destroy(); a.flap.destroy(); }
+      if (a.c.mask) { a.c.mask = null; a.mask.destroy(); a.flap.destroy(); landed.on(a.box, a.c.parent); }
       a.flash.alpha = Math.max(0, 1 - (a.t - FOLD) / FLASH);
     }
   }

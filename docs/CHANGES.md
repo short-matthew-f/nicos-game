@@ -730,3 +730,11 @@ The user: "genuine sound effects might make things feel better. The sound of wal
 - **Waves:** a slow swell near the shore.
 - **Car horns:** a polite double toot, two notes through a soft filter, instead of the harsh square-wave honk.
 - Tests: a surface map unit test; e2e walks on concrete, sand and grass and hears the right footsteps (208 checks).
+
+### Weight (2026-10-10)
+The user: "Make sure things have 'weight' even though we are in the sticker verse."
+- **Nico gets going and slows down over a moment** instead of starting and stopping dead: his velocity eases toward the stick. His walk animation and footsteps now follow how far he really moved, so he no longer walks on the spot against a wall.
+- **Each foot lands with a little squash.** On sand he kicks up small puffs.
+- **The camera trails a moment behind** (it cuts on a jump of more than a screen, like going through a door).
+- **His car leans out on turns** and pitches forward when it brakes and back when it speeds up: the body shifts over its shadow.
+- **Stickers land with a thump:** a low thud, a ring of dust along the bottom, and a small jolt of the screen.
