@@ -28,6 +28,8 @@ export const ROOMS: Record<string, Room> = {
 };
 export const WALL_H = 210;   // the back wall's depth: you can't walk into it
 export const SEAT = 70;      // how far below a table's centre the 'sit' spot is
+export const TABLE_TOP = 62;   // how high a tabletop is (px above the floor)
+export const STOOL_SEAT = 43;  // ...and a stool's seat
 export const STOOL = 90;     // the stools, either side of a table: you sit on the left one, facing it
 
 /** What you bump into inside a room. */
@@ -87,8 +89,10 @@ export function drawRoom(r: Room, menu: { label: string; price: number }[]): { v
       stools.ellipse(cx, fy - 42, 26 + BAND, 11 + BAND).fill('#FFFFFF').ellipse(cx, fy - 40, 26, 10).fill('#D9822B').ellipse(cx, fy - 43, 26, 10).fill('#F9A826');
     }
     stools.zIndex = y; layer.addChild(stools);   // (behind whoever's sitting on them)
-    g.rect(x - 8, y - 20, 16, 30).fill('#7A5236');
-    g.ellipse(x, y - 24, 66 + BAND, 30 + BAND).fill('#FFFFFF').ellipse(x, y - 24, 66, 30).fill('#F4F6F8').ellipse(x, y - 26, 56, 22).fill('#E9EEF3');
+    // a pedestal table, its top a little above the stools' seats
+    g.ellipse(x, y + 10, 30 + BAND, 10 + BAND).fill('#FFFFFF').ellipse(x, y + 10, 30, 10).fill('#7D8A98');
+    g.roundRect(x - 8 - BAND, y - TABLE_TOP, 16 + 2 * BAND, TABLE_TOP + 10, 4).fill('#FFFFFF').roundRect(x - 8, y - TABLE_TOP, 16, TABLE_TOP + 8, 3).fill('#9AA6B2');
+    g.ellipse(x, y - TABLE_TOP, 66 + BAND, 28 + BAND).fill('#FFFFFF').ellipse(x, y - TABLE_TOP + 4, 66, 28).fill('#C9D3DC').ellipse(x, y - TABLE_TOP, 66, 28).fill('#F4F6F8').ellipse(x, y - TABLE_TOP - 2, 56, 21).fill('#E9EEF3');
     g.zIndex = y + 14; layer.addChild(g);
   }
   view.addChild(layer);

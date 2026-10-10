@@ -23,7 +23,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, type Room } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room } from './world/rooms';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -443,7 +443,7 @@ async function main() {
     if (!room) return;
     const [tx, ty] = room.r.tables[i];
     mode = 'play'; play = { kind: 'eat', t: 0, from: [tx - STOOL, ty + 12], seat: i };   // on the left stool
-    if (carrying) { trayView.visible = false; const t = trayArt(carrying.label.split(' ')[0]); t.position.set(tx, ty - 30); t.zIndex = ty + 15; room.layer.addChild(t); tableTray = { view: t }; }
+    if (carrying) { trayView.visible = false; const t = trayArt(carrying.label.split(' ')[0]); t.position.set(tx - 10, ty - TABLE_TOP + 4); t.zIndex = ty + 15; room.layer.addChild(t); tableTray = { view: t }; }
   }
   function startDig() {
     const n = treasure.nearest(nico.x, nico.y);
@@ -720,7 +720,8 @@ async function main() {
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
       } else if (play.kind === 'eat') {
         // sitting at the table (back to us, facing it); with food, a few seconds' eating, then the boost
-        b = { x: play.from[0], y: play.from[1], view: 'side', face: 1, amp: 0, crouch: 1, hold: carrying ? 0.6 + 0.4 * Math.abs(Math.sin(play.t * 5)) : 0, sit: 1, z: play.from[1] + 20, sy: 1 };   // (in front of the table: sitting at it)
+        // upright on the stool's seat (sitting drops the hips to the feet, so draw him up by the seat's height)
+        b = { x: play.from[0], y: play.from[1], dy: -STOOL_SEAT, view: 'side', face: 1, amp: 0, crouch: 0, hold: carrying ? 0.6 + 0.4 * Math.abs(Math.sin(play.t * 5)) : 0, sit: 1, z: play.from[1] + 20, sy: 1 };   // (in front of the table: sitting at it)
         if (carrying && play.t >= 3) {
           boost = Math.min(BOOST.max, boost + carrying.boost); sfx.coin();
           toast(`Yum! ${carrying.label}. You feel speedy! ⚡`); carrying = null; tableTray?.view.destroy(); tableTray = null;

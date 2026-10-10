@@ -581,3 +581,7 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - **Ice cream next**, the same room with a different menu, once Nico has seen this one.
 - **e2e:** go in, order fries (money, then a tray, no boost yet), sit and eat (then the boost), leave back to the door, the $2 case, tap-outside closes the card (166 checks).
 - **Stools** (user feedback): they were drawn straight down from above while the table is at an angle. Now they match it: an oval seat on a post, with a foot on the floor.
+- **Sitting looked wrong** (user: "does it look natural?"). It didn't: Nico sat on the floor in front of the stool, hunched, with his face at the tabletop. The sitting pose drops the hips to the feet, which is right for the slide but not a stool. Fixes:
+  - He's now drawn up by the seat's height (`STOOL_SEAT`), sitting upright (no hunch).
+  - Tables have a pedestal, with the top (`TABLE_TOP`, 62 px) a little above the stool seats (43 px). His tray sits on the tabletop.
+  - Left as is: his legs point straight forward rather than bending at the knee. The rig's sitting pose has no knee bend, and it's shared with the slide.
