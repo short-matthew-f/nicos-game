@@ -6,14 +6,14 @@ export const BOOST = { speed: 1.35, max: 180 };   // walk-speed multiplier while
 
 export const PLACES: Place[] = [
   { building: 'burger', title: 'Burger Barn', action: 'Order lunch', text: 'What can I get you?', menu: [
-    { id: 'burger', label: 'Burger', price: 5, boost: 90 },
-    { id: 'fries', label: 'Fries', price: 3, boost: 40 },
-    { id: 'shake', label: 'Milkshake', price: 4, boost: 60 },
+    { id: 'burger', label: '🍔 Burger', price: 5, boost: 90 },
+    { id: 'fries', label: '🍟 Fries', price: 3, boost: 40 },
+    { id: 'shake', label: '🥤 Milkshake', price: 4, boost: 60 },
   ] },
   { building: 'icecream', title: 'Ice Cream', action: 'Get ice cream', text: 'Twelve flavours! What would you like?', menu: [
-    { id: 'cone', label: 'Cone', price: 2, boost: 30 },
-    { id: 'sundae', label: 'Sundae', price: 4, boost: 70 },
-    { id: 'float', label: 'Root beer float', price: 3, boost: 50 },
+    { id: 'cone', label: '🍦 Cone', price: 2, boost: 30 },
+    { id: 'sundae', label: '🍨 Sundae', price: 4, boost: 70 },
+    { id: 'float', label: '🥤 Root beer float', price: 3, boost: 50 },
   ] },
   { building: 'school', title: 'School', text: "School's out for the summer. The janitor waves at you from the hallway." },
   { building: 'hospital', title: 'Hospital', text: 'The nurse at the desk smiles. "Hope we don\'t see you in here for a while!"' },

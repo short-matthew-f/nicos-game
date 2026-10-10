@@ -17,7 +17,7 @@ The handoff isn't a complete list, and it isn't fixed. Nico will change his mind
 - Every change of direction gets a line in `docs/CHANGES.md` saying what changed and why.
 
 ## Milestones
-### v0: "Nico on the street" (now)
+### v0: "Nico on the street" (done)
 This is the thinnest version that tests the two biggest risks: **control feel** and **the live sticker look in Safari on the iPad**.
 - Nico walks around a scrolling neighborhood bigger than the screen. Controls are a floating thumbstick (touch the left half of the screen) or WASD/arrow keys.
 - He faces his direction of travel using the rig's side, front and back views.
@@ -26,11 +26,14 @@ This is the thinnest version that tests the two biggest risks: **control feel** 
 - There's an FPS counter, plus a debug button that adds more walkers to find the iPad's performance limit.
 - **Done when:** it opens on the iPad over Wi-Fi, Nico says it feels right, and it holds a steady frame rate.
 
-### v1: "Alive" (next)
-- Get in and out of a car, and drive with the same thumbstick.
-- The playground (play on it), a fast-food place (buy lunch, which introduces money), and the school and hospital as places.
-- The fire truck leaves its station now and then.
-- People walking around on their own routines.
+### v1: "Alive" (done, 2026-10-09, plus extras from the overnight build)
+- **Driving:** Nico's red car, Sasquatch-style steering, reverse when stuck, and traffic that squeezes past a car parked in its way.
+- **Places:** Burger Barn and the ice cream shop sell lunch and treats (a speed boost). The school, hospital, shops and home each have a door and a line of text.
+- **Playground:** a slide and swings (sitting properly; the swings are shared with Primo). There's also a park with a pond, ducks, a fountain and benches to sit on.
+- **Fire truck:** the alarm, lights and siren, and fire calls. A building catches fire, and the truck drives there and sprays it out.
+- **People:** James and Primo, plus six townspeople on routines. You can say hi to anyone. Five of them offer odd jobs that pay $3–6.
+- **More life:** the school bus with its stops, pigeons, cloud shadows, hidden coins, a soccer field with goals, sounds with a mute button, rooftop landmarks, and a minimap plus a big map.
+- **Nico's feedback, all done:** 8-direction facing (3/4 views for everyone), a mid-size town with tall buildings, solid trees, the playground behind-walk fix, sitting poses.
 
 ### v2: the business loop
 - Storage-unit flipping as the first hustle. The first unit is guaranteed to make a profit, and price and value ranges are shown before the player buys.
@@ -62,12 +65,8 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - How time works: rent and wages (§13.6), and what failure costs (§13.7).
 - How deep factory planning goes (§13.5).
 
-## Nico's feedback on v1, 2026-10-09 (being worked through in this order)
-1. Trees are solid, so you can't drive through them. The playground equipment doesn't look wrong when you walk behind it, and you can't walk through it.
-2. **Scale:** buildings and the world are bigger, so Nico isn't as tall as the trees and houses. Cars grow too.
-3. Sitting properly on the slide and the swing (the swing bar was on his lap), with the equipment spaced further apart.
-4. **People he knows walking around town:** James (short brown hair with a side-swept fringe; navy hoodie or blue polo with khakis) and cousin Primo (younger and smaller; shoulder-length wavy light-brown hair worn loose; blue soccer jersey and camo cargo pants). The photos are reference only and never go in the repo, which is public.
-5. **"8 directions":** he can already walk in any direction. The art only faces 4 ways (side, front, back), so this needs 3/4 front and 3/4 back views drawn in the rig. Waiting to confirm that's what he meant.
+## Waiting on
+- The iPad report: frame rate (lite mode switches on by itself below 45 fps), how the stick feels, and Nico's reactions to the overnight build.
 
 ## Idea parking lot (wanted, not scheduled)
 - **Customizing his house and his clothes** (Nico, longer term).
