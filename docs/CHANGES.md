@@ -248,3 +248,12 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - The e2e checks closing by a tap outside the card.
 - On screens narrower than 640 px (phones in portrait), the top bar shows only money and ⟳. The fps/people chip and the +10/Clear test buttons wrapped into a mess there.
 - **Diagonal views mock-up** (`src/mock_diag.py`, for sign-off): following Nico's note, the 3/4 front ponytail now hangs behind his head and neck instead of over his shoulder.
+- **Diagonal hair, iterated over six review rounds** (Nico: "something going on with the hair" in the down-right view). Rejected along the way:
+  - a straight diagonal hairline that cut across the forehead;
+  - a skull-hugging curve that read as a bowl cut;
+  - arched hairlines that gave him a big domed forehead;
+  - pulled-back hair with the ear showing. This was the root problem: his front view has hair falling past the ears to the jaw, so the 3/4 view didn't match.
+
+  **Kept:**
+  - **3/4 front:** the front view's centre-part hairstyle, turned. The part is right of centre, the near side shows more hair, and the far side has a narrow fall beside his face. The ponytail hangs out of sight behind his neck.
+  - **3/4 back:** hair covers the back of his head and hangs to the jaw, with his cheek showing in front of it.

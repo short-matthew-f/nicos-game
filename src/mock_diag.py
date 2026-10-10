@@ -40,31 +40,27 @@ def torso_q(back):
     return s
 
 def upper_q_front():
-    # the ponytail hangs from the back of his head, so it is drawn first, behind his body:
-    # only a little shows, past the far side of his neck and shoulder
-    return (f'<path d="M-17,-72 C-23,-62 -22,-48 -17,-38 C-13,-48 -11,-60 -10,-68 Z" fill="{HAIR}"/>'
-        f'<rect x="-23" y="-73" width="10" height="6" rx="3" fill="{HAIR_TIE}" transform="rotate(-30 -18 -70)"/>' +
+    # Hair as in the front view (centre part, falling past the ears to the jaw), turned:
+    # the part sits right of centre, the near (left) side shows more hair, the far side a
+    # narrower fall beside the face. The ponytail hangs behind his neck, just out of sight.
+    return (f'<path d="M-11,-72 C-15,-62 -14,-50 -10,-42 C-6,-50 -4,-60 -3,-68 Z" fill="{HAIR}"/>' +
         torso_q(False) +
         f'<circle cx="2" cy="-86" r="29" fill="{SK}"/>'
-        # hair: part right of centre; on the right it falls to the jaw beside his face, on
-        # the left it is pulled back over the ear to the tie at the nape (like the side view)
-        f'<path d="M10,{T} C28,{T} 36,-102 32,-84 C32,-76 30,-68 27,-63 L22,-66 '
-        f'C24,-80 21,-95 10,-104 C0,-99 -8,-96 -14,-92 C-20,-88 -22,-80 -21,-72 '
-        f'L-25,-67 C-31,-73 -34,-84 -32,-94 C-28,-108 -12,{T} 10,{T} Z" fill="{HAIR}"/>'
-        f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{SK2}"/>'   # near ear, in front of the pulled-back hair
+        f'<path d="M28,-61 C32,-70 34,-80 33,-90 C32,-108 18,{T} 2,{T} C-14,{T} -30,-108 -33,-90 '
+        f'C-34,-80 -31,-70 -24,-62 L-22,-60 L-16,-63 C-17,-80 -12,-96 8,-106 C17,-98 23,-84 24,-62 Z" fill="{HAIR}"/>'
         # face turned right: near eye round, far eye a little narrower
         f'<circle cx="0" cy="-85" r="3.6" fill="{EYE}"/><ellipse cx="17" cy="-85" rx="3" ry="3.6" fill="{EYE}"/>'
         f'<path d="M1,-72 Q9,-63 17,-72" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-        f'<circle cx="-5" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/><circle cx="22" cy="-75" r="4.2" fill="{CHEEK}" opacity=".6"/>')
+        f'<circle cx="-5" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/><circle cx="19" cy="-75" r="4.2" fill="{CHEEK}" opacity=".6"/>')
 
 def upper_q_back():
+    # the back view turned right: hair over the whole back of the head and hanging to the
+    # jaw on the face side, with his cheek and jaw showing in front of it; ponytail down the back
     return (torso_q(True) +
         f'<circle cx="-2" cy="-86" r="29" fill="{SK}"/>'
         f'<circle cx="21" cy="-76" r="3.5" fill="{CHEEK}" opacity=".5"/>'
-        # hair pulled back from the turned-away face: cheek, jaw and ear show on the right
-        f'<path d="M-33,-82 C-36,-108 -20,{T} -2,{T} C14,{T} 26,-110 24,-96 '
-        f'C18,-92 14,-84 13,-74 C12,-68 10,-64 6,-62 C-2,-63 -10,-62 -16,-60 C-26,-62 -32,-72 -33,-82 Z" fill="{HAIR}"/>'
-        f'<circle cx="15" cy="-80" r="5" fill="{SK2}"/>'              # ear, just behind the hairline
+        f'<path d="M-33,-82 C-36,-108 -20,{T} -2,{T} C12,{T} 24,-110 22,-98 '
+        f'C17,-92 14,-80 15,-66 C12,-61 6,-60 0,-61 C-10,-60 -18,-59 -24,-62 C-30,-66 -33,-74 -33,-82 Z" fill="{HAIR}"/>'
         f'<path d="M-13,-64 C-17,-50 -15,-36 -8,-24 C0,-36 2,-50 -2,-64 Z" fill="{HAIR}"/>'
         f'<rect x="-13" y="-66" width="12" height="6" rx="3" fill="{HAIR_TIE}"/>')
 
