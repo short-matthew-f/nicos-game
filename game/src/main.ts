@@ -100,7 +100,7 @@ async function main() {
   const shells = new Shells(); for (const v of shells.views) { v.cullable = true; layer.addChild(v); }
   const treasure = new Treasure();
   const holes: { view: { alpha: number; destroy(): void }; t: number }[] = [];
-  let beepIn = 0, signal = 0;   // s until the next beep; 0..5 bars
+  let beepIn = 0, signal = 0, hinted = '';   // (hinted: the treasure we've already said 'dig here' for)   // s until the next beep; 0..5 bars
   const ducks = new Ducks();
   let quackIn = 2;
   for (const d of ducks.views) layer.addChild(d);
@@ -958,6 +958,7 @@ async function main() {
       signal = gap === null ? 0 : Math.max(1, Math.round(5 - 4 * (gap - DETECT.fastest) / (DETECT.slowest - DETECT.fastest)));
       beepIn -= dt;
       if (gap !== null && beepIn <= 0) { sfx.beep(signal); beepIn = gap; }
+      if (n.d <= DETECT.dig && hinted !== n.i + ':' + treasure.spots[n.i].join()) { hinted = n.i + ':' + treasure.spots[n.i].join(); toast("📡 It's right here! Tap ⛏️ Dig!"); }
     } else { signal = 0; digSpot.x = digSpot.y = -9999; }
     detectorEl.hidden = !detecting;
     if (detecting && detectorEl.dataset.signal !== String(signal)) {   // a little signal meter: five bars, lit up to the signal

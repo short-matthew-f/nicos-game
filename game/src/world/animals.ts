@@ -5,6 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { NAVY, BAND } from './draw';
 import { moveCircle, freeAt } from '../player';
 import { SOLIDS, WORLD } from './map';
+import { PASTURE, FARMYARD } from './zones';
 
 export type AnimalKind = 'cow' | 'chicken' | 'deer' | 'rabbit' | 'gull' | 'crab' | 'fox';
 interface Kind { speed: number; run: number; shy: number; roam: number; label: string }
@@ -18,10 +19,14 @@ export const KINDS: Record<AnimalKind, Kind> = {
   fox: { speed: 75, run: 420, shy: 330, roam: 320, label: '🦊 Fox' },   // rare and very shy: photograph it from far off
 };
 
+/** Animals that are fenced in stay inside their pen. */
+export const PENS: Partial<Record<AnimalKind, { x: number; y: number; w: number; d: number }>> = { cow: PASTURE, chicken: FARMYARD };
+const inPen = (k: AnimalKind, x: number, y: number) => { const p = PENS[k]; return !p || (x > p.x + 20 && x < p.x + p.w - 20 && y > p.y + 20 && y < p.y + p.d - 10); };
+
 /** Who lives where: kind and home (they roam around it). */
 export const HERDS: [AnimalKind, number, number][] = [
   ['cow', 300, 4420], ['cow', 520, 4520], ['cow', 650, 4380],
-  ['chicken', 300, 4210], ['chicken', 420, 4195], ['chicken', 900, 4250], ['chicken', 980, 4300],
+  ['chicken', 300, 4190], ['chicken', 420, 4195], ['chicken', 700, 4200], ['chicken', 980, 4195],
   ['deer', 5600, 1500], ['deer', 6000, 1800], ['deer', 7300, 1300], ['deer', 5500, 400],
   ['rabbit', 5900, 1200], ['rabbit', 6900, 1700], ['rabbit', 5300, 1900], ['rabbit', 7600, 1100],
   ['gull', 1300, 5080], ['gull', 2600, 4880], ['gull', 4600, 4520], ['gull', 5900, 3900], ['gull', 6800, 3200],
@@ -92,6 +97,7 @@ function art(kind: AnimalKind): Graphics {
 }
 
 /** The nearest spot to (x, y) an animal can stand on (homes are rough; trees move when the forest is tuned). */
+export { inPen };
 export function settle(x: number, y: number): [number, number] {
   for (let r = 0; r < 400; r += 20) for (let a = 0; a < 16; a++) {
     const px = x + Math.cos(a * Math.PI / 8) * r, py = y + Math.sin(a * Math.PI / 8) * r;
@@ -124,6 +130,7 @@ export class Animals {
         // run directly away (but not too far from home)
         const ax = (a.x - near[0]) / (nd || 1), ay = (a.y - near[1]) / (nd || 1);
         a.tx = a.x + ax * 160; a.ty = a.y + ay * 160; a.scared = 1.2; a.wait = 0;
+        if (!inPen(a.kind, a.tx, a.ty)) { a.tx = a.x; a.ty = a.y; }
       }
       if (a.scared > 0) a.scared -= dt;
       const speed = a.scared > 0 ? k.run : k.speed;
@@ -133,6 +140,7 @@ export class Animals {
         if (a.wait <= 0) {   // pick somewhere new near home
           const ang = Math.random() * Math.PI * 2, r = Math.random() * k.roam;
           a.tx = a.home[0] + Math.cos(ang) * r; a.ty = a.home[1] + Math.sin(ang) * r * 0.6;
+          if (!inPen(a.kind, a.tx, a.ty)) { a.tx = a.home[0]; a.ty = a.home[1]; }   // (not over the fence)
           a.wait = 1.5 + Math.random() * 4;
         }
       } else {
@@ -140,7 +148,7 @@ export class Animals {
         const [nx, ny] = moveCircle(a.x, a.y, dx / d * st, dy / d * st, SOLIDS, WORLD, 12);
         if (nx === a.x && ny === a.y) { a.tx = a.x; a.ty = a.y; }   // stuck: think again
         // (and never stray far from home, even when chased)
-        if (Math.hypot(nx - a.home[0], ny - a.home[1]) < k.roam * 1.6) { a.x = nx; a.y = ny; } else { a.tx = a.home[0]; a.ty = a.home[1]; }
+        if (Math.hypot(nx - a.home[0], ny - a.home[1]) < k.roam * 1.6 && inPen(a.kind, nx, ny)) { a.x = nx; a.y = ny; } else { a.tx = a.home[0]; a.ty = a.home[1]; }
         if (Math.abs(dx) > 1) a.body.scale.x = dx > 0 ? 1 : -1;
       }
       const moving = d >= 4;

@@ -78,6 +78,10 @@ export const ZONE_BUILDINGS: ZoneBuilding[] = [
   { id: 'cabin', label: 'RANGER', x: 6500, y: 1340, w: 300, d: 170, h: 200, wall: '#A8754A', roof: '#4E6B3A', trim: '#F2D6A2' },
 ];
 
+/** Where the farm animals live (they stay inside). */
+export const PASTURE = { x: 140, y: 4270, w: 640, d: 360 };
+export const FARMYARD = { x: 100, y: 3720, w: 980, d: 500 };
+
 export type ZoneProp = { kind: string; x: number; y: number; color?: string; len?: number };
 export const ZONE_PROPS: ZoneProp[] = [
   // the beach
@@ -95,6 +99,7 @@ export const ZONE_PROPS: ZoneProp[] = [
   // the farm
   { kind: 'hay', x: 620, y: 4250 }, { kind: 'hay', x: 680, y: 4300 },
   { kind: 'fence', x: 110, y: 4240, len: 700 }, { kind: 'fence', x: 110, y: 4660, len: 700 },
+  { kind: 'fencev', x: 110, y: 4240, len: 420 }, { kind: 'fencev', x: 810, y: 4240, len: 150 }, { kind: 'fencev', x: 810, y: 4510, len: 150 },   // (a gate on the right for Nico)
   // the campground and the forest
   { kind: 'tent', x: 6000, y: 2260, color: '#F9A826' }, { kind: 'tent', x: 6250, y: 2230, color: '#3BB273' }, { kind: 'tent', x: 6480, y: 2280, color: '#5B8FD6' },
   { kind: 'campfire', x: 6250, y: 2420 }, { kind: 'log', x: 6150, y: 2470 }, { kind: 'log', x: 6350, y: 2470 },

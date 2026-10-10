@@ -25,7 +25,7 @@ export const TREASURE: { what: 'cash' | string; weight: number; cash?: [number, 
   { what: 'bottle', weight: 3 }, { what: 'oldkey', weight: 2.5 }, { what: 'watch', weight: 2 },
   { what: 'piratecoin', weight: 1.4 }, { what: 'ring', weight: 0.8 },
 ];
-export const DETECT = { buried: 4, range: 520, dig: 56, slowest: 1.3, fastest: 0.1 };   // px, px, beep gap in s
+export const DETECT = { buried: 4, range: 520, dig: 110, slowest: 1.3, fastest: 0.1 };   // (dig reach: Nico missed the button when it was 56)   // px, px, beep gap in s
 
 let seed = 41;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;

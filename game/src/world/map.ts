@@ -119,7 +119,7 @@ export const BUS_STOPS: [number, number][] = [[1800, ROADS_Y[1] - LANE], [2600, 
 
 /** Street furniture and bits of life, as data. Solid ones are added to SOLIDS. */
 export type PropKind = 'busstop' | 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone'
-  | 'umbrella' | 'towel' | 'sandcastle' | 'lifeguard' | 'palm' | 'lighthouse' | 'waterslide' | 'lounge' | 'hay' | 'fence' | 'tent' | 'campfire' | 'log' | 'rock';
+  | 'umbrella' | 'towel' | 'sandcastle' | 'lifeguard' | 'palm' | 'lighthouse' | 'waterslide' | 'lounge' | 'hay' | 'fence' | 'fencev' | 'tent' | 'campfire' | 'log' | 'rock';
 export interface Prop { kind: PropKind; x: number; y: number; color?: string; h?: number; stripe?: string; len?: number }
 export const PROPS: Prop[] = [
   // park: fountain, benches round the pond, flower beds, the ice cream cart
@@ -222,6 +222,7 @@ export function propSolid(p: Prop): Rect | null {
     case 'lounge': return { x: p.x - 22, y: p.y - 40, w: 44, d: 44 };
     case 'hay': return { x: p.x - 34, y: p.y - 22, w: 68, d: 24 };
     case 'fence': return { x: p.x, y: p.y - 8, w: p.len ?? 100, d: 10 };
+    case 'fencev': return { x: p.x - 6, y: p.y, w: 12, d: p.len ?? 100 };
     case 'tent': return { x: p.x - 70, y: p.y - 50, w: 140, d: 52 };
     case 'campfire': return { x: p.x - 26, y: p.y - 16, w: 52, d: 20 };
     case 'log': return { x: p.x - 46, y: p.y - 14, w: 92, d: 16 };

@@ -433,6 +433,12 @@ export function drawProp(p: Prop): Container {
       for (let k = x; k <= x + L; k += 70) g.roundRect(k - 5, y - 44, 10, 46, 3).fill('#FFFFFF').roundRect(k - 3, y - 42, 6, 42, 2).fill('#8A5A3B');
       break;
     }
+    case 'fencev': {   // a fence running down the screen: posts one above another, rails between
+      const L = p.len ?? 100;
+      for (let k = y; k <= y + L; k += 70) g.roundRect(x - 5, k - 44, 10, 46, 3).fill('#FFFFFF').roundRect(x - 3, k - 42, 6, 42, 2).fill('#8A5A3B');
+      g.rect(x - 3, y - 34, 6, L).fill('#FFFFFF').rect(x - 2, y - 33, 4, L - 2).fill('#B9895A');
+      break;
+    }
     case 'tent': {
       const col = p.color ?? '#F9A826';
       sh(72, 14);

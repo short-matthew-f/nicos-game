@@ -60,3 +60,18 @@ describe('town layout', () => {
     for (let y = PIER.y; y < PIER.y + PIER.d - 30; y += 60) expect(freeAt(PIER.x + PIER.w / 2, y, SOLIDS, WORLD), `pier at y ${y}`).toBe(true);
   });
 });
+
+import { Animals, PENS, inPen } from '../src/world/animals';
+describe('farm animals', () => {
+  it('stay inside their pens, even when chased (Nico: "they\'re roaming everywhere")', () => {
+    const z = new Animals();
+    for (const a of z.list) if (PENS[a.kind]) expect(inPen(a.kind, a.x, a.y), `${a.kind} starts in its pen`).toBe(true);
+    let t = 0;
+    for (let i = 0; i < 60 * 120; i++) {   // two minutes, with Nico running round the farm
+      t += 1 / 60;
+      const nico: [number, number] = [450 + Math.cos(t) * 400, 4300 + Math.sin(t * 1.3) * 300];
+      z.update(1 / 60, [nico]);
+      for (const a of z.list) if (PENS[a.kind]) expect(inPen(a.kind, a.x, a.y), `${a.kind} at ${a.x.toFixed(0)},${a.y.toFixed(0)} after ${t.toFixed(1)}s`).toBe(true);
+    }
+  });
+});

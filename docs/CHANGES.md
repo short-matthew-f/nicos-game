@@ -618,3 +618,11 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - leave halfway, one unit at a time;
   - Appraiser on the third unit;
   - a wanted radio shows under a door, its card says so, keep it.
+
+## 2026-10-10: farm animals stay in; easier digging
+- **Nico:** "the farm animals are roaming everywhere because they're not enclosed."
+  - The pasture now has fences on all four sides (a new `fencev` prop for the up-and-down sides), with a gate on the right for Nico.
+  - Cows stay inside the pasture and chickens inside the farmyard (`PENS` in `world/animals.ts`): wandering and running-away targets are kept inside the pen, and so is every step.
+  - The chicken homes that sat outside the farmyard were moved in.
+  - Test: two minutes of Nico chasing them round the farm, and every cow and chicken stays penned. Mutation-checked: without the pen rules, the test fails.
+- **Nico didn't notice the Dig button:** it only appeared within 56 px. Now it shows within 110 px (`DETECT.dig`), and the first time the meter fills on each treasure a hint pops up: "📡 It's right here! Tap ⛏️ Dig!"
