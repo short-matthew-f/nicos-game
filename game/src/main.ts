@@ -15,7 +15,7 @@ import { Pigeons, Clouds, Coins, COIN } from './world/life';
 import { loadArt, PersonView } from './rig/person';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
-import { chooseView, moveCircle, freeAt, WALK_SPEED } from './player';
+import { chooseView, moveCircle, freeAt, stepGait, GAIT_SCALE, WALK_SPEED } from './player';
 import { startUpdates, BUILD_ID } from './update';
 import { load, save as writeSave, VERSION, type Save } from './state';
 import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
@@ -28,8 +28,6 @@ import { drawCat, drawBubble } from './world/critters';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
-const AMP_RATE = 5;          // gait amplitude ramp (1/s)
-const CADENCE = 1.5;         // gait phase per second at full speed (rig walk = 1)
 const MY_CAR = { color: '#E0453A', stripe: '#FFFFFF' };   // Nico's car: red with a white stripe
 const HOME_DOOR = doorOf(BUILDINGS.find(b => b.id === 'home')!);
 const NICO_START = { x: HOME_DOOR[0] + 60, y: HOME_DOOR[1] + 40 };   // just outside his front door
@@ -306,7 +304,7 @@ async function main() {
       Object.assign(l.st, { crouch: 0 });
     }
     Object.assign(l.st, chooseView(l.w.vx, l.w.vy, l.st));
-    stepGait(l.st, Math.hypot(l.w.vx, l.w.vy) / WALK_SPEED, l.w.vy, dt);
+    stepGait(l.st, Math.hypot(l.w.vx, l.w.vy), l.w.vy, dt, GAIT_SCALE * l.view.height);   // (taller people take longer strides)
     l.view.pose(l.w.x, l.w.y, l.st);
   }
 
@@ -360,15 +358,7 @@ async function main() {
   applyZoom();
   app.renderer.on('resize', applyZoom);
 
-  function stepGait(st: PoseState, speed01: number, vy: number, dt: number) {
-    const target = Math.min(1, speed01 * 1.6);
-    st.amp += Math.max(-AMP_RATE * dt, Math.min(AMP_RATE * dt, target - st.amp));
-    const rate = CADENCE * Math.max(speed01, st.amp > 0.01 ? 0.35 : 0);
-    st.phase += rate * dt;
-    // front/back: planted foot cancels the body's screen-y motion (rig units per phase)
-    st.stride_y = rate > 0 ? (vy / rate) / 0.75 : 0;
-    if (st.amp < 0.01 && speed01 === 0) { st.amp = 0; st.phase = 0; }
-  }
+
 
   function addWalkers(n: number) {
     for (let i = 0; i < n; i++) {
@@ -438,7 +428,7 @@ async function main() {
       if (play) {
         nico.x = b.x; nico.y = b.y;
         Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, sit: b.sit, stride_y: 0 });
-        stepGait(nico.st, b.amp, 0, dt);
+        stepGait(nico.st, b.amp * 150, 0, dt);   // (climbing the ladder: a steady step)
         nico.view.pose(nico.x, nico.y, nico.st);
         nico.view.root.zIndex = b.z;
         nico.view.root.scale.y *= b.sy;
@@ -449,7 +439,7 @@ async function main() {
       const sp = Math.hypot(input.vx, input.vy);
       [nico.x, nico.y] = moveCircle(nico.x, nico.y, vx * dt, vy * dt, SOLIDS, WORLD);
       Object.assign(nico.st, chooseView(vx, vy, nico.st));
-      stepGait(nico.st, sp * fast, vy, dt);
+      stepGait(nico.st, sp * WALK_SPEED * fast, vy, dt);
       nico.view.pose(nico.x, nico.y, nico.st);
     } else if (mode === 'drive') {
       const prevH = car.h;
@@ -474,7 +464,7 @@ async function main() {
       if (nx === w.x && ny === w.y && (w.vx || w.vy)) w.t = 0;
       w.x = nx; w.y = ny;
       Object.assign(w.st, chooseView(w.vx, w.vy, w.st));
-      stepGait(w.st, Math.hypot(w.vx, w.vy) / WALK_SPEED, w.vy, dt);
+      stepGait(w.st, Math.hypot(w.vx, w.vy), w.vy, dt);
       w.view.pose(w.x, w.y, w.st);
     }
 

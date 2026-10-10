@@ -1,5 +1,5 @@
 // Player movement rules, kept free of rendering so they can be unit tested.
-import type { View } from './rig/pose';
+import { CYCLE, type PoseState, type View } from './rig/pose';
 import type { Rect } from './world/map';
 
 export const WALK_SPEED = 270;   // world px/s at full stick
@@ -46,4 +46,24 @@ export function freeAt(x: number, y: number, solids: Rect[], bounds: { w: number
 
 function hits(x: number, y: number, r: number, s: Rect): boolean {
   return x > s.x - r && x < s.x + s.w + r && y > s.y - r && y < s.y + s.d + r;
+}
+
+const AMP_RATE = 5;              // gait amplitude ramp (1/s)
+const IDLE_CADENCE = 0.5;        // phase/s while the legs settle after stopping
+export const GAIT_SCALE = 0.75;  // world px per rig unit (= rig/person RIG_SCALE)
+
+/** Walk cycle from actual speed (world px/s): faster means a longer stride (up to a run,
+ * amp 1.25) and quicker steps, with the cadence set so the planted foot keeps pace with
+ * the ground instead of sliding. A stance foot sweeps 2 x leg x sin(swing) per half cycle. */
+export function stepGait(st: PoseState, speedPx: number, vy: number, dt: number, scale = GAIT_SCALE): void {
+  const target = Math.min(1.25, speedPx / 220);
+  st.amp += Math.max(-AMP_RATE * dt, Math.min(AMP_RATE * dt, target - st.amp));
+  const stridePerPhase = 2 * 58 * scale * Math.sin(28 * Math.max(st.amp, 0.3) * Math.PI / 180) / (CYCLE / 2);
+  // 0.8: the leg swing is a sine, so the planted foot can't match the ground all the way
+  // through a step; measured (test/gait.test.ts), 0.8 of the "exact" cadence slides least
+  const rate = speedPx > 1 ? 0.8 * speedPx / stridePerPhase : st.amp > 0.01 ? IDLE_CADENCE : 0;
+  st.phase += rate * dt;
+  // front/back: planted foot cancels the body's screen-y motion (rig units per phase)
+  st.stride_y = rate > 0 ? (vy / rate) / scale : 0;
+  if (st.amp < 0.01 && speedPx <= 1) { st.amp = 0; st.phase = 0; }
 }

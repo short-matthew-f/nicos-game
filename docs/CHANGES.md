@@ -375,3 +375,8 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - Every frame rate so far was measured on the Mac. As insurance for the iPad: if it stays under 45 fps for 4 s, the game permanently drops the costly extras (characters' soft drop shadows and the cloud shadows). The white sticker outlines stay, so the style holds. The fps chip then reads "(lite)".
 - e2e 80: lite mode runs and is labelled.
 - **Not proven:** the automatic trigger. The Mac never drops under 45 fps, so the e2e forces it through a hook. The trigger itself is a 4-line threshold.
+
+## 2026-10-09 (overnight): walk cycle from real speed
+- `stepGait` moved to `player.ts` (testable) and now takes the real speed in px/s. A faster walk means a longer stride (amp up to 1.25, a jog) and quicker steps. Taller people (the grown-ups) take longer strides at the same pace. Before, the cadence was a fixed multiple of stick deflection, so boosted (lunch) walking and different heights didn't match the legs.
+- **Correction while measuring foot slide:** I expected the exact stride-matching cadence to stop the feet sliding. Measured, it slid *more* (0.46 of walking speed, against the old 0.36). With a sine leg swing the planted foot can't match the ground all the way through a step, and 0.8 of the "exact" cadence slides least (0.35–0.38 across speeds). So the remaining slide is part of this gait style; fixing it would need a stance phase in the rig. `test/gait.test.ts` keeps the slide under 0.4 of the walking speed at 120, 270 and boosted 365 px/s, and checks that faster means a longer stride and quicker steps, and that walking stops cleanly.
+- Vitest 181, e2e 80.
