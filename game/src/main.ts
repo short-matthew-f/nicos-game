@@ -6,6 +6,7 @@ import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, 
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
+import { FireScene } from './world/fire';
 import { Siren, sfx, audio } from './sound';
 import { Minimap } from './minimap';
 import { BallView, kick, roll, kickoff } from './world/ball';
@@ -77,8 +78,22 @@ async function main() {
   for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
+  // fire calls: when the alarm rings, a building near the truck's route catches fire (just
+  // smoke and flames in a front window) and the truck stops there to spray it out
+  const fireScene = new FireScene(); layer.addChild(fireScene.view);
+  const fireCandidates = BUILDINGS.filter(b => b.id !== 'home' && b.id !== 'fire').filter(b => {
+    const s = truck.nearestS(b.x + b.w / 2, b.y + b.d), [px, py] = truck.loop.at(s);
+    return Math.hypot(px - (b.x + b.w / 2), py - (b.y + b.d)) < 420;
+  });
+  let wasBurning = false;
+  truck.onAlarm = t => {
+    const b = fireCandidates[Math.floor(Math.random() * fireCandidates.length)];
+    if (!b) return;
+    t.stopAt = t.nearestS(b.x + b.w / 2, b.y + b.d);
+    fireScene.start(b);
+    toast(`🚒 Fire at the ${b.label ? b.label.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()) : 'house'}! Follow the fire truck!`);
+  };
   const siren = new Siren();
-  let wasOut = false;
 
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
@@ -195,7 +210,7 @@ async function main() {
   const spots: Spot[] = [
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
     { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
-    { id: 'swing', x: (seatX(0) + seatX(1)) / 2, y: SWINGS.y + 25, r: 110, label: 'Swing', run: startSwing },
+    { id: 'swing', x: (seatX(0) + seatX(1)) / 2, y: SWINGS.y + 25, r: 110, label: 'Swing', run: startSwing, priority: 0.6 },   // even with Primo on the other swing
     ...PROPS.filter(p => p.kind === 'bench').map((p, i) => ({ id: `bench${i}`, x: p.x, y: p.y + 30, r: 70, label: 'Sit', run: () => sitOnBench(p.x, p.y) })),
     ...PLACES.map(p => {
       const [x, y] = doorOf(BUILDINGS.find(b => b.id === p.building)!);
@@ -233,7 +248,7 @@ async function main() {
   }
   for (const l of locals) {
     spots.push({
-      id: l.t.who, x: 0, y: 0, r: 90,
+      id: l.t.who, x: 0, y: 0, r: 90, priority: 0.5,   // talking to someone beats the door they're standing at
       label: () => finishing(l.t.who) ? `Finish job ✔` : offers(l.t.who) ? `Talk to ${l.t.name} ❗` : `Say hi to ${l.t.name}`,
       run: () => talkTo(l),
     });
@@ -352,6 +367,9 @@ async function main() {
   function clearWalkers() { for (const w of walkers) { w.view.root.destroy({ children: true }); } walkers.length = 0; updateCount(); }
   const peopleEl = document.getElementById('people')!;
   function updateCount() { const n = walkers.length + 1; peopleEl.textContent = `${n} ${n === 1 ? 'person' : 'people'}`; }
+  // the stress-test buttons only show with ?debug in the address
+  const debug = new URLSearchParams(location.search).has('debug');
+  for (const id of ['more', 'fewer']) document.getElementById(id)!.hidden = !debug;
   document.getElementById('more')!.addEventListener('click', () => addWalkers(10));
   document.getElementById('fewer')!.addEventListener('click', clearWalkers);
   const hint = document.getElementById('hint')!;
@@ -468,11 +486,11 @@ async function main() {
       const [x, y] = c.pos, h = c.loop.heading(c.s);
       return circles(x, y, h).map(([cx, cy]) => [cx, cy]) as [number, number][];
     })]);
-    if (truckOut && !wasOut) {
-      const [tx, ty] = truck.pos;
-      if (Math.hypot(tx - (mode === 'drive' ? car.x : nico.x), ty - (mode === 'drive' ? car.y : nico.y)) < 1600) toast('🚒 The fire alarm is ringing!');
-    }
-    wasOut = truckOut;
+    // the fire: water from the truck while it's parked there spraying
+    const spraying = truck.out && truck.stopAt !== null && truck.speed === 0 && truck.spraying > 0;
+    fireScene.update(dt, spraying ? [truck.pos[0], truck.pos[1] - 70] : null);
+    if (wasBurning && !fireScene.burning) toast('🔥 The fire is out! Hooray for the firefighters!');
+    wasBurning = fireScene.burning;
 
     // action button
     spots[0].x = car.x; spots[0].y = car.y;
@@ -516,6 +534,7 @@ async function main() {
     minimap.update([
       ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
+      ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
       ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
       ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
       { x: mode === 'drive' ? car.x : nico.x, y: mode === 'drive' ? car.y : nico.y, color: '#F08A3C', r: 5, ring: true },
@@ -529,7 +548,8 @@ async function main() {
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
-      truck: { out: truck.out, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
+      fire: fireScene.burning ? fireScene.building!.id : null,
+      truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },
       cars: cars.map(c => ({ speed: c.speed, pos: c.pos, heading: c.loop.heading(c.s) })), fps, people: walkers.length + 1, zoom,

@@ -55,8 +55,27 @@ export class FireTruck {
     return [-0.38, -0.13, 0.13, 0.38].map(f => f * TRUCK.len).map(a => [x + Math.cos(h) * a, y + Math.sin(h) * a]);
   }
 
-  /** Ring the alarm now (also used by tests). */
-  alarm() { if (!this.out) { this.out = true; this.s = 0; this.speed = 0; } }
+  /** Where along its run it stops to put out a fire (null: just a lap), and for how long
+   * it's been spraying. */
+  stopAt: number | null = null;
+  spraying = 0;
+  static readonly SPRAY = 10;   // seconds to put a fire out
+
+  /** Ring the alarm now (also used by tests): optionally with a fire to stop at. */
+  alarm(stopAt: number | null = null) {
+    if (this.out) return;
+    this.out = true; this.s = 0; this.speed = 0; this.stopAt = stopAt; this.spraying = 0;
+    this.onAlarm(this);
+  }
+  /** Set by the game: pick a fire to go to when the alarm rings by itself. */
+  onAlarm: (t: FireTruck) => void = () => {};
+
+  /** The point on its run nearest to (x, y): where to stop for a fire there. */
+  nearestS(x: number, y: number): number {
+    let best = 0, bd = Infinity;
+    for (let s = 0; s < this.loop.length; s += 10) { const [px, py] = this.loop.at(s), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = s; } }
+    return best;
+  }
 
   /** `yieldTo`: things in front to stop for. Cars already stopped for the truck are left
    * out by the caller, so the two never wait for each other. Returns true while out. */
@@ -82,10 +101,18 @@ export class FireTruck {
     this.stuck = byMine && this.speed < 5 ? this.stuck + dt : 0;
     if (this.stuck > SQUEEZE.after) { this.squeeze = SQUEEZE.for; this.stuck = 0; }
     const top = this.squeeze > 0 ? SQUEEZE.speed : TRUCK.max;
-    this.speed = blocked ? Math.max(0, this.speed - TRUCK.brake * dt) : Math.min(top, this.speed + TRUCK.acc * dt);
+    // pull up at the fire: brake to a stop at stopAt, spray, then carry on
+    let atFire = false;
+    if (this.stopAt !== null) {
+      const left = this.stopAt - this.s;
+      if (left <= 8) { atFire = true; this.speed = 0; this.spraying += dt; if (this.spraying >= FireTruck.SPRAY) this.stopAt = null; }
+      else if (left < this.speed * this.speed / (2 * TRUCK.brake) + 4) blocked = true;
+    }
+    if (!atFire) this.speed = blocked ? Math.max(0, this.speed - TRUCK.brake * dt) : Math.min(top, this.speed + TRUCK.acc * dt);
     this.s += this.speed * dt;
+    if (this.stopAt !== null && this.s > this.stopAt) this.s = this.stopAt;
     if (this.s >= this.loop.length) {
-      this.out = false; this.s = 0; this.speed = 0;
+      this.out = false; this.s = 0; this.speed = 0; this.stopAt = null;
       this.wait = TRUCK.every[0] + Math.random() * (TRUCK.every[1] - TRUCK.every[0]);
     }
     this.place();

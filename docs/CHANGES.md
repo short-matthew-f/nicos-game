@@ -337,3 +337,13 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Cloud shadows:** six soft shadows drift slowly across the whole town.
 - **Hidden coins:** 15 gold coins spinning in corners and out-of-the-way spots (world edges, behind buildings). Walking or driving over one gives +$1 and a toast, and it comes back after 3 minutes. A reason to explore, and a second way to earn.
 - **Tests:** Vitest 176 (every coin and flock is reachable and off the road; caught a coin under a tree and one by a lamp). e2e 76 (coin pickup once only, mute button).
+
+## 2026-10-09 (overnight): fire calls; tidier top bar; spot priorities
+- **Fire calls:** when the alarm rings, a building near the truck's route (not Nico's home or the fire station) catches fire. Flames and smoke pour from a front window where you can see them from the street, and a toast says "🚒 Fire at the School! Follow the fire truck!". The minimap marks the fire, flashing. The truck brakes to a stop in the lane beside it and sprays an arc of water for 10 s until the fire is out ("🔥 The fire is out!"), then finishes its lap home.
+  - **Corrections:**
+    - The truck stopped 2 px short of its mark and waited forever: the stop window was 1 px, but braking held it 4 px out. The window is now 8 px, and a unit test drives it to a fire, sprays and comes home.
+    - The fire was fading out a moment after the truck stopped spraying, so it burned forever. It now goes out in 8 s of spraying.
+    - The first version put the flames on the roof, which is off screen from the street.
+- **Spot priorities:** James waiting at Burger Barn's door, or Mr. Brooks at the hospital's, lost the tie to the door's "Go in". So you couldn't say hi, and Mr. Brooks couldn't pay for the package job. The e2e caught both once the fire call made the run longer. Order now: job step (1) > swing (0.6, even with Primo on the other one) > people (0.5) > doors and everything else (0).
+- The +10 people / Clear stress-test buttons only show with `?debug` in the address (the e2e uses it). The frame-rate counter stays, for the iPad report.
+- **Tests:** Vitest 177. e2e 77: a building is on fire with a toast, the truck stops there and sprays, then goes home.

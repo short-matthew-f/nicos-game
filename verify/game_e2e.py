@@ -15,7 +15,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(url); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)
+    pg.goto(url + ('&' if '?' in url else '?') + 'debug'); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)   # ?debug: the stress-test buttons
     pg.wait_for_timeout(800)
     G = lambda: pg.evaluate('()=>JSON.parse(JSON.stringify(window.__game))')
     # place Nico relative to a named spot (doors, car, slide...), so map changes don't break checks
@@ -156,11 +156,15 @@ with sync_playwright() as p:
     check(not G()['truck']['out'], 'the fire truck waits in the station at first')
     pg.evaluate('()=>window.__game.alarm()'); pg.wait_for_timeout(1800); g = G()
     check(g['truck']['out'] and g['truck']['speed'] > 100 and g['truck']['pos'][1] > G()['spots']['fire']['y'] - 20, f"on the alarm it drives out of the station ({g['truck']})")
-    check('fire alarm' in pg.locator('#toast').inner_text(), 'a toast says the alarm is ringing (Nico is nearby)')
+    check('Fire at the' in pg.locator('#toast').inner_text() and G()['fire'], f"a building is on fire and a toast says where ({G()['fire']})")
+    try:
+        pg.wait_for_function('window.__game.truck.spraying > 1', timeout=45000); sprayed = True
+    except Exception: sprayed = False
+    check(sprayed and G()['truck']['speed'] == 0, 'the truck stops at the fire and sprays it')
     try:
         pg.wait_for_function('!window.__game.truck.out', timeout=60000); back = True
     except Exception: back = False
-    check(back, f"it finishes its lap and goes home within a minute ({G()['truck']})")
+    check(back, f"it puts out the fire, finishes its lap and goes home within a minute ({G()['truck']})")
     # James and Primo walk their routines; walk up to say hi; Primo's swing is taken
     t0 = {t['who']: t for t in G()['townsfolk']}
     check({'james', 'primo'} <= set(t0) and len(t0) >= 8 and all(t['art'] for t in t0.values()), f"James, Primo and the townspeople are in town with their own art ({list(t0)})")

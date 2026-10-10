@@ -59,3 +59,18 @@ describe('fire truck', () => {
     expect(maxStill).toBeLessThan(6);
   });
 });
+
+describe('fire calls', () => {
+  it('drives to the fire, stops there, sprays it out, then goes home', () => {
+    const t = new FireTruck(); const stop = 2500;
+    t.alarm(stop);
+    let secs = 0, stoppedAt = -1, sprayed = 0;
+    while (t.out && secs < 200) {
+      t.update(1 / 30, []); secs += 1 / 30;
+      if (t.speed === 0 && t.stopAt !== null) { stoppedAt = t.s; sprayed = t.spraying; }
+    }
+    expect(Math.abs(stoppedAt - stop)).toBeLessThan(10);
+    expect(sprayed).toBeGreaterThan(FireTruck.SPRAY - 0.2);
+    expect(t.out).toBe(false);
+  });
+});

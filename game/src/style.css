@@ -82,3 +82,4 @@ html, body {
 }
 #job { border: 0; font: inherit; font-size: 16px; font-weight: 800; color: var(--navy); background: #FFF4DA; pointer-events: auto; touch-action: manipulation; max-width: 46vw; text-align: left; box-shadow: 0 3px 0 rgba(43,63,85,.2); }
 #job[hidden] { display: none; }
+#buttons button[hidden] { display: none; }
