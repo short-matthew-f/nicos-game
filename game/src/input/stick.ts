@@ -18,6 +18,10 @@ export class Input {
   private touch = { id: -1, cx: 0, cy: 0, x: 0, y: 0 };
   private base: HTMLElement; private knob: HTMLElement;
 
+  /** A touch that lands where this says true goes to `onTap` instead of starting the stick. */
+  reserved: (x: number, y: number) => boolean = () => false;
+  onTap: (x: number, y: number) => void = () => {};
+
   constructor(surface: HTMLElement) {
     this.base = document.createElement('div'); this.base.className = 'stick-base';
     this.knob = document.createElement('div'); this.knob.className = 'stick-knob';
@@ -25,6 +29,7 @@ export class Input {
 
     surface.addEventListener('pointerdown', e => {
       if (this.touch.id !== -1) return;
+      if (this.reserved(e.clientX, e.clientY)) { this.onTap(e.clientX, e.clientY); e.preventDefault(); return; }
       surface.setPointerCapture(e.pointerId);
       this.touch = { id: e.pointerId, cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY };
       this.base.style.display = 'block';

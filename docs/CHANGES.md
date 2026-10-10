@@ -360,3 +360,7 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - chimneys on the houses.
 - Storage units have a row of numbered orange roll-up doors (with the office door kept), and the garage has one big roll-up door for the car.
 - Vitest 177, e2e 77.
+
+## 2026-10-09 (overnight): the big map
+- **Tap the minimap** for a big map of the whole town: every building named, the playground, park and soccer field labelled, live dots (you in orange, your job in gold, friends, the fire truck, a fire). Tap anywhere to close. A touch on the minimap goes to the map instead of starting the thumbstick (`Input.reserved`/`onTap`). More minimap emoji: 🍦 🔧 📦.
+- e2e 79: the map opens without moving Nico, and a tap closes it.

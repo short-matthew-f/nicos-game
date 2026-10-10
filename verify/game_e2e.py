@@ -238,6 +238,12 @@ with sync_playwright() as p:
     pg.evaluate('()=>window.__game.place(1700, 600)'); pg.evaluate('()=>window.__game.place(1520, 700)'); pg.wait_for_timeout(250)
     check(G()['money'] == m0 + 1, 'the same coin can\'t be picked up twice')
     check(pg.locator('#mute').is_visible(), 'there is a sound on/off button')
+    # the big map: tap the minimap to open it (it doesn't move Nico), tap again to close
+    mm = G()['minimapAt']; x0 = G()['nico']['x']
+    pg.mouse.click(mm['x'], mm['y']); pg.wait_for_timeout(300)
+    check(G()['bigMap'] and abs(G()['nico']['x'] - x0) < 1, 'tapping the minimap opens the big map without moving Nico')
+    pg.mouse.click(W * 0.6, H * 0.5); pg.wait_for_timeout(200)
+    check(not G()['bigMap'], 'a tap closes it')
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

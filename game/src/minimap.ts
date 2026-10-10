@@ -10,7 +10,7 @@ export class Minimap {
   private dots = new Graphics();
   readonly w: number; readonly h: number; private s: number;
 
-  constructor(width = 170) {
+  constructor(width = 170, labels = false) {
     this.s = width / WORLD.w; this.w = width; this.h = WORLD.h * this.s;
     const s = this.s, g = new Graphics();
     g.roundRect(-6, -6, this.w + 12, this.h + 12, 12).fill({ color: '#FFFFFF', alpha: 0.92 });
@@ -21,10 +21,21 @@ export class Minimap {
     for (const b of BUILDINGS) g.roundRect(b.x * s, b.y * s, b.w * s, b.d * s, 2).fill(b.roof);
     this.view.addChild(g);
     // a few labels for the places you'll look for
-    for (const [id, label] of [['burger', '🍔'], ['fire', '🚒'], ['school', '🏫'], ['hospital', '🏥'], ['home', '🏠'], ['toys', '🧸']] as const) {
+    for (const [id, label] of [['burger', '🍔'], ['fire', '🚒'], ['school', '🏫'], ['hospital', '🏥'], ['home', '🏠'], ['toys', '🧸'], ['icecream', '🍦'], ['parts', '🔧'], ['storage', '📦']] as const) {
       const b = BUILDINGS.find(b => b.id === id); if (!b) continue;
       const t = new Text({ text: label, style: { fontSize: 13 } });
       t.anchor.set(0.5); t.position.set((b.x + b.w / 2) * s, (b.y + b.d / 2) * s);
+      this.view.addChild(t);
+    }
+    // the big map names every place
+    if (labels) for (const b of BUILDINGS) if (b.label) {
+      const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 13, fill: '#2B3F55', stroke: { color: '#FFFFFF', width: 4 } } });
+      t.anchor.set(0.5, 0); t.position.set((b.x + b.w / 2) * s, (b.y + b.d) * s + 4);
+      this.view.addChild(t);
+    }
+    if (labels) for (const l of LOTS) if (['playground', 'park', 'field'].includes(l.id)) {
+      const t = new Text({ text: { playground: 'PLAYGROUND', park: 'PARK', field: 'SOCCER FIELD' }[l.id]!, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '700', fontSize: 11, fill: '#3E6B35' } });
+      t.anchor.set(0.5); t.position.set((l.x + l.w / 2) * s, (l.y + l.d / 2) * s);
       this.view.addChild(t);
     }
     this.view.addChild(this.dots);

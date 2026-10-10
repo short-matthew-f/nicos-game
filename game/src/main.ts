@@ -1,4 +1,4 @@
-import { Application, Container, CullerPlugin, extensions } from 'pixi.js';
+import { Application, Container, CullerPlugin, Graphics, Text, extensions } from 'pixi.js';
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
@@ -55,6 +55,21 @@ async function main() {
   app.stage.addChild(world);
   const minimap = new Minimap(window.innerWidth < 640 ? 130 : 170);
   app.stage.addChild(minimap.view);
+  // tap the minimap for the big map; tap again to close it
+  const bigMap = new Container(); bigMap.visible = false;
+  const bigBack = new Graphics(); bigMap.addChild(bigBack);
+  const bigNote = new Text({ text: 'Tap anywhere to close  ·  🟠 you  ·  🟡 your job', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 16, fill: '#FFFFFF' } });
+  bigNote.anchor.set(0.5, 1);
+  let big: Minimap | null = null;
+  app.stage.addChild(bigMap);
+  function openBigMap() {
+    const w = Math.min(app.screen.width - 48, (app.screen.height - 48) * WORLD.w / WORLD.h);
+    if (!big || Math.abs(big.w - w) > 1) { if (big) big.view.destroy({ children: true }); big = new Minimap(w, true); bigMap.addChild(big.view); }
+    bigBack.clear().rect(0, 0, app.screen.width, app.screen.height).fill({ color: '#2B3F55', alpha: 0.45 });
+    big.view.position.set((app.screen.width - big.w) / 2, (app.screen.height - big.h) / 2);
+    bigMap.addChild(bigNote); bigNote.position.set(app.screen.width / 2, app.screen.height - 8);
+    bigMap.visible = true;
+  }
   const { seats } = drawWorld(layer);
 
   // parked cars (the ambulance and friends): static car sprites
@@ -328,6 +343,12 @@ async function main() {
   muteEl.addEventListener('click', () => { audio.setMuted(!audio.muted); showMute(); if (!audio.muted) sfx.tap(); });
   Object.assign(game, { build: BUILD_ID, checkUpdate: () => updater.check(true) });
   const input = new Input(host);
+  input.reserved = (x, y) => {
+    if (bigMap.visible) return true;
+    const b = minimap.view.getBounds();
+    return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+  };
+  input.onTap = () => { if (bigMap.visible) bigMap.visible = false; else openBigMap(); };
 
   let overview = false;
   let zoom = 1, viewH = mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
@@ -531,7 +552,7 @@ async function main() {
     const mr = moneyEl.getBoundingClientRect();
     minimap.view.position.set(mr.left + 6, mr.bottom + 16);
     const flash = Math.floor(performance.now() / 250) % 2 === 0;
-    minimap.update([
+    const mapDots = ([
       ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
       ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
@@ -539,6 +560,8 @@ async function main() {
       ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
       { x: mode === 'drive' ? car.x : nico.x, y: mode === 'drive' ? car.y : nico.y, color: '#F08A3C', r: 5, ring: true },
     ]);
+    minimap.update(mapDots);
+    if (bigMap.visible && big) big.update(mapDots.map(d => ({ ...d, r: (d.r ?? 4) * 1.6 })));
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
@@ -546,6 +569,7 @@ async function main() {
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
+      bigMap: bigMap.visible, minimapAt: (() => { const b = minimap.view.getBounds(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })(),
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
