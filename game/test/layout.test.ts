@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILDINGS, TREES, PROPS, LOTS, POND, SLIDE, SWINGS, GOALS, FIELD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, WORLD, SOLIDS, doorOf, propSolid, type Rect } from '../src/world/map';
 import { freeAt } from '../src/player';
+import { COIN_SPOTS, FLOCKS } from '../src/world/life';
 
 const band = ROAD_W / 2 + SIDEWALK;   // road plus sidewalk, either side of a centre line
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
@@ -41,5 +42,10 @@ describe('town layout', () => {
       expect(r.x >= sand.x && r.x + r.w <= sand.x + sand.w && r.y >= sand.y && r.y + r.d <= sand.y + sand.d).toBe(true);
     expect(POND.x >= park.x && POND.x + POND.w <= park.x + park.w && POND.y >= park.y && POND.y + POND.d <= park.y + park.d).toBe(true);
     for (const g of GOALS) expect(g.x > FIELD.x && g.x < FIELD.x + FIELD.w).toBe(true);
+  });
+  it('every coin and pigeon flock is somewhere Nico can reach', () => {
+    for (const [x, y] of COIN_SPOTS) expect(freeAt(x, y, SOLIDS, WORLD), `coin ${x},${y}`).toBe(true);
+    const onRoad = (x: number, y: number) => ROADS_X.some(r => Math.abs(x - r) < ROAD_W / 2 + 20) || ROADS_Y.some(r => Math.abs(y - r) < ROAD_W / 2 + 20);
+    for (const [x, y] of FLOCKS) expect(freeAt(x, y, SOLIDS, WORLD) && !onRoad(x, y), `pigeons ${x},${y}`).toBe(true);   // sidewalks are fine
   });
 });

@@ -44,6 +44,8 @@ export class Car {
   speed = MAX;
   blockedBy: string | null = null;   // tag of what it's stopped for, if anything
   private stuck = 0;                 // s spent waiting on Nico's car
+  waitedOnNico = 0;                  // s spent stopped for Nico or his car (for honking)
+  honked = 0;                        // s since its last honk
   private squeeze = 0;               // s left squeezing past it (it's been parked in the way too long)
   constructor(readonly loop: Loop, public s: number, color: string, taxi = false) {
     ({ view: this.view, turn: this.turn } = carSprite(color, taxi));
@@ -69,6 +71,8 @@ export class Car {
     }
     // waiting on Nico's car for ages (he parked or crashed in the lane): squeeze past slowly
     this.stuck = this.blockedBy === 'mine' && this.speed < 5 ? this.stuck + dt : 0;
+    this.waitedOnNico = (this.blockedBy === 'mine' || this.blockedBy === 'nico') && this.speed < 5 ? this.waitedOnNico + dt : 0;
+    this.honked += dt;
     if (this.stuck > SQUEEZE.after) { this.squeeze = SQUEEZE.for; this.stuck = 0; }
     const top = this.squeeze > 0 ? SQUEEZE.speed : MAX;
     this.speed = blocked ? Math.max(0, this.speed - BRAKE * dt) : Math.min(top, this.speed + ACC * dt);

@@ -227,6 +227,13 @@ with sync_playwright() as p:
     check(G()['money'] == m0 + 6 and G()['job'] is None and not pg.locator('#job').is_visible(), f"paid $6 and the job is done ({m0} -> {G()['money']})")
     near('mrbrooks')
     check('❗' not in pg.locator('#action').inner_text(), 'no new job from him straight away')
+    # hidden coins: walk over one for $1; it's gone until it respawns
+    c0, m0 = G()['coins'], G()['money']
+    pg.evaluate('()=>window.__game.place(1520, 700)'); pg.wait_for_timeout(250)
+    check(G()['money'] == m0 + 1 and G()['coins'] == c0 - 1, f"walking over a coin picks it up (+$1) ({m0} -> {G()['money']})")
+    pg.evaluate('()=>window.__game.place(1700, 600)'); pg.evaluate('()=>window.__game.place(1520, 700)'); pg.wait_for_timeout(250)
+    check(G()['money'] == m0 + 1, 'the same coin can\'t be picked up twice')
+    check(pg.locator('#mute').is_visible(), 'there is a sound on/off button')
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

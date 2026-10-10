@@ -2,14 +2,15 @@ import { Application, Container, CullerPlugin, extensions } from 'pixi.js';
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, doorOf } from './world/map';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
-import { Siren } from './sound';
+import { Siren, sfx, audio } from './sound';
 import { Minimap } from './minimap';
 import { BallView, kick, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
+import { Pigeons, Clouds, Coins, COIN } from './world/life';
 import { loadArt, PersonView } from './rig/person';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
@@ -67,7 +68,12 @@ async function main() {
   const ball = kickoff(), ballView = new BallView();
   layer.addChild(ballView.root);
   let goalReset = 0; const score = { left: 0, right: 0 };
+  const pigeons = new Pigeons(); for (const v of pigeons.views) layer.addChild(v);
+  pigeons.onScatter = () => sfx.flap();
+  const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
+  const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   const ducks = new Ducks();
+  let quackIn = 2;
   for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
@@ -212,7 +218,7 @@ async function main() {
   function payJob() {
     if (!job) return;
     const j = job.job, name = locals.find(l => l.t.who === j.giver)?.t.name ?? '';
-    state.money += j.reward; showMoney(); persist();
+    state.money += j.reward; showMoney(); persist(); sfx.coin();
     toast(`${name}: “${j.thanks}” +$${j.reward}`);
     jobWait[j.id] = j.cooldown; job = null;
   }
@@ -301,6 +307,10 @@ async function main() {
   for (const c of layer.children) c.cullable = true;   // everything placed so far
   const updater = startUpdates(persist);
   document.getElementById('check-update')!.addEventListener('click', () => updater.check(true));
+  const muteEl = document.getElementById('mute')!;
+  const showMute = () => { muteEl.textContent = audio.muted ? '🔇' : '🔊'; };
+  showMute();
+  muteEl.addEventListener('click', () => { audio.setMuted(!audio.muted); showMute(); if (!audio.muted) sfx.tap(); });
   Object.assign(game, { build: BUILD_ID, checkUpdate: () => updater.check(true) });
   const input = new Input(host);
 
@@ -424,23 +434,33 @@ async function main() {
     // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
     if (goalReset > 0) { goalReset -= dt; if (goalReset <= 0) Object.assign(ball, kickoff()); }
     else {
-      if (mode === 'walk') kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast);
-      if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) break;
+      if (mode === 'walk' && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
+      if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) { sfx.kick(); break; }
       for (const l of locals) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
       const g = roll(ball, dt, SOLIDS, WORLD);
       if (g) {
         if (g < 0) score.right++; else score.left++;
-        toast(`⚽ GOAL! ${score.left} – ${score.right}`);
+        toast(`⚽ GOAL! ${score.left} – ${score.right}`); sfx.goal();
         goalReset = 1.6;
       }
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
+    clouds.update(dt);
+    const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y], ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
+    pigeons.update(dt, movers);
+    const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : [[nico.x, nico.y]]);
+    if (got) { state.money += got * COIN.value; showMoney(); persist(); sfx.coin(); toast(`🪙 Found a coin! +$${got * COIN.value}`); }
+    // quacks when Nico's near the pond; honks from cars he's been holding up
+    const me: [number, number] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y];
+    quackIn -= dt;
+    if (quackIn <= 0) { quackIn = 3 + Math.random() * 6; if (Math.hypot(me[0] - (POND.x + POND.w / 2), me[1] - (POND.y + POND.d / 2)) < 420) sfx.quack(); }
+    for (const c of cars) if (c.waitedOnNico > 1.2 && c.honked > 4 && Math.hypot(c.pos[0] - me[0], c.pos[1] - me[1]) < 700) { sfx.honk(); c.honked = 0; }
 
     // traffic brakes for Nico on foot, and for every part of his car
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
-    if (mode !== 'drive') mine.push([nico.x, nico.y]);
+    if (mode !== 'drive') mine.push([nico.x, nico.y, 'nico']);
     for (const l of locals) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
@@ -505,7 +525,7 @@ async function main() {
     Object.assign(game, {
       townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, art: l.view.artLoaded() })),
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
-      ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score },
+      ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

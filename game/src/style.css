@@ -56,7 +56,7 @@ html, body {
 }
 .card button.primary { background: #F9A826; }
 .card button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(43,63,85,.25); }
-#check-update { font-size: 22px; min-width: 48px; }
+#check-update, #mute { font-size: 22px; min-width: 48px; }
 #left { display: flex; gap: 8px; align-items: flex-start; }
 .chip { background: rgba(255,255,255,.85); border-radius: 12px; padding: 8px 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #money { font-size: 22px; font-weight: 800; padding: 6px 14px; color: #2E7D4F; }

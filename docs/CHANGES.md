@@ -330,3 +330,10 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - Vitest 175: every job's giver exists and it pays; every place a job sends you is walkable (caught a cat spot inside a park bench); steps run in order; several-place steps pick one.
   - e2e 73: the ❗ offer, accepting, the chip, each step offered at its place, Finish job, paid $6, no new job straight away.
   - Mutation: no cooldown went red.
+
+## 2026-10-09 (overnight): sounds and little bits of life
+- **Sound** (`sound.ts`): all synthesised with WebAudio, no files. There's a ball kick, a coin, a goal fanfare, quacks now and then near the pond, wing flaps, a honk from cars Nico has held up for more than 1.2 s (on foot or in his car, at most every 4 s per car, only nearby), and the siren. A 🔊/🔇 button mutes everything and is remembered on the device.
+- **Pigeons** (8 flocks of 4): they peck and hop. When Nico, a townsperson or a car comes within 150 px they flap off, fading as they climb, and come back about 20 s later.
+- **Cloud shadows:** six soft shadows drift slowly across the whole town.
+- **Hidden coins:** 15 gold coins spinning in corners and out-of-the-way spots (world edges, behind buildings). Walking or driving over one gives +$1 and a toast, and it comes back after 3 minutes. A reason to explore, and a second way to earn.
+- **Tests:** Vitest 176 (every coin and flock is reachable and off the road; caught a coin under a tree and one by a lamp). e2e 76 (coin pickup once only, mute button).
