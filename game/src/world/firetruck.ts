@@ -3,14 +3,14 @@
 import { Container, Graphics } from 'pixi.js';
 import { Loop, roundCorners } from './path';
 import { fireRoute } from './map';
-import { NAVY } from './draw';
+import { NAVY, BAND as B } from './draw';
 import { SQUEEZE } from './cars';
 
 const S = 1.4;   // drawn at 1.4x its base art (160 x 64)
-export const TRUCK = { max: 330, acc: 240, brake: 760, len: 160 * S, wid: 64 * S, firstRun: 25, every: [70, 130] as [number, number] };
+export const TRUCK = { max: 330, acc: 240, brake: 760, len: 160 * S, wid: 64 * S, firstRun: 120, every: [300, 600] as [number, number] };   // (Nico: fires came too often)
 
 function truckArt(): { body: Container; lights: [Graphics, Graphics] } {
-  const L = 160, W = 64, B = 7;
+  const L = 160, W = 64;
   const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 14 * S + B).fill('#FFFFFF');
   const g = new Graphics();
   for (const x of [-52, -14, 44]) for (const y of [-W / 2 - 3, W / 2 - 7]) g.roundRect(x - 11, y, 22, 10, 4).fill('#2C3E52');

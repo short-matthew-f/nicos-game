@@ -11,7 +11,7 @@ interface ArtMeta { res: number; height?: number; views: Record<View, PartMeta[]
 export type Who = string;   // a folder in art/: 'nico', 'james', 'primo', townspeople...
 
 export const RIG_SCALE = 0.75;   // world px per rig unit (Nico ~ 132 px tall)
-export const OUTLINE = 6;        // rig units, matches the SVG sticker band
+export const OUTLINE = 3;        // rig units (was 6, the SVG sticker band; Nico wanted less white)
 export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 
 const arts = new Map<Who, ArtMeta>();

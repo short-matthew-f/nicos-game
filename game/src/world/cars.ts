@@ -2,7 +2,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { Loop, roundCorners } from './path';
 import { carLoops, BUS_STOPS } from './map';
-import { NAVY } from './draw';
+import { NAVY, BAND as B } from './draw';
 import { CAR, CAR_SCALE, circles } from '../drive';
 
 const MAX = 250, ACC = 320, BRAKE = 680, GAP = CAR.len * 1.7;
@@ -14,7 +14,7 @@ const COLORS = ['#F9A826', '#D77B72', '#5FAFA5', '#5B8FD6', '#E8B64A', '#9B7BC8'
 function carArt(color: string, taxi: boolean, stripe?: string): Container {
   // top-down, pointing +x; base art 112 x 56 drawn at CAR_SCALE, with the white band kept
   // at the same width as everything else's
-  const L = 112, W = 56, B = 7, S = CAR_SCALE;
+  const L = 112, W = 56, S = CAR_SCALE;
   const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 18 * S + B).fill('#FFFFFF');
   const g = new Graphics(); g.scale.set(S);
   for (const [x, y] of [[-30, -W / 2 - 3], [26, -W / 2 - 3], [-30, W / 2 - 7], [26, W / 2 - 7]]) g.roundRect(x - 10, y, 20, 10, 4).fill('#2C3E52');
@@ -30,7 +30,7 @@ function carArt(color: string, taxi: boolean, stripe?: string): Container {
 
 /** The school bus: long and yellow, rows of windows down both sides. Base art 150 x 62. */
 function busArt(): Container {
-  const L = 150, W = 62, B = 7, S = CAR_SCALE;
+  const L = 150, W = 62, S = CAR_SCALE;
   const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 12 * S + B).fill('#FFFFFF');
   const g = new Graphics(); g.scale.set(S);
   for (const x of [-48, 36, 54]) for (const y of [-W / 2 - 3, W / 2 - 7]) g.roundRect(x - 10, y, 20, 10, 4).fill('#2C3E52');

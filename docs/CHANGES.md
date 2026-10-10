@@ -504,3 +504,11 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - unlocks come one at a time;
   - the robot's test can be passed and failed (a bump, an edge, stopping short);
   - e2e builds the robot (a wrong order first), fails a program, fixes it, passes, and sells the robot (131 checks).
+
+## 2026-10-10: thinner sticker edges; fewer fires
+- **Nico:** "the white area around the stickers should be reduced quite a bit."
+  - The world's edge is now one constant, `BAND = 3` px in `world/draw.ts` (was 7). Cars, the fire truck, the ball and the toy-shop window use it instead of their own copies of 7.
+  - The characters' outline is `OUTLINE = 3` rig units (was 6). Small props already had 3–5 px.
+- **Nico:** "there is maybe a fire too often."
+  - The first alarm now comes after 2 minutes (was 25 s), so a restart doesn't bring an instant fire.
+  - After that, alarms come every 5–10 minutes (was 70–130 s).

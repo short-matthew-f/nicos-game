@@ -2,6 +2,7 @@
 // for each sale, up to three), so the town shows what he's made.
 import { Container, Graphics, Text } from 'pixi.js';
 import { bld } from './map';
+import { BAND } from './draw';
 
 const CAR_COLORS = ['#E0453A', '#2F7FD8', '#F2B632'];
 
@@ -18,7 +19,7 @@ export class ToyWindow {
   constructor() {
     const b = bld('toys'), x = b.x + 30, y = b.y + b.d - 92, w = 130, hgt = 70;
     const g = new Graphics()
-      .roundRect(x - 6, y - 6, w + 12, hgt + 12, 10).fill('#FFFFFF')
+      .roundRect(x - BAND, y - BAND, w + 2 * BAND, hgt + 2 * BAND, 8).fill('#FFFFFF')
       .roundRect(x, y, w, hgt, 6).fill('#CFE6F7')
       .rect(x, y + hgt - 14, w, 14).fill('#F7C8D0');                      // the shelf
     this.view.addChild(g);

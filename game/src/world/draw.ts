@@ -5,7 +5,9 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
 
 export const NAVY = 0x2B3F55;
-const BAND = 7, SH = { x: 6, y: 10, a: 0.18 };
+/** The white sticker edge round everything in the world (px). Characters match it (person.ts OUTLINE). */
+export const BAND = 3;
+const SH = { x: 6, y: 10, a: 0.18 };
 const GRASS = '#B9DA9C', WALK = '#E4E8ED', ROAD = '#5F6D7C', PAINT = '#F4F6F8', KERB = '#CDD3DA';
 
 /** Shadow + white band for a rounded-rect silhouette. */

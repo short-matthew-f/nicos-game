@@ -2,7 +2,7 @@
 // and posts, and scores when it crosses a goal line between the posts.
 import { Container, Graphics } from 'pixi.js';
 import { FIELD, GOALS, GOAL_MOUTH, type Rect } from './map';
-import { NAVY } from './draw';
+import { NAVY, BAND } from './draw';
 
 export const BALL = { r: 15, friction: 1.1, kickMin: 320, kickMul: 1.6, bounce: 0.6, gravity: 1400 };
 
@@ -62,7 +62,7 @@ export class BallView {
   private shadow = new Graphics(); private ball = new Container(); private spin = new Graphics();
   constructor() {
     this.shadow.ellipse(0, 0, BALL.r + 2, 6).fill({ color: NAVY, alpha: 0.25 });
-    const g = new Graphics().circle(0, 0, BALL.r + 5).fill('#FFFFFF').circle(0, 0, BALL.r).fill('#FAFBFC');
+    const g = new Graphics().circle(0, 0, BALL.r + BAND).fill('#FFFFFF').circle(0, 0, BALL.r).fill('#FAFBFC');
     this.spin.poly([0, -6, 6, -2, 4, 5, -4, 5, -6, -2]).fill('#2B3F55');
     for (const a of [0, 72, 144, 216, 288]) {
       const rx = Math.cos(a * Math.PI / 180) * 11, ry = Math.sin(a * Math.PI / 180) * 11;
