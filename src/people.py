@@ -82,7 +82,7 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee'):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
 
@@ -99,6 +99,11 @@ class Look:
                 t += (f'<path d="M-15,-55 C-14,-46 -6,-42 0,-42 C6,-42 14,-46 15,-55 L10,-57 C8,-50 -8,-50 -10,-57 Z" fill="{s.shirt2}"/>'
                       f'<rect x="-6" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="4" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
                       f'<path d="M-14,-18 L14,-18 L17,-4 L-17,-4 Z" fill="{s.shirt2}"/>')
+        elif s.top == 'track':   # track jacket: a stand-up collar, a zip down the front, stripes down the sides
+            t += f'<rect x="-14" y="-56" width="28" height="9" rx="4" fill="{s.shirt2}"/>'
+            if not back: t += f'<rect x="-1.5" y="-50" width="3" height="50" fill="{s.trim}"/><rect x="-3" y="-50" width="6" height="5" rx="1.5" fill="{s.trim}"/>'
+            t += (f'<rect x="-21" y="-40" width="3" height="40" fill="{s.trim}"/>'
+                  f'<rect x="18" y="-40" width="3" height="40" fill="{s.trim}"/>')
         else:          # tee / jersey: round neck, stripes down the sides
             if not back:
                 t += f'<path d="M-9,-52 Q0,-44 9,-52" fill="none" stroke="{s.shirt2}" stroke-width="3"/>'
@@ -114,6 +119,9 @@ class Look:
                  f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{s.shirt}"/>')
         if s.top == 'hoodie':
             shirt += f'<path d="M-18,-56 C-26,-50 -26,-36 -18,-30 C-14,-40 -12,-48 -10,-56 Z" fill="{s.shirt2}"/>'
+        elif s.top == 'track':
+            shirt += (f'<rect x="-10" y="-56" width="20" height="9" rx="4" fill="{s.shirt2}"/>'
+                      f'<rect x="15" y="-48" width="3" height="48" fill="{s.trim}"/>')
         else:
             shirt += f'<rect x="-19" y="-40" width="3" height="40" fill="{s.trim}"/>'
         return (shirt +
@@ -147,6 +155,10 @@ class Look:
                 t += (f'<path d="M-9,-55 C-8,-46 0,-42 6,-42 C12,-42 18,-46 19,-55 L14,-57 C12,-50 -2,-50 -4,-57 Z" fill="{s.shirt2}"/>'
                       f'<rect x="1" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="10" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
                       f'<path d="M-8,-18 L18,-18 L20,-4 L-11,-4 Z" fill="{s.shirt2}"/>')
+        elif s.top == 'track':
+            t += f'<rect x="-10" y="-56" width="26" height="9" rx="4" fill="{s.shirt2}"/>'
+            if not back: t += f'<rect x="5.5" y="-50" width="3" height="50" fill="{s.trim}"/>'
+            t += f'<rect x="17" y="-40" width="3" height="40" fill="{s.trim}"/>'
         else:
             if not back:
                 t += f'<path d="M-2,-52 Q6,-45 14,-52" fill="none" stroke="{s.shirt2}" stroke-width="3"/>'
@@ -172,6 +184,11 @@ class Look:
     def arm_art(s, far, pfx):
         hand = rig.SK2 if far else rig.SK
         sl = s.sleeve if not far else s.shirt2 if s.top == 'hoodie' else s.sleeve
+        if s.top == 'track':    # long sleeve, a white stripe down it, a ribbed cuff
+            return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
+                    f'<rect x="-8.5" y="-7" width="17" height="42" rx="8.5" fill="{sl}"/>'
+                    f'<rect x="-1.5" y="-4" width="3" height="31" fill="{s.trim}"/>'
+                    f'<rect x="-8" y="28" width="16" height="6" rx="3" fill="{s.shirt2}"/>')
         if s.top == 'hoodie':   # long sleeve with a cuff
             return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
                     f'<rect x="-8.5" y="-7" width="17" height="42" rx="8.5" fill="{sl}"/>'
@@ -184,7 +201,9 @@ class Look:
 
     def leg_art(s, far):
         fill = f'url(#{rig._PEOPLE_PFX}camo)' if s.camo else (s.pants2 if far else s.pants)
-        return f'<rect x="-8.5" y="0" width="17" height="50" rx="7" fill="{fill}"/>'
+        leg = f'<rect x="-8.5" y="0" width="17" height="50" rx="7" fill="{fill}"/>'
+        if s.stripe: leg += f'<rect x="-1.5" y="2" width="3" height="46" fill="{s.stripe}"/>'   # track pants: a stripe down the side
+        return leg
 
     def defs(s, pfx):
         return camo_defs(pfx, s.camo) if s.camo else ''
@@ -200,6 +219,10 @@ LOOKS = {
                   shirt='#2456C8', shirt2='#1C45A6', sleeve='#2456C8', trim='#FFFFFF',
                   pants='#A39B78', pants2='#8E8766', shoe='#3A3D44', shoe2='#30333A', height=0.86,
                   camo=('#A39B78', '#6E6A4C', '#8C6F5E', '#C9C0A0')),
+    # Tempo: short dark-brown hair, brown eyes; an all-red tracksuit (white zip and stripes)
+    'tempo': Look('tempo', skin='#EDC3A0', skin2='#DBA682', hair='#3B271B', style='short', top='track',
+                  shirt='#D9322E', shirt2='#B82723', sleeve='#D9322E', trim='#FFFFFF',
+                  pants='#D9322E', pants2='#B82723', shoe='#F4F6F8', shoe2='#D3DAE1', height=0.9, stripe='#FFFFFF'),
     # townspeople (made up, not real people): a spread of skin tones, hair and clothes
     'maya': Look('maya', skin='#C68B62', skin2='#B07650', hair='#2A1E18', hl='#4A362A', style='shaggy', top='tee',
                  shirt='#F07B5F', shirt2='#D9654B', sleeve='#F07B5F', trim='#FFFFFF',

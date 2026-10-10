@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { TOWNSFOLK, stepRoute, type Walk } from '../src/townsfolk';
-import { SOLIDS, WORLD, ROADS_X, ROADS_Y, ROAD_W } from '../src/world/map';
+import { SOLIDS, WORLD, ROAD_SEGS, roadRect } from '../src/world/map';
 import { freeAt } from '../src/player';
 
-const onRoad = (x: number, y: number) => ROADS_X.some(r => Math.abs(x - r) < ROAD_W / 2) || ROADS_Y.some(r => Math.abs(y - r) < ROAD_W / 2);
+// (the roads as built: they stop where they end, so the beach below the south road is fair game)
+const onRoad = (x: number, y: number) => ROAD_SEGS.map(r => roadRect(r)).some(r => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.d);
 
 describe('townsfolk', () => {
   for (const t of TOWNSFOLK) {

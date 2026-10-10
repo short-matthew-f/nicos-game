@@ -690,3 +690,10 @@ Nico: "a purchasable beach side store where he can make necklaces and bracelets 
   - A greedy hour (every shell picked up, the best pieces made) earns about $2.40 a minute. The test fails above $6, and a mutation check confirmed it catches a raised buy chance.
   - The layout test now covers both the shed and the shop.
   - e2e: buy the shop, buy twine, string a pattern bracelet ($9), a visitor buys it, empty the till, and things sell during an hour away (201 checks).
+
+### Tempo (2026-10-10)
+- A new townsperson, from the user ("Let's add tempo now too. This kiddo should be in an all red tracksuit"). He has short dark-brown hair, is a little smaller than Nico, and wears an all-red tracksuit: a jacket with a stand-up collar, a white zip and white sleeve stripes, red track pants with a white stripe down each leg, and white trainers.
+  - `people.py` gained a `track` top and a `stripe` on the legs. Nico's art is byte-identical.
+  - The photos are reference only and are not in the repo.
+- He runs up and down the beach: the sandcastle, outside Bibs and Bobs, and the pier.
+- The townsfolk route test now checks the roads as built (segments), not as endless lines, so a beach route can cross below where the south road ends.

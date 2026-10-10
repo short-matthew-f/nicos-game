@@ -22,6 +22,16 @@ export const TOWNSFOLK: Townie[] = [
     lines: ['Hey Nico! Burger Barn fries are the best.', 'Did you see the fire truck go by?', 'Race you round the block!', 'What are you building next?', 'Want to play soccer later?'],
   },
   {
+    // Tempo, in his red tracksuit, runs up and down the beach: the sandcastle, Bibs and Bobs, the pier
+    who: 'tempo', name: 'Tempo', speed: 175,
+    route: [
+      { x: 3300, y: 4610 }, { x: 2700, y: 4740 }, { x: 2300, y: 4840, wait: 5 },   // (admiring the sandcastle)
+      { x: 2700, y: 4740 }, { x: 3580, y: 4620, wait: 4 },                          // outside Bibs and Bobs
+      { x: 4200, y: 4520 }, { x: 4400, y: 4600, wait: 3 }, { x: 4200, y: 4600 }, { x: 3830, y: 4600 },     // by the pier, then back past the palm
+    ],
+    lines: ['Race you to the water!', 'Red is the fastest colour.', 'Have you been in Bibs and Bobs?', 'I found a starfish once!', 'Watch me run!'],
+  },
+  {
     // Primo plays at the playground and round the pond: swings, past the slide, the fountain
     who: 'primo', name: 'Primo', speed: 165,
     route: [
