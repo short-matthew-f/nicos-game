@@ -175,3 +175,10 @@ html, body {
 @keyframes flash { from { opacity: .85; } to { opacity: 0; } }
 #vf-close { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); pointer-events: auto;
   min-height: 48px; padding: 0 18px; border: 0; border-radius: 14px; font: inherit; font-size: 17px; font-weight: 800; background: #fff; color: var(--navy); box-shadow: 0 3px 0 rgba(43,63,85,.25); touch-action: manipulation; }
+
+/* sleeping: the screen fades to night-black, a few Zs float up */
+#sleep { position: fixed; inset: 0; background: #0E1430; opacity: 0; pointer-events: none; transition: opacity .9s; display: flex; align-items: center; justify-content: center; gap: 18px; z-index: 40; }
+#sleep.on { opacity: .94; pointer-events: auto; }
+#sleep span { color: #F4F1DE; font: 900 64px system-ui, -apple-system, sans-serif; animation: zfloat 1.8s ease-in-out infinite; }
+#sleep span:nth-child(2) { font-size: 48px; animation-delay: .3s; } #sleep span:nth-child(3) { font-size: 36px; animation-delay: .6s; }
+@keyframes zfloat { 0%, 100% { transform: translateY(10px); opacity: .5; } 50% { transform: translateY(-14px); opacity: 1; } }

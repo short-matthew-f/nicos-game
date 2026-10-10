@@ -738,3 +738,15 @@ The user: "Make sure things have 'weight' even though we are in the sticker vers
 - **The camera trails a moment behind** (it cuts on a jump of more than a screen, like going through a door).
 - **His car leans out on turns** and pitches forward when it brakes and back when it speeds up: the body shifts over its shadow.
 - **Stickers land with a thump:** a low thud, a ring of dust along the bottom, and a small jolt of the screen.
+
+### Nico's house, inside, and sleeping (2026-10-10)
+Nico wanted to go inside his house. The user asked "How can Nico sleep?"
+- **Walk in through his front door** (it used to show a card). Inside:
+  - his bed, with a nightstand lamp that glows after dark;
+  - a couch under the windows (sit on it);
+  - the kitchen, with mom's note on the fridge: "Grab a snack" gives an apple and a little speed, every 2 minutes;
+  - a big round rug and a picture;
+  - two windows that show the sky outside: blue by day, orange at sunset, and stars and the moon at night.
+- **Sleeping:** at night the bed says "Go to sleep". Nico climbs in, tucked under the blanket with his head on the pillow, and the screen fades to night with floating Zzz. It's morning when he wakes: the clock jumps to sunrise and he's full of energy (+30 s speedy). By day it's "Take a nap" (+15 s speedy, no time skip).
+- The furniture is data (`HOME_FURNITURE`), ready for decorating.
+- e2e: in, sleep at night and wake at sunrise, a snack, out (214 checks).

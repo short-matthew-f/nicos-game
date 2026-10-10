@@ -7,7 +7,7 @@ import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
 import { Dust } from './world/dust';
-import { Night, DAY, inForest } from './world/night';
+import { Night, DAY, inForest, darkness, light } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
@@ -30,7 +30,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt } from './world/rooms';
 import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, emptyTill, visitGap, design, type Piece } from './jewelry';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
@@ -139,7 +139,7 @@ async function main() {
   const state = { money: saved.money, biz: saved.biz };
   let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
   const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false };
-  let aroundIn = 0, lastFoot = 0, squash = 0, shake = 0;
+  let aroundIn = 0, lastFoot = 0, squash = 0, shake = 0, windowsIn = 0, lastDt = 0;
   const nv = [0, 0], cam = { x: NaN, y: NaN };   // Nico's velocity (eased); where the camera's looking (it trails a little)
   // a sticker hitting the world: a thump, a ring of dust along its bottom, a little jolt
   landed.on = (box, parent) => { sfx.thud(); shake = 0.3; if (parent === layer) dust.land(box.x, box.y + box.h - 10, box.w); };
@@ -170,8 +170,8 @@ async function main() {
   else { shopOutline = outlineArt(shopBox.x, shopBox.y, shopBox.w, shopBox.h, '🐚 Bibs and Bobs', unlockOf('shop').price); shopOutline.zIndex = SHOP.y - SHOP.h; layer.addChild(shopOutline); }
   // inside a building: the room, and where Nico is outside (the town only ever sees that)
   type Box = { x: number; y: number; w: number; d: number };
-  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
-    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container } | null = null;
+  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop' | 'home'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
+    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container; windows?: Graphics; lamp?: Container } | null = null;
   let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
@@ -222,7 +222,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep'; t: number; from: [number, number]; seat: number } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -238,6 +238,7 @@ async function main() {
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
     if (play.kind === 'camera') viewfinder.hidden = true;
+    if (play.kind === 'sleep') { nico.x = BED_SIDE[0]; nico.y = BED_SIDE[1]; sleepEl.classList.remove('on'); }
     if (play.kind === 'eat') { nico.x = play.from[0] + STOOL; nico.y = play.from[1] + SEAT; tableTray?.view.destroy(); tableTray = null; }
     if (play.kind === 'swim') { waterSkin.visible = ring.visible = false; nico.view.root.mask = null; swimMask.clear(); floating = false; const [ox, oy] = climbOut(nico.x, nico.y); nico.x = ox; nico.y = oy; }
     play = null; mode = 'walk';
@@ -372,6 +373,7 @@ async function main() {
   const needLine = (recipe: Record<string, number>) => missing(biz, recipe).map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ');
   const BIZ_DOORS: Record<string, (p: Place) => void> = {
     storage: () => enterHall(),
+    home: () => enterHome(),
     parts: p => showParts(p),
     burger: () => enterRoom('burger'),
     cabin: p => {
@@ -493,6 +495,47 @@ async function main() {
       }),
       { id: 'leave', x: SHED_EXIT[0], y: SHED_EXIT[1], r: 120, label: '🚪 Leave', run: leaveRoom },
     ];
+  }
+  // ---- Nico's house: his bed, the couch, the fridge; windows show the sky outside
+  const sleepEl = document.getElementById('sleep')!;
+  const BED_SIDE: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w + 70, HOME_FURNITURE.bed.y + HOME_FURNITURE.bed.d - 20];
+  let snackIn = 0;   // s till the fridge has another snack
+  function enterHome() {
+    const { view, layer: rl, windows } = drawHomeRoom(), { bed, blanket } = bedArt(), stand = nightstandArt();
+    const lamp = light(stand.bulb[0], stand.bulb[1], 110, 90, 0xFFD98A, 0.8); lamp.zIndex = 9999;
+    rl.addChild(bed, blanket, stand.view, couchArt(), kitchenArt(), lamp);
+    paintWindows(windows, darkness(clock));
+    const f = HOME_FURNITURE;
+    showRoom({ kind: 'home', id: 'home', w: HOME_ROOM.w, h: HOME_ROOM.h, view, layer: rl, windows, lamp,
+      solids: [{ x: 0, y: 0, w: HOME_ROOM.w, d: HOME_ROOM.wall + 14 }, ...Object.values(f).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d }))] }, [HOME_EXIT[0], HOME_EXIT[1] - 70]);
+    sfx.door();
+  }
+  function homeSpots(): Spot[] {
+    const c = HOME_FURNITURE.couch, k = HOME_FURNITURE.kitchen, night = darkness(clock) > 0.3;
+    return [
+      { id: 'bed', x: BED_SIDE[0], y: BED_SIDE[1], r: 130, label: night ? '😴 Go to sleep' : '😴 Take a nap', run: () => {
+        mode = 'play'; play = { kind: 'sleep', t: 0, from: [PILLOW[0], PILLOW[1]], seat: night ? 1 : 0 }; sfx.tap();
+      } },
+      { id: 'couch', x: c.x + c.w / 2, y: c.y + c.d + 50, r: 120, label: '🛋️ Sit on the couch', run: () => sitOnBench(c.x + c.w / 2, c.y + c.d - 6) },
+      { id: 'fridge', x: k.x + k.w - 43, y: k.y + k.d + 50, r: 120, label: '🥤 Grab a snack', run: () => {
+        if (snackIn > 0) { toast('🥤 You just had one! Save some for later.'); return; }
+        snackIn = 120; boost = Math.min(BOOST.max, boost + 15); sfx.coin(); toast('🍎 An apple from the fridge. Crunch! You feel speedy! ⚡');
+      } },
+      { id: 'leave', x: HOME_EXIT[0], y: HOME_EXIT[1], r: 120, label: '🚪 Go outside', run: leaveRoom },
+    ];
+  }
+  /** Asleep in bed: tucked in, the screen fades to night, morning comes (or, for a nap, a little rest). */
+  function sleepStep(t: number, night: boolean): Body {
+    if (t > 0.8) sleepEl.classList.add('on');
+    if (t >= 2.4 && t - lastDt < 2.4) {   // (once, while it's dark)
+      if (night) { clock = 0.03; boost = Math.min(BOOST.max, boost + 30); }
+      else boost = Math.min(BOOST.max, boost + 15);
+      if (room?.windows) paintWindows(room.windows, darkness(clock));
+      persist();
+    }
+    if (t >= 2.6) sleepEl.classList.remove('on');
+    if (t >= 3.6) { stopPlay(); toast(night ? '☀️ Good morning! You slept all night and feel full of energy! ⚡' : '😌 What a nice nap. You feel rested! ⚡'); }
+    return { x: PILLOW[0], y: PILLOW[1] + 104, view: 'front', face: 1, amp: 0, crouch: 0, hold: 0, sit: 0, z: HOME_FURNITURE.bed.y + 140, sy: 1 };
   }
   // ---- Bibs and Bobs: the stringing table, the shelves, the till; visitors come in and browse
   const SHOP_DOOR = doorOf(SHOP);
@@ -624,6 +667,7 @@ async function main() {
     if (!room) return [];
     if (room.kind === 'shed') return shedSpots();
     if (room.kind === 'shop') return shopSpots();
+    if (room.kind === 'home') return homeSpots();
     if (room.kind === 'hall') return [
       ...DOOR_NAMES.map((nm, i) => {
         const st = doorState(biz, i), u = st === 'sale' ? doorUnit(biz, i) : null;
@@ -1072,11 +1116,13 @@ async function main() {
     boost = Math.max(0, boost - dt);
     const fast = boost > 0 ? BOOST.speed : 1;
     if (mode === 'play' && play) {
-      play.t += dt;
+      play.t += dt; lastDt = dt;
       let b: Body;
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'sleep') {
+        b = sleepStep(play.t, play.seat === 1);
       } else if (play.kind === 'eat') {
         // sitting at the table (back to us, facing it); with food, a few seconds' eating, then the boost
         // upright on the stool's seat (sitting drops the hips to the feet, so draw him up by the seat's height)
@@ -1210,7 +1256,8 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
-    clock = (clock + dt / DAY.length) % 1; dust.update(dt);
+    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt;
+    if (room?.kind === 'home' && room.windows) { const dk = darkness(clock); if ((windowsIn -= dt) <= 0) { windowsIn = 2; paintWindows(room.windows, dk); } if (room.lamp) room.lamp.alpha = 0.25 + 0.6 * dk; }
     if ((aroundIn -= dt) <= 0) {   // what's round Nico, for the birds, the wind in the trees and the waves (twice a second)
       aroundIn = 0.5; const [ax, ay] = here(), near = (p: [number, number]) => Math.abs(p[0] - ax) < 600 && Math.abs(p[1] - ay) < 500;
       around.trees = TREES.filter(near).length + PINES.filter(near).length; around.shore = Math.max(0, shoreY(ax) - ay); around.forest = inForest(ax, ay);

@@ -369,3 +369,92 @@ export function counterArt(): Container {
   for (let i = 0; i < 3; i++) g.rect(tx + 12 + i * 22, ty - 18, 16, 8).fill('#FFFFFF');
   c.addChild(g); c.zIndex = F; return c;
 }
+
+// ---- Nico's house (Nico: "he wants to be able to go inside his house"; the user: "how can Nico
+// sleep?"): his bed (sleep the night away), a couch, the kitchen with the fridge, windows that show
+// the sky outside. Furniture is data (HOME_FURNITURE) so decorating can add to it later.
+export const HOME_ROOM = { w: 1300, h: 880, wall: 250 };
+export const HOME_EXIT: [number, number] = [HOME_ROOM.w / 2, HOME_ROOM.h - 30];
+/** Each piece: its footprint (solid) and how tall it's drawn. */
+export const HOME_FURNITURE: Record<string, { x: number; y: number; w: number; d: number; h: number }> = {
+  bed: { x: 90, y: 250, w: 210, d: 270, h: 40 },        // head against the back wall
+  nightstand: { x: 320, y: 250, w: 70, d: 60, h: 60 },
+  couch: { x: 520, y: 262, w: 300, d: 70, h: 70 },       // under the windows, facing the room
+  kitchen: { x: 930, y: 250, w: 300, d: 80, h: 70 },     // counter along the wall, the fridge at the end
+};
+/** Where Nico's head goes on the pillow (he's tucked in under the blanket). */
+export const PILLOW: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w / 2, HOME_FURNITURE.bed.y + 50];
+export function drawHomeRoom(): { view: Container; layer: Container; windows: Graphics } {
+  const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = HOME_ROOM;
+  g.rect(-3000, -3000, w + 6000, h + 6000).fill('#2B2320');
+  for (let y = wall; y < h; y += 40) g.rect(0, y, w, 40).fill(((y - wall) / 40) % 2 ? '#D9B48A' : '#D1AA7E').rect(0, y + 38, w, 2).fill('#B8915F');   // wooden floor
+  g.rect(0, 0, w, wall).fill('#C9DDF2');
+  for (let x = 0; x < w; x += 46) g.rect(x, 0, 18, wall).fill({ color: '#FFFFFF', alpha: 0.18 });   // striped wallpaper
+  g.rect(0, wall - 14, w, 14).fill('#8FA9C4');
+  g.ellipse(w / 2 + 40, 620, 330, 150).fill('#FFFFFF').ellipse(w / 2 + 40, 620, 320, 142).fill('#E5484D').ellipse(w / 2 + 40, 620, 250, 105).fill('#F2C14E').ellipse(w / 2 + 40, 620, 170, 70).fill('#E5484D');   // a round rug
+  // pictures on the wall
+  g.roundRect(380 - BAND, 60 - BAND, 90 + 2 * BAND, 70 + 2 * BAND, 6).fill('#FFFFFF').roundRect(380, 60, 90, 70, 4).fill('#7FD1C1').circle(405, 82, 9).fill('#F9C846').poly([380, 130, 420, 95, 450, 115, 470, 100, 470, 130]).fill('#3E8F5A');
+  g.roundRect(SHOP_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the front door
+  const windows = new Graphics();
+  for (const x of [540, 700]) windows.roundRect(x, 50, 120, 120, 8).fill('#FFFFFF');
+  view.addChild(g, windows, layer);
+  return { view, layer, windows };
+}
+/** The windows' glass: blue sky by day, night sky with a star or two after dark (k: 0 day .. 1 night). */
+export function paintWindows(g: Graphics, k: number) {
+  g.clear();
+  const sky = k < 0.5 ? (k < 0.2 ? '#9FD4F5' : '#F2A65A') : '#1E2A55';
+  for (const x of [540, 700]) {
+    g.roundRect(x - BAND, 50 - BAND, 120 + 2 * BAND, 120 + 2 * BAND, 10).fill('#FFFFFF').roundRect(x, 50, 120, 120, 8).fill(sky);
+    if (k >= 0.5) g.circle(x + 30, 80, 2.5).fill('#FFFFFF').circle(x + 85, 70, 2).fill('#FFFFFF').circle(x + 60, 120, 1.8).fill('#FFFFFF');
+    if (k >= 0.5 && x === 700) g.circle(x + 80, 95, 14).fill('#F4F1DE');   // the moon
+    g.rect(x + 57, 50, 6, 120).fill('#FFFFFF').rect(x, 107, 120, 6).fill('#FFFFFF');
+  }
+}
+/** The bed (headboard, pillow, mattress) and, separately, the blanket (drawn over Nico when he's in it). */
+export function bedArt(): { bed: Container; blanket: Container } {
+  const s = HOME_FURNITURE.bed, bed = new Container(), g = new Graphics(), top = s.y - 70;
+  g.ellipse(s.x + s.w / 2 + 8, s.y + s.d - 2, s.w / 2 + 8, 14).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.d + 70 + 2 * BAND, 14).fill('#FFFFFF');
+  g.roundRect(s.x, top, s.w, 90, 12).fill('#5B78AA');                                      // headboard
+  g.roundRect(s.x + 6, s.y, s.w - 12, s.d - 10, 10).fill('#F4F6F8');                         // mattress
+  g.roundRect(s.x + 34, s.y + 14, s.w - 68, 56, 22).fill('#FFFFFF').roundRect(s.x + 38, s.y + 18, s.w - 76, 48, 20).fill('#E9EEF3');   // pillow
+  g.roundRect(s.x, s.y + s.d - 30, s.w, 30, 8).fill('#3E5F8E');                             // footboard
+  bed.addChild(g); bed.zIndex = s.y;
+  const blanket = new Container(), b = new Graphics();
+  b.roundRect(s.x + 4, s.y + 92, s.w - 8, s.d - 116, 14).fill('#E5484D').roundRect(s.x + 4, s.y + 92, s.w - 8, 22, 10).fill('#FFFFFF');   // folded over at the top
+  for (let i = 0; i < 3; i++) b.rect(s.x + 4, s.y + 140 + i * 36, s.w - 8, 8).fill({ color: '#FFFFFF', alpha: 0.35 });
+  blanket.addChild(b); blanket.zIndex = s.y + s.d;   // (in front of whoever's in bed)
+  return { bed, blanket };
+}
+export function nightstandArt(): { view: Container; bulb: [number, number] } {
+  const s = HOME_FURNITURE.nightstand, c = new Container(), g = new Graphics(), F = s.y + s.d, top = F - s.h - 30;
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 30 + 2 * BAND, 8).fill('#FFFFFF').roundRect(s.x, top, s.w, s.h + 30, 6).fill('#B9895A')
+   .rect(s.x + 8, top + 34, s.w - 16, 4).fill('#8A5A3B');
+  g.rect(s.x + s.w / 2 - 3, top - 40, 6, 40).fill('#5B6472').poly([s.x + 12, top - 40, s.x + s.w - 12, top - 40, s.x + s.w - 20, top - 72, s.x + 20, top - 72]).fill('#F9E39A');   // a lamp
+  c.addChild(g); c.zIndex = F; return { view: c, bulb: [s.x + s.w / 2, top - 50] };
+}
+export function couchArt(): Container {
+  const s = HOME_FURNITURE.couch, c = new Container(), g = new Graphics(), F = s.y + s.d, seat = F - 40;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, seat - 70 - BAND, s.w + 2 * BAND, 110 + 2 * BAND, 16).fill('#FFFFFF');
+  g.roundRect(s.x, seat - 70, s.w, 60, 14).fill('#3E8F8A');                                   // the back
+  g.roundRect(s.x + 20, seat - 16, s.w - 40, 40, 10).fill('#4FA9A2');                           // the seat cushions
+  g.rect(s.x + s.w / 2 - 1, seat - 14, 2, 36).fill('#3E8F8A');
+  for (const x of [s.x, s.x + s.w - 30]) g.roundRect(x, seat - 40, 30, 80, 12).fill('#357B76');   // arms
+  g.roundRect(s.x + 40, seat - 52, 54, 34, 10).fill('#F2C14E');                                  // a cushion
+  c.addChild(g); c.zIndex = F; return c;
+}
+export function kitchenArt(): Container {
+  const s = HOME_FURNITURE.kitchen, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - 74, depth = 30;
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, 74 + depth + 2 * BAND, 8).fill('#FFFFFF');
+  g.roundRect(s.x, front, s.w - 90, 74, 4).fill('#F4F6F8').roundRect(s.x, front - depth, s.w - 90, depth + 4, 4).fill('#9AA6B2');
+  for (let i = 0; i < 3; i++) g.rect(s.x + 10 + i * 70, front + 10, 60, 54).fill('#E9EEF3').rect(s.x + 34 + i * 70, front + 16, 12, 4).fill('#5B6472');   // cupboards
+  g.roundRect(s.x + 30, front - depth + 6, 60, 20, 6).fill('#C9D3DC');   // the sink
+  const fx = s.x + s.w - 86;   // the fridge, tall
+  g.roundRect(fx - BAND, front - 150 - BAND, 86 + 2 * BAND, 224 + 2 * BAND, 10).fill('#FFFFFF').roundRect(fx, front - 150, 86, 224, 8).fill('#E9EEF3')
+   .rect(fx, front - 60, 86, 4).fill('#C9D3DC').rect(fx + 70, front - 120, 5, 40).fill('#9AA6B2').rect(fx + 70, front - 40, 5, 50).fill('#9AA6B2');
+  g.rect(fx + 16, front - 132, 26, 20).fill('#FFFFFF').rect(fx + 18, front - 130, 22, 3).fill('#E5484D');   // mom's note on the fridge
+  c.addChild(g); c.zIndex = F; return c;
+}
