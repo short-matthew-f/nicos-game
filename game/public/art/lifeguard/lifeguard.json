@@ -1,0 +1,296 @@
+{
+ "res": 2,
+ "height": 1.12,
+ "views": {
+  "side": [
+   {
+    "part": "ba",
+    "img": "art/lifeguard/side_ba.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "bl",
+    "img": "art/lifeguard/side_bl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "bs",
+    "img": "art/lifeguard/side_bs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "fl",
+    "img": "art/lifeguard/side_fl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "fs",
+    "img": "art/lifeguard/side_fs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/lifeguard/side_up.png",
+    "x": -40,
+    "y": -122,
+    "w": 79,
+    "h": 127
+   },
+   {
+    "part": "fa",
+    "img": "art/lifeguard/side_fa.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "front": [
+   {
+    "part": "legl",
+    "img": "art/lifeguard/front_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/lifeguard/front_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/lifeguard/front_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/lifeguard/front_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/lifeguard/front_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 76,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/lifeguard/front_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/lifeguard/front_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "back": [
+   {
+    "part": "legl",
+    "img": "art/lifeguard/back_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/lifeguard/back_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/lifeguard/back_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/lifeguard/back_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/lifeguard/back_up.png",
+    "x": -37,
+    "y": -122,
+    "w": 74,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/lifeguard/back_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/lifeguard/back_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qfront": [
+   {
+    "part": "armf",
+    "img": "art/lifeguard/qfront_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/lifeguard/qfront_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/lifeguard/qfront_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/lifeguard/qfront_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/lifeguard/qfront_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/lifeguard/qfront_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 75,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/lifeguard/qfront_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qback": [
+   {
+    "part": "armf",
+    "img": "art/lifeguard/qback_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/lifeguard/qback_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/lifeguard/qback_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/lifeguard/qback_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/lifeguard/qback_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/lifeguard/qback_up.png",
+    "x": -38,
+    "y": -122,
+    "w": 68,
+    "h": 133
+   },
+   {
+    "part": "armn",
+    "img": "art/lifeguard/qback_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ]
+ }
+}

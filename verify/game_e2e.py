@@ -325,6 +325,8 @@ with sync_playwright() as p:
     def door(spot):   # walk up to a door and go in (by name: a passer-by near the door would otherwise get the tap)
         pg.evaluate("()=>window.__game.exitRooms()")
         at(spot); pg.wait_for_timeout(150); pg.evaluate(f"()=>window.__game.use('{spot}')"); pg.wait_for_timeout(250)
+        if G()['room'] == spot and 'counter' in G()['roomSpots']:   # (inside: walk up to the counter, where the business is)
+            room_at('counter'); pg.click('#action'); pg.wait_for_timeout(250)
     def bench():      # into the work shed, up to the workbench
         door('shed'); room_at('workbench'); pg.click('#action'); pg.wait_for_timeout(250)
     door('storage'); pg.wait_for_timeout(300)

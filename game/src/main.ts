@@ -19,7 +19,7 @@ import { Minimap } from './minimap';
 import { BallView, kick, nudge, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
 import { Pigeons, Clouds, Coins, COIN } from './world/life';
-import { loadArt, PersonView } from './rig/person';
+import { loadArt, hasArt, PersonView } from './rig/person';
 import { neutral, type PoseState, type View } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, freeAt, stepGait, GAIT_SCALE, WALK_SPEED } from './player';
@@ -32,6 +32,7 @@ import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, 
 import { POOL, WSLIDE } from './world/zones';
 import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
 import { WALLPAPERS, RUGS, REDECORATE } from './decor';
+import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
 import { RECIPES, PANTRY, BAKERY as BAKERY_RULES, recipe, cantBake, visit as bakeryVisit, whileAway as bakeryAway, emptyTill as bakeryEmpty, visitGap as bakeryGap, HENS } from './bakery';
 import type { Shop } from './store';
 import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, emptyTill, visitGap, design } from './jewelry';
@@ -174,7 +175,7 @@ async function main() {
   else { shopOutline = outlineArt(shopBox.x, shopBox.y, shopBox.w, shopBox.h, '🐚 Bibs and Bobs', unlockOf('shop').price); shopOutline.zIndex = SHOP.y - SHOP.h; layer.addChild(shopOutline); }
   // inside a building: the room, and where Nico is outside (the town only ever sees that)
   type Box = { x: number; y: number; w: number; d: number };
-  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop' | 'home' | 'bakery'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
+  let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop' | 'home' | 'bakery' | 'inside'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
     outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container; windows?: Graphics; lamp?: Container } | null = null;
   let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
@@ -510,6 +511,51 @@ async function main() {
       { id: 'leave', x: SHED_EXIT[0], y: SHED_EXIT[1], r: 120, label: '🚪 Leave', run: leaveRoom },
     ];
   }
+  // ---- inside every other building (world/interiors.ts): walk round, use things, talk to whoever's there
+  const treatIn: Record<string, number> = {};   // s till each grown-up has another treat
+  function enterInside(id: string, at?: [number, number]) {
+    const r = INTERIORS[id], { view, layer: rl } = drawInterior(r);
+    const solids = interiorSolids(r);
+    const addWorker = () => {
+      if (!r.person || room?.id !== id || room.worker) return;
+      const v = new PersonView(r.person.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
+      v.pose(r.person.x, r.person.y, neutral('front')); v.root.zIndex = r.person.y; rl.addChild(v.root); room.worker = v;
+    };
+    if (r.person) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
+    if (id === 'fire') { const t = r.things.find(q => q.kind === 'emoji'); if (t && truck.out) rl.children.find(c => c.zIndex === (t as { y: number }).y)?.removeFromParent(); }   // (the truck's out on a call)
+    showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
+    if (r.person) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
+    sfx.door();
+  }
+  /** The building's own business (its menu, buying, selling...), from the counter. */
+  const placeAction = (id: string) => { const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p); };
+  function insideSpots(): Spot[] {
+    if (!room) return [];
+    const r: Interior = INTERIORS[room.id], out: Spot[] = [];
+    if (r.person) {
+      const pr = r.person, act = pr.action, treat = pr.treat;
+      out.push({ id: 'counter', x: pr.x, y: pr.y + 130, r: 120, label: act ? ({ icecream: '🍦 Order ice cream', parts: '🔧 Shop for parts', toys: '🧸 Sell your toys', barn: '🥚 Ask about eggs', cabin: '📷 Talk to the ranger' }[act] ?? `💬 Talk to ${pr.name}`) : treat ? `💬 Say hi to ${pr.name}` : `💬 Talk to ${pr.name}`,
+        run: () => {
+          if (act) { placeAction(act); return; }
+          const line = pick(pr.lines);
+          if (!treat) { toast(`${pr.name[0].toUpperCase()}${pr.name.slice(1)}: “${line}”`); return; }
+          showCard(`talk:${room!.id}`, r.title, `${pr.name[0].toUpperCase()}${pr.name.slice(1)}: “${line}”`, [{ label: treat.label, sub: (treatIn[room!.id] ?? 0) > 0 ? 'had one!' : 'free', id: 'treat', disabled: (treatIn[room!.id] ?? 0) > 0,
+            onClick: () => { treatIn[room!.id] = 120; boost = Math.min(BOOST.max, boost + treat.boost); sfx.coin(); toast(`${treat.label}! Thank you! ⚡`); } }], 'Bye!');
+        } });
+    }
+    r.things.forEach((t, i) => {
+      if (!('use' in t) || !t.use) return;
+      const u = t.use, [x, y] = useSpot(t);
+      out.push({ id: u.action && u.action === room!.id ? 'counter' : `thing${i}`, x, y, r: 100, label: u.label, run: () => {
+        if (u.sit) { sitOnBench(x, y - 44); return; }
+        if (u.action === 'bell') { for (let k = 0; k < 3; k++) audio.tone('triangle', 1568, 1568, 0.25, 0.08, k * 0.3); toast('🔔 Ding ding ding! The firefighters come running... false alarm!'); return; }
+        if (u.action) { placeAction(u.action); return; }
+        if (u.lines) toast(pick(u.lines));
+      } });
+    });
+    out.push({ id: 'leave', x: r.w / 2, y: r.h - 30, r: 120, label: '🚪 Leave', run: leaveRoom });
+    return out;
+  }
   // ---- Nico's house: his bed, the couch, the fridge; windows show the sky outside
   const sleepEl = document.getElementById('sleep')!;
   const BED_SIDE: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w + 70, HOME_FURNITURE.bed.y + HOME_FURNITURE.bed.d - 20];
@@ -831,6 +877,7 @@ async function main() {
     if (room.kind === 'shop') return shopSpots();
     if (room.kind === 'home') return homeSpots();
     if (room.kind === 'bakery') return bakerySpots();
+    if (room.kind === 'inside') return insideSpots();
     if (room.kind === 'hall') return [
       ...DOOR_NAMES.map((nm, i) => {
         const st = doorState(biz, i), u = st === 'sale' ? doorUnit(biz, i) : null;
@@ -1027,7 +1074,7 @@ async function main() {
     ...PROPS.filter(p => p.kind === 'bench').map((p, i) => ({ id: `bench${i}`, x: p.x, y: p.y + 30, r: 70, label: 'Sit', run: () => sitOnBench(p.x, p.y) })),
     ...PLACES.map(p => {
       const [x, y] = doorOf(BUILDINGS.find(b => b.id === p.building)!);
-      return { id: p.building, x, y, r: 70, label: p.action ?? 'Go in', run: () => (BIZ_DOORS[p.building] ?? showPlace)(p) };
+      return { id: p.building, x, y, r: 70, label: INTERIORS[p.building] ? '🚪 Go in' : p.action ?? 'Go in', run: () => (INTERIORS[p.building] ? enterInside(p.building) : (BIZ_DOORS[p.building] ?? showPlace)(p)) };
     }),
   ];
   // ---- people Nico knows, on their routines; walk up to one to say hi
@@ -1214,7 +1261,7 @@ async function main() {
   const walkers: Walker[] = [];
   // read by verify/*.py; place() and friends move things for tests
   const game: Record<string, unknown> = {
-    place: (x: number, y: number) => { nico.x = x; nico.y = y; },
+    place: (x: number, y: number) => { if (room && (x > room.w || y > room.h)) for (let i = 0; i < 3 && room; i++) leaveRoom(); nico.x = x; nico.y = y; },   // (a spot out in town: step outside first)
     placeCar: (x: number, y: number, h: number) => { Object.assign(car, { x, y, h, speed: 0 }); },
     // stand Nico d px ahead of car i, in its lane (for the car-stops check)
     inFrontOf: (i: number, d: number) => { const c = cars[i], [x, y] = c.pos, h = c.loop.heading(c.s); nico.x = x + Math.cos(h) * d; nico.y = y + Math.sin(h) * d; },
@@ -1292,6 +1339,8 @@ async function main() {
   }
 
   if (player !== 'nico') playAs(player);   // (playing as a friend, from the save: once everything's set up)
+  // the people inside buildings: their art loads in the background once the town is up (so the game starts as fast as before)
+  setTimeout(() => { void loadArt([...new Set(Object.values(INTERIORS).map(r => r.person?.who).filter((w): w is string => !!w && !hasArt(w)))]); }, 1500);
   app.ticker.add(t => {
     const dt = Math.min(t.deltaMS / 1000, 0.05);
     fpsAcc += t.deltaMS; fpsN++;
@@ -1452,7 +1501,7 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
-    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
+    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
     if (room?.kind === 'home') {   // the fish swim round their tank (faster when they've just been fed)
       fishFed = Math.max(0, fishFed - dt); const T = HOME_DECOR.fishtank, sp = fishFed > 0 ? 2.5 : 1, tt = performance.now() / 1000;
       fish.forEach((g, i) => { if (g.destroyed) return; const u = tt * 0.5 * sp + i * 2.1, x = T.x + T.w / 2 + Math.sin(u) * (T.w / 2 - 26); g.position.set(x, T.y + T.d - T.h + 24 + i * 18 + Math.sin(u * 1.7) * 4); g.scale.x = Math.cos(u) >= 0 ? 1 : -1; });

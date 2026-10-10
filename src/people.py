@@ -70,6 +70,67 @@ def shaggy_qback(h, hl):
             f'C17,-92 14,-80 15,-62 C10,-54 4,-50 -2,-52 C-8,-48 -14,-52 -20,-48 C-26,-52 -31,-58 -33,-66 C-35,-72 -34,-78 -34,-82 Z" fill="{h}"/>'
             f'<path d="M-18,-106 C-6,-112 6,-110 14,-104" fill="none" stroke="{hl}" stroke-width="3.5" stroke-linecap="round"/>')
 
+# bald on top, a fringe of hair round the sides and back (Poppop)
+def bald_side(h):
+    return (f'<path d="M-4,-71 C-18,-69 -32,-78 -32,-92 C-32,-99 -28,-104 -23,-106 C-25,-97 -23,-87 -15,-80 C-11,-77 -7,-75 -4,-71 Z" fill="{h}"/>'
+            f'<path d="M6,-74 C2,-80 2,-90 8,-94 C10,-88 10,-80 6,-74 Z" fill="{h}"/>')
+def bald_front(h):
+    return (f'<path d="M-31,-78 C-35,-90 -31,-100 -24,-104 C-27,-95 -27,-86 -25,-77 Z" fill="{h}"/>'
+            f'<path d="M31,-78 C35,-90 31,-100 24,-104 C27,-95 27,-86 25,-77 Z" fill="{h}"/>')
+def bald_back(h):
+    return f'<path d="M-31,-84 C-30,-74 -22,-68 0,-67 C22,-68 30,-74 31,-84 C28,-89 20,-91 0,-91 C-20,-91 -28,-89 -31,-84 Z" fill="{h}"/>'
+def bald_qfront(h):
+    return f'<path d="M-33,-88 C-34,-80 -31,-72 -25,-68 L-21,-71 C-24,-78 -24,-88 -20,-97 C-26,-99 -31,-95 -33,-88 Z" fill="{h}"/>'
+def bald_qback(h):
+    return f'<path d="M-33,-84 C-32,-74 -22,-68 -4,-67 C10,-68 17,-73 18,-80 C14,-90 6,-96 -6,-97 C-22,-96 -31,-92 -33,-84 Z" fill="{h}"/>'
+
+# short and curly (Nonna): a close cap with a row of curls round the crown
+def _curls(h, hl, cx, cy, a0, a1, n=7, r=30):
+    import math
+    out = ''
+    for i in range(n):
+        a = math.radians(a0 + (a1 - a0) * i / (n - 1))
+        x, y = cx + r * math.cos(a), cy + r * math.sin(a)
+        out += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6.5" fill="{h}"/><path d="M{x - 3:.1f},{y:.1f} a3,3 0 0 1 6,0" fill="none" stroke="{hl}" stroke-width="1.6"/>'
+    return out
+def curly_side(h, hl): return short_side(h) + _curls(h, hl, 2, -92, -190, -40, 5, 26)
+def curly_front(h, hl): return short_front(h) + _curls(h, hl, 0, -90, -160, -20, 5, 26)
+def curly_back(h, hl): return short_back(h) + _curls(h, hl, 0, -90, -170, -10, 6, 26)
+def curly_qfront(h, hl): return short_qfront(h) + _curls(h, hl, -2, -90, -175, -25, 5, 26)
+def curly_qback(h, hl): return short_qback(h) + _curls(h, hl, -4, -90, -180, -20, 6, 26)
+
+HAIR = {
+    'short': (short_side, short_front, short_back, short_qfront, short_qback),
+    'shaggy': (shaggy_side, shaggy_front, shaggy_back, shaggy_qfront, shaggy_qback),
+    'bald': (bald_side, bald_front, bald_back, bald_qfront, bald_qback),
+    'curly': (curly_side, curly_front, curly_back, curly_qfront, curly_qback),
+}
+def hair_of(look, view):
+    fn = HAIR[look.style][('side', 'front', 'back', 'qfront', 'qback').index(view)]
+    return fn(look.hair) if look.style in ('short', 'bald') else fn(look.hair, look.hl)
+
+# glasses and a mustache, over the face (eye positions: side (17,-85); front (+-9.5,-84); 3/4 (0,-84), (17,-84))
+def face_extras(look, view):
+    out = ''
+    if look.mustache:
+        m = look.mustache
+        if view == 'side':
+            out += f'<path d="M6,-75 Q16,-84 31,-76 Q30,-66 22,-69 Q15,-66 6,-75 Z" fill="{m}"/>'
+        elif view == 'front':
+            out += f'<path d="M-17,-70 Q-12,-81 0,-77 Q12,-81 17,-70 Q12,-64 6,-69 Q0,-67 -6,-69 Q-12,-64 -17,-70 Z" fill="{m}"/>'
+        elif view == 'qfront':
+            out += f'<path d="M-6,-70 Q-1,-81 9,-77 Q19,-81 24,-70 Q19,-64 14,-69 Q9,-67 3,-69 Q-2,-64 -6,-70 Z" fill="{m}"/>'
+    if look.glasses:
+        frame, lens = look.glasses
+        st = f'fill="{lens}" stroke="{frame}" stroke-width="2.6"'
+        if view == 'side':
+            out += f'<circle cx="18" cy="-85" r="8" {st}/><path d="M10,-86 L-6,-84" stroke="{frame}" stroke-width="2.4"/>'
+        elif view == 'front':
+            out += f'<circle cx="-10" cy="-84" r="8" {st}/><circle cx="10" cy="-84" r="8" {st}/><path d="M-2,-85 Q0,-88 2,-85" fill="none" stroke="{frame}" stroke-width="2.2"/>'
+        elif view == 'qfront':
+            out += f'<circle cx="0" cy="-84" r="7.5" {st}/><ellipse cx="17" cy="-84" rx="6" ry="7.5" {st}/><path d="M7,-85 L11,-85" stroke="{frame}" stroke-width="2.2"/>'
+    return out
+
 # ---------------------------------------------------------------- clothes
 def camo_defs(pfx, c):
     base, a, b, d = c
@@ -82,9 +143,10 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
+        if plaid: s.shirt = s.sleeve = 'url(#eplaid2)'   # (a plaid flannel: the pattern is in defs; the game export's prefix is 'e')
 
     # -- torso, front and back views (replaces the flannel)
     def torso(s, back, pfx):
@@ -99,6 +161,9 @@ class Look:
                 t += (f'<path d="M-15,-55 C-14,-46 -6,-42 0,-42 C6,-42 14,-46 15,-55 L10,-57 C8,-50 -8,-50 -10,-57 Z" fill="{s.shirt2}"/>'
                       f'<rect x="-6" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="4" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
                       f'<path d="M-14,-18 L14,-18 L17,-4 L-17,-4 Z" fill="{s.shirt2}"/>')
+        elif s.top == 'cardigan':   # an open cardigan over a collared shirt (shirt2 shows down the front)
+            if not back: t += (f'<path d="M-9,-52 L9,-52 L7,0 L-7,0 Z" fill="{s.shirt2}"/>'
+                               f'<path d="M-10,-54 L0,-44 L-4,-56 Z M10,-54 L0,-44 L4,-56 Z" fill="{s.trim}"/>')
         elif s.top == 'track':   # track jacket: a stand-up collar, a zip down the front, stripes down the sides
             t += f'<rect x="-14" y="-56" width="28" height="9" rx="4" fill="{s.shirt2}"/>'
             if not back: t += f'<rect x="-1.5" y="-50" width="3" height="50" fill="{s.trim}"/><rect x="-3" y="-50" width="6" height="5" rx="1.5" fill="{s.trim}"/>'
@@ -114,7 +179,7 @@ class Look:
 
     def upper_side(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = short_side(s.hair) if s.style == 'short' else shaggy_side(s.hair, s.hl)
+        hair = hair_of(s, 'side')
         shirt = (f'<rect x="-5" y="-62" width="15" height="16" rx="5" fill="{rig.SK2}"/>'
                  f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{s.shirt}"/>')
         if s.top == 'hoodie':
@@ -128,18 +193,18 @@ class Look:
             f'<circle cx="4" cy="-86" r="29" fill="{rig.SK}"/><circle cx="31" cy="-81" r="4" fill="{rig.SK}"/>' + hair +
             f'<circle{f} cx="17" cy="-85" r="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M10,-71 Q18,-64 27,-71" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-            f'<circle{f} cx="9" cy="-74" r="5" fill="{rig.CHEEK}" opacity=".45"/>')
+            f'<circle{f} cx="9" cy="-74" r="5" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'side'))
 
     def upper_front(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = short_front(s.hair) if s.style == 'short' else shaggy_front(s.hair, s.hl)
+        hair = hair_of(s, 'front')
         return (s.torso(False, pfx) + f'<circle cx="0" cy="-86" r="29" fill="{rig.SK}"/>' + hair +
             f'<circle{f} cx="-9.5" cy="-84" r="3.6" fill="{rig.EYE}"/><circle{f} cx="9.5" cy="-84" r="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M-7,-72 Q0,-66 7,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-            f'<circle{f} cx="-14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/>')
+            f'<circle{f} cx="-14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'front'))
 
     def upper_back(s, pfx):
-        hair = short_back(s.hair) if s.style == 'short' else shaggy_back(s.hair, s.hl)
+        hair = hair_of(s, 'back')
         return s.torso(True, pfx) + f'<circle cx="0" cy="-86" r="29" fill="{rig.SK}"/>' + hair
 
     def torso_q(s, back, pfx):
@@ -148,7 +213,9 @@ class Look:
              f'<rect x="-6" y="-62" width="14" height="16" rx="5" fill="{rig.SK2}"/>'
              f'<rect x="-20" y="-52" width="40" height="54" rx="15" fill="{s.shirt}"/>'
              f'<rect x="-20" y="-50" width="9" height="50" rx="4.5" fill="{s.shirt2}"/>')    # the side turned toward us
-        if s.top == 'hoodie':
+        if s.top == 'cardigan':
+            if not back: t += f'<path d="M-1,-52 L13,-52 L11,0 L-1,0 Z" fill="{s.shirt2}"/>'
+        elif s.top == 'hoodie':
             if back:
                 t += f'<path d="M-19,-54 C-20,-38 -12,-30 -3,-30 C6,-30 13,-38 12,-54 Z" fill="{s.shirt2}"/>'
             else:
@@ -168,16 +235,16 @@ class Look:
 
     def upper_qfront(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = short_qfront(s.hair) if s.style == 'short' else shaggy_qfront(s.hair, s.hl)
-        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style == 'short' else ''
+        hair = hair_of(s, 'qfront')
+        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly') else ''
         return (s.torso_q(False, pfx) + f'<circle cx="2" cy="-86" r="29" fill="{rig.SK}"/>' + hair + ear +
             f'<circle{f} cx="0" cy="-84" r="3.6" fill="{rig.EYE}"/><ellipse{f} cx="17" cy="-84" rx="3" ry="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M2,-72 Q9,-66 16,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-            f'<circle{f} cx="-5" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="19" cy="-75" r="4.2" fill="{rig.CHEEK}" opacity=".45"/>')
+            f'<circle{f} cx="-5" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="19" cy="-75" r="4.2" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'qfront'))
 
     def upper_qback(s, pfx):
-        hair = short_qback(s.hair) if s.style == 'short' else shaggy_qback(s.hair, s.hl)
-        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style == 'short' else ''
+        hair = hair_of(s, 'qback')
+        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly') else ''
         return (s.torso_q(True, pfx) + f'<circle cx="-2" cy="-86" r="29" fill="{rig.SK}"/>'
                 f'<circle cx="21" cy="-76" r="3.5" fill="{rig.CHEEK}" opacity=".45"/>' + hair + ear)
 
@@ -189,7 +256,7 @@ class Look:
                     f'<rect x="-8.5" y="-7" width="17" height="42" rx="8.5" fill="{sl}"/>'
                     f'<rect x="-1.5" y="-4" width="3" height="31" fill="{s.trim}"/>'
                     f'<rect x="-8" y="28" width="16" height="6" rx="3" fill="{s.shirt2}"/>')
-        if s.top == 'hoodie':   # long sleeve with a cuff
+        if s.top in ('hoodie', 'cardigan'):   # long sleeve with a cuff
             return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
                     f'<rect x="-8.5" y="-7" width="17" height="42" rx="8.5" fill="{sl}"/>'
                     f'<rect x="-8" y="27" width="16" height="7" rx="3.5" fill="{s.shirt2}"/>')
@@ -206,7 +273,13 @@ class Look:
         return leg
 
     def defs(s, pfx):
-        return camo_defs(pfx, s.camo) if s.camo else ''
+        out = camo_defs(pfx, s.camo) if s.camo else ''
+        if s.plaid:
+            base, band, line = s.plaid
+            out += (f'<pattern id="{pfx}plaid2" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="{base}"/>'
+                    f'<rect x="0" y="8" width="26" height="8" fill="{band}" opacity=".85"/><rect x="8" y="0" width="8" height="26" fill="{band}" opacity=".7"/>'
+                    f'<rect x="0" y="20" width="26" height="2" fill="{line}"/><rect x="20" y="0" width="2" height="26" fill="{line}"/></pattern>')
+        return out
 
 LOOKS = {
     # James: short brown hair brushed to the side, navy hoodie, khakis
@@ -219,6 +292,17 @@ LOOKS = {
                   shirt='#2456C8', shirt2='#1C45A6', sleeve='#2456C8', trim='#FFFFFF',
                   pants='#A39B78', pants2='#8E8766', shoe='#3A3D44', shoe2='#30333A', height=0.86,
                   camo=('#A39B78', '#6E6A4C', '#8C6F5E', '#C9C0A0')),
+    # Poppop (Nico's grandpa): bald on top with white hair round the sides, a big white walrus
+    # mustache, glasses, an orange-and-green plaid flannel shirt, dark trousers
+    'poppop': Look('poppop', skin='#F0C4A8', skin2='#DDA88A', hair='#EDEDED', style='bald', top='tee',
+                   shirt='#2F6E62', shirt2='#2F6E62', sleeve='#2F6E62', trim='#2F6E62', plaid=('#2F6E62', '#E07A3A', '#F4EBD6'),
+                   pants='#3E4A5A', pants2='#334050', shoe='#5A4131', shoe2='#4A3628', height=1.24,
+                   glasses=('#2B3F55', '#DCEAF5'), mustache='#F4F4F4'),
+    # Nonna (Nico's grandma): short wavy grey hair, thin rimless glasses, a blue shirt under a grey cardigan
+    'nonna': Look('nonna', skin='#F0C9AE', skin2='#DDAE90', hair='#B9BCC0', hl='#E2E4E6', style='curly', top='cardigan',
+                  shirt='#C9C6BC', shirt2='#6E8FC4', sleeve='#C9C6BC', trim='#8FAAD6',
+                  pants='#4A4E7A', pants2='#3E4268', shoe='#C9A08E', shoe2='#B58C7A', height=1.04,   # (4'11": Nico's almost as tall as her)
+                  glasses=('#C9CED6', '#EEF4FA')),
     # Tempo: short dark-brown hair, brown eyes; an all-red tracksuit (white zip and stripes)
     'tempo': Look('tempo', skin='#EDC3A0', skin2='#DBA682', hair='#3B271B', style='short', top='track',
                   shirt='#D9322E', shirt2='#B82723', sleeve='#D9322E', trim='#FFFFFF',
@@ -242,6 +326,29 @@ LOOKS = {
     'mrbrooks': Look('mrbrooks', skin='#7A4A2E', skin2='#673D25', hair='#1A1411', style='short', top='hoodie',
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
+    # people who work inside the other buildings, and the grown-ups at home in the houses (made up)
+    'nurse': Look('nurse', skin='#D9A07A', skin2='#C48B66', hair='#2A1E18', hl='#4A362A', style='shaggy', top='tee',
+                  shirt='#4FB3A9', shirt2='#3E978E', sleeve='#4FB3A9', trim='#FFFFFF', pants='#4FB3A9', pants2='#3E978E', shoe='#F4F6F8', shoe2='#D3DAE1', height=1.15),
+    'firefighter': Look('firefighter', skin='#E8B48E', skin2='#D69C76', hair='#5B3B26', style='short', top='hoodie',
+                        shirt='#C9A35A', shirt2='#B08A44', sleeve='#C9A35A', trim='#F9E04A', pants='#C9A35A', pants2='#B08A44', shoe='#2F343C', shoe2='#272B32', height=1.22, stripe='#F9E04A'),
+    'farmer': Look('farmer', skin='#E8B48E', skin2='#D69C76', hair='#8A5E3B', style='short', top='tee',
+                   shirt='#5B8FD6', shirt2='#4A79B8', sleeve='#5B8FD6', trim='#5B8FD6', pants='#7A5236', pants2='#664430', shoe='#5A4131', shoe2='#4A3628', height=1.2),
+    'ranger': Look('ranger', skin='#A86F4B', skin2='#94603F', hair='#2A1E18', style='short', top='tee',
+                   shirt='#4E7A44', shirt2='#3F6537', sleeve='#4E7A44', trim='#C9B48A', pants='#C9B48A', pants2='#B39E76', shoe='#5A4131', shoe2='#4A3628', height=1.2),
+    'lifeguard': Look('lifeguard', skin='#E8B48E', skin2='#D69C76', hair='#E3C27A', hl='#F2DDA0', style='shaggy', top='tee',
+                      shirt='#E5484D', shirt2='#C93B40', sleeve='#E5484D', trim='#FFFFFF', pants='#E5484D', pants2='#C93B40', shoe='#F4F6F8', shoe2='#D3DAE1', height=1.12),
+    'scoop': Look('scoop', skin='#F1C6A6', skin2='#DFA683', hair='#C46A2C', style='shaggy', top='tee',
+                  shirt='#F7C8D0', shirt2='#E8A9B4', sleeve='#F7C8D0', trim='#FFFFFF', pants='#7FD1C1', pants2='#66B8A8', shoe='#F4F6F8', shoe2='#D3DAE1', height=1.1),
+    'toyshop': Look('toyshop', skin='#7A4A2E', skin2='#673D25', hair='#1A1411', style='short', top='hoodie',
+                    shirt='#7B5BA6', shirt2='#684C8F', sleeve='#7B5BA6', trim='#F9C846', pants='#34466B', pants2='#2A3957', shoe='#F9C846', shoe2='#D9A93A', height=1.18),
+    'janitor': Look('janitor', skin='#C68B62', skin2='#B07650', hair='#5A5A5A', hl='#7A7A7A', style='short', top='hoodie',
+                    shirt='#5B6E86', shirt2='#4B5D73', sleeve='#5B6E86', trim='#E9EEF3', pants='#5B6E86', pants2='#4B5D73', shoe='#2F343C', shoe2='#272B32', height=1.2),
+    'mom': Look('mom', skin='#E8B48E', skin2='#D69C76', hair='#3B2618', hl='#5C3E28', style='shaggy', top='tee',
+                shirt='#F28C38', shirt2='#D9772A', sleeve='#F28C38', trim='#FFFFFF', pants='#34466B', pants2='#2A3957', shoe='#F4F6F8', shoe2='#D3DAE1', height=1.16),
+    'dad': Look('dad', skin='#C68B62', skin2='#B07650', hair='#1E1612', style='short', top='hoodie',
+                shirt='#3E8F8A', shirt2='#337A76', sleeve='#3E8F8A', trim='#E9EEF3', pants='#C9B48A', pants2='#B39E76', shoe='#2F343C', shoe2='#272B32', height=1.22, glasses=('#2B3F55', '#DCEAF5')),
+    'grandma': Look('grandma', skin='#F1C6A6', skin2='#DFA683', hair='#E6E6E6', hl='#FFFFFF', style='curly', top='cardigan',
+                    shirt='#E8A9B4', shirt2='#FFFFFF', sleeve='#E8A9B4', trim='#F7C8D0', pants='#7B5BA6', pants2='#684C8F', shoe='#6B4E3A', shoe2='#5A4131', height=1.1, glasses=('#B8554D', '#F4F1EA')),
     # works the counter at Burger Barn: red-and-white uniform
     'cook': Look('cook', skin='#E8B48E', skin2='#D69C76', hair='#3A2A20', style='short', top='tee',
                  shirt='#E5484D', shirt2='#C93B40', sleeve='#FFFFFF', trim='#FFFFFF',

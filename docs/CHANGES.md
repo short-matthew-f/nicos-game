@@ -800,3 +800,26 @@ Nico wanted to switch between Nico, James and Primo; Tempo is in too.
 - The choice is saved (`Save.player`, optional), and it's applied once the game is set up.
 - People keep their tap spot under their first name, whoever's walking the route. That fixed a crash on the first try.
 - e2e: play as Primo, Nico walks Primo's rounds, back to Nico (231 checks).
+
+### Inside every building (2026-10-10)
+The user: "any space that exists should be able to be gone inside of."
+- **`world/interiors.ts`:** a room is data. It has wall and floor colours, the things in it, and someone to talk to. A thing is one of four kinds:
+  - a block (counters, desks, shelves, beds);
+  - something on the back wall (chalkboards, maps, posters, windows);
+  - a big emoji (a cow, the fire truck);
+  - a rug.
+  Anything can have a use: a line or two when you walk up, a seat, or the building's own business.
+- **New insides:**
+  - **School:** a chalkboard you can draw on, rows of desks to sit at, a globe to spin, and the janitor.
+  - **Hospital:** the nurse gives you a check-up and a little speed; there's a waiting room and a bed that crinkles.
+  - **Fire station:** the truck (unless it's out on a call; ring its bell), the pole, a helmet rack, and a firefighter.
+  - **Ice cream:** order at the counter, sit at a table.
+  - **Parts & Tools, Toy Shop:** shelves of stuff, and the clerk or the owner at the counter (the same buying and selling as before).
+  - **Garage:** the tool wall, your bike, and "Bring my car home" at the bench.
+  - **The farm's barn:** hay, a cow, a horse, chickens, and the farmer with the eggs.
+  - **Pool house:** lockers and pool toys, and the lifeguard.
+  - **Ranger station:** the trail map, a stuffed bear, and the ranger with the photo album.
+  - **The six houses round town:** each family's living room. Maya's mom, Leo's dad, Sam's grandma and the others say hi and offer a treat (lemonade, a cookie, a muffin...: a little speed, every 2 minutes).
+- **New people** (made up): the nurse, firefighter, farmer, ranger, lifeguard, ice cream server, toy shop owner, janitor, and moms, dads and grandmas. `people.py` gained bald and curly hair, glasses and a mustache for them. Their art loads in the background after the town is up, so starting the game is no slower.
+- **Doors now take you inside.** The menus and buying cards moved to the counter inside. The e2e door helper walks up to the counter, and the debug `place()` steps outside when it's given a spot out in town.
+- Tests: every building has an inside and a door; in every room, everything you can use, the person and the way out can be reached (17 more). e2e: 231 checks.

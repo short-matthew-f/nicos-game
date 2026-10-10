@@ -17,6 +17,7 @@ export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 const arts = new Map<Who, ArtMeta>();
 // ?v= so a new deploy never mixes with cached art (Pages lets browsers cache files for 10 minutes)
 const BUST = `?v=${encodeURIComponent(BUILD_ID)}`;
+export const hasArt = (who: Who) => arts.has(who);
 export async function loadArt(who: Who[] = ['nico'], base = './'): Promise<void> {
   await Promise.all(who.map(async w => {
     const art = await (await fetch(`${base}art/${w}/${w}.json${BUST}`)).json() as ArtMeta;
