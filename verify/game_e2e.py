@@ -244,6 +244,9 @@ with sync_playwright() as p:
     check(G()['bigMap'] and abs(G()['nico']['x'] - x0) < 1, 'tapping the minimap opens the big map without moving Nico')
     pg.mouse.click(W * 0.6, H * 0.5); pg.wait_for_timeout(200)
     check(not G()['bigMap'], 'a tap closes it')
+    # lite mode (what a slow device switches to by itself): still runs, outlines kept
+    pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
+    check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

@@ -378,7 +378,7 @@ async function main() {
       const horiz = Math.random() < 0.5;
       if (horiz) { w.x = 100 + Math.random() * (WORLD.w - 200); w.y = ROADS_Y[Math.random() < 0.5 ? 0 : 1] + (Math.random() < 0.5 ? -98 : 98); }
       else { w.y = 100 + Math.random() * (WORLD.h - 200); w.x = ROADS_X[Math.random() < 0.5 ? 0 : 1] + (Math.random() < 0.5 ? -98 : 98); }
-      view.setZoom(zoom, resolution);
+      view.setZoom(zoom, resolution); if (low) view.setLow(true);
       view.root.cullable = true;
       layer.addChild(view.root);
       walkers.push(w);
@@ -397,11 +397,24 @@ async function main() {
 
   const fpsEl = document.getElementById('fps')!;
   let fpsAcc = 0, fpsN = 0, fps = 0;
+  // if the device can't keep up (under 45 fps for 4 s), drop the costly extras for good:
+  // characters' soft shadows and the cloud shadows (the sticker outlines stay)
+  let slowFor = 0, low = false;
+  function goLow() {
+    low = true;
+    for (const n of [nico, ...walkers, ...locals]) n.view.setLow(true);
+    clouds.view.visible = false;
+    console.info('[nico] low-quality mode: fps was', fps);
+  }
 
   app.ticker.add(t => {
     const dt = Math.min(t.deltaMS / 1000, 0.05);
     fpsAcc += t.deltaMS; fpsN++;
-    if (fpsAcc > 500) { fps = Math.round(1000 * fpsN / fpsAcc); fpsEl.textContent = `${fps} fps`; fpsAcc = 0; fpsN = 0; }
+    if (fpsAcc > 500) {
+      fps = Math.round(1000 * fpsN / fpsAcc); fpsEl.textContent = `${fps} fps${low ? ' (lite)' : ''}`; fpsAcc = 0; fpsN = 0;
+      slowFor = fps < 45 && !document.hidden ? slowFor + 0.5 : 0;
+      if (slowFor >= 4 && !low) goLow();
+    }
     if (Math.hypot(input.vx, input.vy) > 0) hint.style.opacity = '0';
 
     const frozen = cardOpen !== null;   // a card is open (a building, a job offer)
@@ -570,6 +583,7 @@ async function main() {
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
       bigMap: bigMap.visible, minimapAt: (() => { const b = minimap.view.getBounds(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })(),
+      low, goLow: () => goLow(),
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,

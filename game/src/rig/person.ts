@@ -60,6 +60,9 @@ export class PersonView {
     this.shadow.offset = { x: SHADOW.x * px, y: SHADOW.y * px };
   }
 
+  /** Cheaper drawing for slow devices: keep the white sticker outline, drop the soft shadow. */
+  setLow(low: boolean) { this.root.filters = low ? [this.outline] : [this.outline, this.shadow]; }
+
   /** Every part has real pixels (a bad image URL gives Pixi's 1x1 empty texture). */
   artLoaded(): boolean {
     return Object.values(this.views).every(v => v.parts.every(p => p.sprite.texture.width > 2 && p.sprite.texture.source.resource != null));

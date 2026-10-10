@@ -370,3 +370,8 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Correction (same bug as the fire truck):** the braking margin (10 px) was wider than the stop window (8 px), so the bus parked just short of its first stop forever. The window is now 12 px and the margin 6; the comment says why. A unit test runs the bus for 2 minutes and checks it waits more than 3 s at least twice.
 - Generated streetlamps now also keep clear of the hand-placed props.
 - Vitest 178, e2e 79.
+
+## 2026-10-09 (overnight): automatic lite mode
+- Every frame rate so far was measured on the Mac. As insurance for the iPad: if it stays under 45 fps for 4 s, the game permanently drops the costly extras (characters' soft drop shadows and the cloud shadows). The white sticker outlines stay, so the style holds. The fps chip then reads "(lite)".
+- e2e 80: lite mode runs and is labelled.
+- **Not proven:** the automatic trigger. The Mac never drops under 45 fps, so the e2e forces it through a hook. The trigger itself is a 4-line threshold.
