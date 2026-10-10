@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { BUILDINGS, TREES, PROPS, LOTS, POND, SLIDE, SWINGS, GOALS, FIELD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, WORLD, SOLIDS, doorOf, propSolid, type Rect } from '../src/world/map';
+import { BUILDINGS, TREES, PROPS, LOTS, POND, SLIDE, SWINGS, GOALS, FIELD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, WORLD, SOLIDS, ROAD_SEGS, roadRect, PINES, doorOf, propSolid, type Rect } from '../src/world/map';
 import { freeAt } from '../src/player';
 import { COIN_SPOTS, FLOCKS } from '../src/world/life';
+import { HERDS, settle } from '../src/world/animals';
+import { shoreY, PIER } from '../src/world/zones';
 
 const band = ROAD_W / 2 + SIDEWALK;   // road plus sidewalk, either side of a centre line
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 const drawn = (b: typeof BUILDINGS[number]): Rect => ({ x: b.x, y: b.y - b.h, w: b.w, d: b.d + b.h });
-const roads: Rect[] = [
-  ...ROADS_X.map(x => ({ x: x - band, y: 0, w: band * 2, d: WORLD.h })),
-  ...ROADS_Y.map(y => ({ x: 0, y: y - band, w: WORLD.w, d: band * 2 })),
-];
+const roads: Rect[] = ROAD_SEGS.map(r => roadRect(r, SIDEWALK));
+void band;
 
 describe('town layout', () => {
   it('no building (as drawn, wall and roof included) covers a road or sidewalk, or leaves the world', () => {
@@ -28,6 +28,7 @@ describe('town layout', () => {
   it('trees and props stay off roads, out of buildings and off the soccer field', () => {
     const things: [string, Rect][] = [
       ...TREES.map(([x, y]) => [`tree ${x},${y}`, { x: x - 20, y: y - 18, w: 40, d: 20 }] as [string, Rect]),
+      ...PINES.map(([x, y]) => [`pine ${x},${y}`, { x: x - 16, y: y - 16, w: 32, d: 18 }] as [string, Rect]),
       ...PROPS.map(p => [`${p.kind} ${p.x},${p.y}`, propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 }] as [string, Rect]),
     ];
     for (const [name, r] of things) {
@@ -47,5 +48,15 @@ describe('town layout', () => {
     for (const [x, y] of COIN_SPOTS) expect(freeAt(x, y, SOLIDS, WORLD), `coin ${x},${y}`).toBe(true);
     const onRoad = (x: number, y: number) => ROADS_X.some(r => Math.abs(x - r) < ROAD_W / 2 + 20) || ROADS_Y.some(r => Math.abs(y - r) < ROAD_W / 2 + 20);
     for (const [x, y] of FLOCKS) expect(freeAt(x, y, SOLIDS, WORLD) && !onRoad(x, y), `pigeons ${x},${y}`).toBe(true);   // sidewalks are fine
+  });
+  it('every animal lives somewhere it can stand', () => {
+    for (const [k, x0, y0] of HERDS) { const [x, y] = settle(x0, y0); expect(freeAt(x, y, SOLIDS, WORLD) && Math.hypot(x - x0, y - y0) < 150, `${k} ${x0},${y0}`).toBe(true); }
+  });
+  it('the ocean is solid (past the shallows) except along the pier, and the beach is walkable', () => {
+    for (let x = 100; x < WORLD.w - 100; x += 300) {
+      expect(freeAt(x, shoreY(x) - 120, SOLIDS, WORLD), `beach at x ${x}`).toBe(PINES.every(([px, py]) => Math.hypot(px - x, py - shoreY(x) + 120) > 60) ? true : freeAt(x, shoreY(x) - 120, SOLIDS, WORLD));
+      if (x < PIER.x - 60 || x > PIER.x + PIER.w + 60) expect(freeAt(x, shoreY(x) + 160, SOLIDS, WORLD), `sea at x ${x}`).toBe(false);
+    }
+    for (let y = PIER.y; y < PIER.y + PIER.d - 30; y += 60) expect(freeAt(PIER.x + PIER.w / 2, y, SOLIDS, WORLD), `pier at y ${y}`).toBe(true);
   });
 });

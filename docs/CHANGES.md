@@ -512,3 +512,22 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - **Nico:** "there is maybe a fire too often."
   - The first alarm now comes after 2 minutes (was 25 s), so a restart doesn't bring an instant fire.
   - After that, alarms come every 5–10 minutes (was 70–130 s).
+
+## 2026-10-10: a bigger world: forest, beach, pool, farm, campground, pier
+- **Nico:** "the map isn't large enough. And it shouldn't be fully square... add a forest area, a beach area, a swimming pool, and some other zones."
+- **The world is now 8100 × 5600** (was 4860 × 3510). The town is unchanged in the top-left, so every old position, save, route and test coordinate still works and there's no save bump. The new land is all east and south (`src/world/zones.ts`).
+- **Not square:** a curving shoreline runs from the south-west to the north-east, with ocean beyond (solid), a sandy beach along it, and a pale strip and foam at the water's edge. The forest's edge is uneven.
+- **Zones:**
+  - **Forest:** pines (a jittered grid that thins out at its edges) and a lake. The ranger cabin and a trailhead lot are at the end of the forest road.
+  - **Campground:** tents, a campfire and logs, at the end of the east road.
+  - **Beach:** umbrellas, towels, a sandcastle, a lifeguard chair, palms, a lighthouse, and a **pier** you can walk out on.
+  - **Pool park:** the pool, a waterslide tower (just looks for now), loungers and a pool house.
+  - **Farm:** a barn, crop rows, a fenced pasture and hay bales.
+- **Roads** are now segments (`ROAD_SEGS`) instead of lines across the whole map. They lead out to the forest trailhead, the campground, the farm and pool, and the beach car park.
+- **Animals** (`world/animals.ts`): cows and chickens at the farm, deer and rabbits in the forest, gulls and crabs on the beach (24 in all). Each wanders near its home. The shy ones run from Nico; the cows don't. Homes settle onto the nearest free ground.
+- **Maps:** the minimap and big map show the sand, sea, forest, lake, pool and pier, with zone labels and new icons (🐄 🏊 🌲).
+- **Forest fixes from screenshots:**
+  - pines first covered the road and the cabin door, so they now keep clear of the space a pine's height below roads, lots and doors;
+  - the spacing was loosened so the forest is walkable;
+  - the ocean strips were narrowed to 40 px so the steep east coast keeps its beach.
+- **Tests:** layout tests use the road segments, and check that animals stand on free ground, the sea is solid past the shallows (except the pier), and the beach is walkable. e2e: the sea stops Nico, the pier doesn't, animals exist and a deer runs off (135 checks). 60 fps on the Mac in every zone.

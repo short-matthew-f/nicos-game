@@ -25,6 +25,7 @@ import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './pl
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
+import { Animals } from './world/animals';
 import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
 import { WORKBENCH, PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns } from './business';
@@ -91,6 +92,7 @@ async function main() {
   pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]; if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
+  const animals = new Animals(); for (const a of animals.list) { a.view.cullable = true; layer.addChild(a.view); }
   const ducks = new Ducks();
   let quackIn = 2;
   for (const d of ducks.views) layer.addChild(d);
@@ -625,6 +627,7 @@ async function main() {
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
+    animals.update(dt, [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]]);
     clouds.update(dt);
     const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y], ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
     pigeons.update(dt, movers);
@@ -730,6 +733,7 @@ async function main() {
       low, goLow: () => goLow(),
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,
       setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(windowToys()); persist(); },
+      animals: animals.list.map(a => ({ kind: a.kind, x: a.x, y: a.y, scared: a.scared > 0 })),
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,

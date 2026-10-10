@@ -13,17 +13,33 @@
 export const K = 1.35;                // plan unit -> world (1.6 felt too big to find your way round: 2026-10-09)
 const k = (v: number) => Math.round(v * K);
 
-export const WORLD = { w: k(3600), h: k(2600) };                  // 4860 x 3510
+import { ZONE_WORLD, ZONE_LOTS, ZONE_BUILDINGS, ZONE_PROPS, LAKE, POOL, PIER, oceanSolids, forestTrees, shoreY, SAND_W } from './zones';
+
+export const TOWN = { w: k(3600), h: k(2600) };                   // the town: 4860 x 3510 (top left of the world)
+export const WORLD = ZONE_WORLD;                                   // with the forest, beach, pool and farm round it: 8100 x 5600
 export const ROAD_W = k(160), SIDEWALK = k(36), LANE = k(40);      // 216, 49, 54
 export const ROADS_X = [k(900), k(2300)];   // vertical road centre lines (1215, 3105)
 export const ROADS_Y = [k(700), k(1700)];   // horizontal road centre lines (945, 2295)
 // Blocks between the roads (x: 0-1058 | 1372-2948 | 3262-4860, y: 0-788 | 1102-2138 | 2452-3510)
+/** Where each road runs (they used to cross the whole town edge to edge; now they lead out
+ * to the new places and stop there). */
+export interface RoadSeg { axis: 'h' | 'v'; at: number; from: number; to: number }
+export const ROAD_SEGS: RoadSeg[] = [
+  { axis: 'h', at: ROADS_Y[0], from: 0, to: 6720 },   // east into the forest, to the trailhead
+  { axis: 'h', at: ROADS_Y[1], from: 0, to: 5900 },   // east to the campground
+  { axis: 'v', at: ROADS_X[0], from: 0, to: 4360 },   // south to the farm and the pool
+  { axis: 'v', at: ROADS_X[1], from: 0, to: 4400 },   // south to the beach
+];
+/** A road's rectangle, widened by `extra` each side (SIDEWALK for the sidewalks). */
+export const roadRect = (r: RoadSeg, extra = 0) => r.axis === 'h'
+  ? { x: r.from, y: r.at - ROAD_W / 2 - extra, w: r.to - r.from, d: ROAD_W + 2 * extra }
+  : { x: r.at - ROAD_W / 2 - extra, y: r.from, w: ROAD_W + 2 * extra, d: r.to - r.from };
 
 export interface Building {
   id: string; label?: string;
   x: number; y: number; w: number; d: number; h: number;
   wall: string; roof: string; trim?: string;
-  kind: 'house' | 'shop' | 'civic';
+  kind: 'house' | 'shop' | 'civic' | 'barn';
   bays?: number[];   // big vehicle doors: centre x of each
 }
 
@@ -53,6 +69,8 @@ export const BUILDINGS: Building[] = [
   house('h5', 60, 2700, '#BFE0DA', '#D77B72'),
   house('h6', 400, 2700, '#F7E3C4', '#3E8F8A'),
   house('h7', 230, 3170, '#F2D6A2', '#5B78AA'),
+  // beyond the town (zones.ts)
+  ...ZONE_BUILDINGS.map(b => ({ ...b, kind: (b.id === 'barn' ? 'barn' : 'shop') as Building['kind'] })),
 ];
 
 /** Areas on the ground (not solid; things on them may be). */
@@ -63,7 +81,9 @@ export const LOTS = [
   { id: 'field', x: 1440, y: 3080, w: 1460, d: 390, fill: '#8CC76F' },     // soccer field
   { id: 'carpark', x: 4150, y: 480, w: 640, d: 260, fill: '#C9CED6' },      // by the hospital
   { id: 'yard', x: 3320, y: 2960, w: 1000, d: 470, fill: '#C9CED6' },       // storage yard
+  ...ZONE_LOTS,
 ];
+export { LAKE, POOL, PIER, shoreY, SAND_W };
 
 /** The pond in the park (water: solid), and its ducks' swimming loop. */
 export const POND = { x: 2040, y: 1720, w: 420, d: 250 };
@@ -98,8 +118,9 @@ export const TREES: [number, number][] = [
 export const BUS_STOPS: [number, number][] = [[1800, ROADS_Y[1] - LANE], [2600, ROADS_Y[1] - LANE]];
 
 /** Street furniture and bits of life, as data. Solid ones are added to SOLIDS. */
-export type PropKind = 'busstop' | 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone';
-export interface Prop { kind: PropKind; x: number; y: number; color?: string; h?: number; stripe?: string }
+export type PropKind = 'busstop' | 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone'
+  | 'umbrella' | 'towel' | 'sandcastle' | 'lifeguard' | 'palm' | 'lighthouse' | 'waterslide' | 'lounge' | 'hay' | 'fence' | 'tent' | 'campfire' | 'log' | 'rock';
+export interface Prop { kind: PropKind; x: number; y: number; color?: string; h?: number; stripe?: string; len?: number }
 export const PROPS: Prop[] = [
   // park: fountain, benches round the pond, flower beds, the ice cream cart
   { kind: 'fountain', x: 2700, y: 1850 },
@@ -124,6 +145,7 @@ export const PROPS: Prop[] = [
   { kind: 'cart', x: 4500, y: 1720 },
   // bus stops along the south edge of the park (the school bus runs the inner loop)
   ...BUS_STOPS.map(([x]) => ({ kind: 'busstop' as const, x, y: ROADS_Y[1] - ROAD_W / 2 - SIDEWALK - 8 })),
+  ...(ZONE_PROPS as Prop[]),
 ];
 
 /** Street lamps and hydrants along the sidewalks: every so often on the grass side, skipping
@@ -132,8 +154,10 @@ function streetProps(): Prop[] {
   const out: Prop[] = [];
   const off = ROAD_W / 2 + SIDEWALK + 14;
   // (north side of the east-west roads only: a lamp south of a road would draw up across it)
-  for (const ry of ROADS_Y) for (let x = 180; x < WORLD.w; x += 420) out.push({ kind: 'lamp', x, y: ry - off });
-  for (const rx of ROADS_X) for (let y = 220; y < WORLD.h; y += 460) for (const sg of [-1, 1]) out.push({ kind: 'lamp', x: rx + sg * off, y });
+  for (const r of ROAD_SEGS) {
+    if (r.axis === 'h') for (let x = 180; x < r.to; x += 420) out.push({ kind: 'lamp', x, y: r.at - off });
+    else for (let y = 220; y < r.to; y += 460) for (const sg of [-1, 1]) out.push({ kind: 'lamp', x: r.at + sg * off, y });
+  }
   for (const rx of ROADS_X) for (const ry of ROADS_Y) out.push({ kind: 'hydrant', x: rx + off + 10, y: ry + off + 40 });
   return out;
 }
@@ -190,6 +214,18 @@ export function propSolid(p: Prop): Rect | null {
     case 'fountain': return { x: p.x - 70, y: p.y - 34, w: 140, d: 46 };
     case 'cart': return { x: p.x - 50, y: p.y - 20, w: 100, d: 22 };
     case 'busstop': return { x: p.x - 60, y: p.y - 18, w: 120, d: 20 };
+    case 'umbrella': return { x: p.x - 6, y: p.y - 8, w: 12, d: 10 };
+    case 'lifeguard': return { x: p.x - 40, y: p.y - 20, w: 80, d: 22 };
+    case 'palm': return { x: p.x - 16, y: p.y - 14, w: 32, d: 16 };
+    case 'lighthouse': return { x: p.x - 60, y: p.y - 40, w: 120, d: 44 };
+    case 'waterslide': return { x: p.x - 50, y: p.y - 40, w: 100, d: 44 };
+    case 'lounge': return { x: p.x - 22, y: p.y - 40, w: 44, d: 44 };
+    case 'hay': return { x: p.x - 34, y: p.y - 22, w: 68, d: 24 };
+    case 'fence': return { x: p.x, y: p.y - 8, w: p.len ?? 100, d: 10 };
+    case 'tent': return { x: p.x - 70, y: p.y - 50, w: 140, d: 52 };
+    case 'campfire': return { x: p.x - 26, y: p.y - 16, w: 52, d: 20 };
+    case 'log': return { x: p.x - 46, y: p.y - 14, w: 92, d: 16 };
+    case 'rock': return { x: p.x - 40, y: p.y - 22, w: 80, d: 26 };
     case 'parked': return Math.abs(Math.sin(p.h ?? 0)) > 0.7 ? { x: p.x - 42, y: p.y - 84, w: 84, d: 168 } : { x: p.x - 84, y: p.y - 42, w: 168, d: 84 };
     default: return null;
   }
@@ -198,9 +234,8 @@ export function propSolid(p: Prop): Rect | null {
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 /** Buildings as drawn (front wall and roof included), for keeping props out of them. */
 const drawnRect = (b: Building): Rect => ({ x: b.x - 10, y: b.y - b.h - 10, w: b.w + 20, d: b.d + b.h + 50 });
-const roadBand = ROAD_W / 2 + SIDEWALK;
 const busy: Rect[] = [...BUILDINGS.map(drawnRect), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
-  ...ROADS_X.map(x => ({ x: x - roadBand, y: 0, w: roadBand * 2, d: WORLD.h })), ...ROADS_Y.map(y => ({ x: 0, y: y - roadBand, w: WORLD.w, d: roadBand * 2 })),
+  ...ROAD_SEGS.map(r => roadRect(r, SIDEWALK)),
   // keep a clear lane from each door down toward the street
   ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }),
   ...PROPS.map(p => { const r = propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 }; return { x: r.x - 40, y: r.y - 20, w: r.w + 80, d: r.d + 40 }; })];
@@ -209,6 +244,16 @@ for (const p of streetProps()) {
   if (PROPS.some(q => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < 160)) continue;   // no doubled-up lamps at corners
   if (!busy.some(b => hit(b, r)) && r.x > 10 && r.x + r.w < WORLD.w - 10 && r.y > 10 && r.y + r.d < WORLD.h - 10) PROPS.push(p);
 }
+
+/** The forest's pines, kept off the roads (and their sidewalks), the lots, the lake and buildings. */
+export const PINES: [number, number][] = forestTrees((x, y) => {
+  const r = { x: x - 60, y: y - 60, w: 120, d: 90 };
+  // a pine draws ~250 px up from its foot: keep it far enough below a road (or a lot, or a door) not to cover it
+  const tall = { x: x - 70, y: y - 270, w: 140, d: 300 };
+  return ROAD_SEGS.some(s => hit(roadRect(s, SIDEWALK + 30), tall)) || LOTS.some(l => hit(l, tall)) || BUILDINGS.some(b => hit(drawnRect(b), r))
+    || BUILDINGS.some(b => { const [dx, dy] = doorOf(b); return hit({ x: dx - 90, y: dy - 20, w: 180, d: 360 }, tall); })
+    || hit({ x: LAKE.x - 70, y: LAKE.y - 70, w: LAKE.w + 140, d: LAKE.d + 140 }, r) || PROPS.some(p => Math.hypot(p.x - x, p.y - y) < 120);
+});
 
 /** What you bump into, walking or driving: buildings, tree trunks, props, the pond, the
  * feet of the playground equipment, and the goal posts. */
@@ -222,4 +267,9 @@ export const SOLIDS: Rect[] = [
   { x: SWINGS.x, y: SWINGS.y - 20, w: 22, d: 20 },
   { x: SWINGS.x + SWINGS.w - 22, y: SWINGS.y - 20, w: 22, d: 20 },
   ...GOALS.flatMap(g => [{ x: g.x - 12, y: g.y - GOAL_MOUTH / 2 - 12, w: 24, d: 14 }, { x: g.x - 12, y: g.y + GOAL_MOUTH / 2 - 2, w: 24, d: 14 }]),
+  // beyond the town: pine trunks, the ocean, the lake and the pool (no swimming yet)
+  ...PINES.map(([x, y]) => ({ x: x - 16, y: y - 16, w: 32, d: 18 })),
+  ...oceanSolids(),
+  { x: LAKE.x + 30, y: LAKE.y + 30, w: LAKE.w - 60, d: LAKE.d - 60 },
+  { x: POOL.x, y: POOL.y, w: POOL.w, d: POOL.d },
 ];

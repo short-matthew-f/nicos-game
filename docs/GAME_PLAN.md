@@ -67,7 +67,15 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - How time works: rent and wages (§13.6), and what failure costs (§13.7).
 - How deep factory planning goes (§13.5).
 
+## Next, after Nico's map feedback
+- **Beach:** shells to collect, and a metal detector (beeps faster near buried things; dig up finds).
+- **Forest:** a camera; photograph wildlife and collect an album.
+- **Pool:** the water slide, swimming, and a floating ring.
+- **Building insides:** Burger Barn first. Walk in, read the menu, order at the counter, carry the tray to a table and eat. Then the ice cream shop.
+- **Parked:** the kite, house cleaning, and hiring a worker. The worker needs a decision on how time works (only while the game is open, or also while it's closed).
+
 ## Waiting on
+- Does the world's size and shape feel right to Nico now?
 - Nico playing v2. Use the playtest list at the end of `docs/UX_NOTES.md`.
 - The iPad report: frame rate (lite mode switches on by itself below 45 fps), how the stick feels, and Nico's reactions to the overnight build.
 

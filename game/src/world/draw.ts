@@ -2,7 +2,8 @@
 // navy shadow offset down-right. Static things draw the band as geometry (cheap);
 // only characters use the live outline filter.
 import { Container, Graphics, Text } from 'pixi.js';
-import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
+import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, ROAD_SEGS, roadRect, PINES, LAKE, POOL, PIER, type Building } from './map';
+import { sandPolygon, waterPolygon, SHORE, shoreY } from './zones';
 
 export const NAVY = 0x2B3F55;
 /** The white sticker edge round everything in the world (px). Characters match it (person.ts OUTLINE). */
@@ -25,7 +26,25 @@ export function drawGround(): Graphics {
     const x = rnd() * WORLD.w, y = rnd() * WORLD.h, c = rnd() < 0.5 ? '#AFD392' : '#C6E3AA';
     g.ellipse(x, y, 10 + rnd() * 14, 4 + rnd() * 4).fill(c);
   }
+  // the beach and the ocean: sand, a pale wet strip at the water's edge, foam, then the sea
+  g.poly(sandPolygon()).fill('#F2DFA7');
+  g.poly(waterPolygon()).fill('#62B6D9');
+  g.poly(SHORE.flatMap(([x, y]) => [x, y + 26]).concat([...SHORE].reverse().flatMap(([x, y]) => [x, y + 140]))).fill('#7CC6E6');
+  for (let i = 0; i + 1 < SHORE.length; i++) g.moveTo(SHORE[i][0], SHORE[i][1] + 6).lineTo(SHORE[i + 1][0], SHORE[i + 1][1] + 6);
+  g.stroke({ width: 10, color: '#FFFFFF', alpha: 0.75, cap: 'round' });
+  for (let i = 0; i < 400; i++) { const x = rnd() * WORLD.w, y = rnd() * WORLD.h; if (y > shoreY(x) + 180) g.roundRect(x, y, 40 + rnd() * 50, 5, 3).fill({ color: '#FFFFFF', alpha: 0.2 }); }   // little waves out at sea
   for (const l of LOTS) g.roundRect(l.x, l.y, l.w, l.d, 18).fill(l.fill);
+  // the farm's crop rows, the forest lake, the pool and the pier
+  { const c = LOTS.find(l => l.id === 'crops')!; for (let y = c.y + 20; y < c.y + c.d - 10; y += 34) g.roundRect(c.x + 16, y, c.w - 32, 14, 7).fill('#6E9A43'); }
+  g.ellipse(LAKE.x + LAKE.w / 2, LAKE.y + LAKE.d / 2, LAKE.w / 2 + 14, LAKE.d / 2 + 14).fill('#C9B98E');
+  g.ellipse(LAKE.x + LAKE.w / 2, LAKE.y + LAKE.d / 2, LAKE.w / 2, LAKE.d / 2).fill('#5AA9C9');
+  g.ellipse(LAKE.x + LAKE.w / 2 - 90, LAKE.y + LAKE.d / 2 - 50, LAKE.w / 4, LAKE.d / 7).fill({ color: '#FFFFFF', alpha: 0.22 });
+  g.roundRect(POOL.x - 18, POOL.y - 18, POOL.w + 36, POOL.d + 36, 22).fill('#FFFFFF');
+  g.roundRect(POOL.x, POOL.y, POOL.w, POOL.d, 14).fill('#4FC3E8');
+  for (let i = 1; i < 5; i++) g.rect(POOL.x + 10, POOL.y + i * POOL.d / 5 - 2, POOL.w - 20, 4).fill({ color: '#FFFFFF', alpha: 0.5 });   // lane ropes
+  g.ellipse(POOL.x + POOL.w * 0.3, POOL.y + POOL.d * 0.3, POOL.w * 0.18, POOL.d * 0.08).fill({ color: '#FFFFFF', alpha: 0.3 });
+  g.rect(PIER.x - 8, PIER.y - 40, PIER.w + 16, PIER.d + 40).fill('#8A6A48');
+  for (let y = PIER.y - 36; y < PIER.y + PIER.d; y += 22) g.rect(PIER.x - 4, y, PIER.w + 8, 16).fill('#C49A6C');
   // soccer field markings
   const F = FIELD, lw = 5;
   g.roundRect(F.x + 14, F.y + 14, F.w - 28, F.d - 28, 6).stroke({ width: lw, color: '#F4F6F8' });
@@ -40,18 +59,17 @@ export function drawGround(): Graphics {
   for (const [dx, dy] of [[-150, 60], [140, -70], [100, 70]]) g.ellipse(POND.x + POND.w / 2 + dx, POND.y + POND.d / 2 + dy, 22, 12).fill('#5FAF6A');   // lily pads
   for (const r of DRIVEWAYS) g.rect(r.x, r.y, r.w, r.d).fill(KERB);
   const half = ROAD_W / 2;
-  // sidewalks, then roads on top
-  for (const y of ROADS_Y) g.rect(0, y - half - SIDEWALK, WORLD.w, ROAD_W + 2 * SIDEWALK).fill(WALK);
-  for (const x of ROADS_X) g.rect(x - half - SIDEWALK, 0, ROAD_W + 2 * SIDEWALK, WORLD.h).fill(WALK);
-  for (const y of ROADS_Y) g.rect(0, y - half - 4, WORLD.w, 4).fill(KERB).rect(0, y + half, WORLD.w, 4).fill(KERB);
-  for (const x of ROADS_X) g.rect(x - half - 4, 0, 4, WORLD.h).fill(KERB).rect(x + half, 0, 4, WORLD.h).fill(KERB);
-  for (const y of ROADS_Y) g.rect(0, y - half, WORLD.w, ROAD_W).fill(ROAD);
-  for (const x of ROADS_X) g.rect(x - half, 0, ROAD_W, WORLD.h).fill(ROAD);
+  // sidewalks, then roads on top (each road runs only as far as it goes: ROAD_SEGS)
+  for (const r of ROAD_SEGS) { const w = roadRect(r, SIDEWALK); g.roundRect(w.x, w.y, w.w, w.d, 12).fill(WALK); }
+  for (const r of ROAD_SEGS) { const k = roadRect(r, 4); g.roundRect(k.x, k.y, k.w, k.d, 8).fill(KERB); }
+  for (const r of ROAD_SEGS) { const rd = roadRect(r); g.roundRect(rd.x, rd.y, rd.w, rd.d, 6).fill(ROAD); }
   // dashed centre lines, skipping intersections
   const nearX = (x: number) => ROADS_X.some(rx => Math.abs(x - rx) < half + 30);
   const nearY = (y: number) => ROADS_Y.some(ry => Math.abs(y - ry) < half + 30);
-  for (const y of ROADS_Y) for (let x = 0; x < WORLD.w; x += 70) if (!nearX(x) && !nearX(x + 40)) g.roundRect(x, y - 3, 40, 6, 3).fill(PAINT);
-  for (const x of ROADS_X) for (let y = 0; y < WORLD.h; y += 70) if (!nearY(y) && !nearY(y + 40)) g.roundRect(x - 3, y, 6, 40, 3).fill(PAINT);
+  for (const r of ROAD_SEGS) {
+    if (r.axis === 'h') { for (let x = r.from; x < r.to - 60; x += 70) if (!nearX(x) && !nearX(x + 40)) g.roundRect(x, r.at - 3, 40, 6, 3).fill(PAINT); }
+    else for (let y = r.from; y < r.to - 60; y += 70) if (!nearY(y) && !nearY(y + 40)) g.roundRect(r.at - 3, y, 6, 40, 3).fill(PAINT);
+  }
   // crosswalks on every side of each intersection
   for (const x of ROADS_X) for (const y of ROADS_Y) {
     for (let i = -half + 12; i < half - 12; i += 26) {
@@ -205,6 +223,23 @@ export function drawTree(x: number, y: number): Container {
   return c;
 }
 
+/** A forest pine, a bit taller than the town's trees. (x, y) is the foot of the trunk. */
+export function drawPine(x: number, y: number, shade = 0): Container {
+  const g = new Graphics();
+  const H = 250, W = 150, base = y - 40, c1 = ['#3E8E5A', '#358052', '#4A9A63'][shade % 3];
+  g.ellipse(x + SH.x + 6, y + 4, 60, 16).fill({ color: NAVY, alpha: SH.a });
+  const tri = (w: number, top: number, bot: number) => [x - w / 2, bot, x, top, x + w / 2, bot];
+  g.roundRect(x - 12 - BAND, base - 6, 24 + 2 * BAND, 46 + BAND, 6).fill('#FFFFFF');
+  for (const [w, t, b] of [[W, base - H * 0.55, base], [W * 0.8, base - H * 0.8, base - H * 0.35], [W * 0.55, base - H, base - H * 0.62]] as const)
+    g.poly(tri(w + BAND * 3, t - BAND * 2, b + BAND)).fill('#FFFFFF');
+  g.roundRect(x - 12, base - 6, 24, 46, 5).fill('#7A5236');
+  for (const [w, t, b] of [[W, base - H * 0.55, base], [W * 0.8, base - H * 0.8, base - H * 0.35], [W * 0.55, base - H, base - H * 0.62]] as const)
+    g.poly(tri(w, t, b)).fill(c1);
+  g.poly([x - 10, base - H * 0.95, x, base - H, x + 16, base - H * 0.7]).fill({ color: '#FFFFFF', alpha: 0.12 });
+  const c = new Container(); c.addChild(g); c.zIndex = y;
+  return c;
+}
+
 /** The slide and the swing frame (not solid), plus the swing seats. The seats hang from
  * the bar and are separate layer items drawn just in front of the frame, so a swing can
  * move and Nico can sit between the frame and his seat's chains. */
@@ -329,6 +364,94 @@ export function drawProp(p: Prop): Container {
       g.rect(x + 70, y - 130, 5, 132).fill('#34495E').circle(x + 72, y - 136, 16).fill('#FFFFFF').circle(x + 72, y - 136, 12).fill('#F7C21B')
        .roundRect(x + 64, y - 140, 16, 9, 2).fill('#2B3F55');
       break;
+    case 'umbrella': {
+      const col = p.color ?? '#E5484D';
+      sh(40, 10, 0);
+      g.rect(x - 2, y - 110, 4, 112).fill('#FFFFFF').rect(x - 1, y - 108, 2, 108).fill('#8A6A48');
+      g.ellipse(x, y - 110, 74, 26).fill('#FFFFFF').ellipse(x, y - 110, 70, 22).fill(col);
+      for (const dx of [-35, 0, 35]) g.ellipse(x + dx, y - 108, 10, 16).fill({ color: '#FFFFFF', alpha: 0.5 });
+      break;
+    }
+    case 'towel': g.roundRect(x - 50, y - 20, 100, 40, 6).fill('#FFFFFF').roundRect(x - 47, y - 17, 94, 34, 5).fill(p.color ?? '#5B8FD6')
+      .rect(x - 47, y - 6, 94, 8).fill({ color: '#FFFFFF', alpha: 0.6 }); break;
+    case 'sandcastle':
+      sh(46, 9);
+      g.roundRect(x - 48, y - 40, 96, 42, 4).fill('#FFFFFF').roundRect(x - 44, y - 36, 88, 36, 3).fill('#E8C77A');
+      for (const dx of [-36, 0, 36]) g.roundRect(x + dx - 13, y - 66, 26, 32, 3).fill('#FFFFFF').roundRect(x + dx - 10, y - 63, 20, 28, 2).fill('#DDBA6A');
+      g.rect(x - 1, y - 92, 2, 28).fill('#2B3F55').poly([x + 1, y - 92, x + 18, y - 86, x + 1, y - 80]).fill('#E5484D'); break;
+    case 'lifeguard':
+      sh(44, 10);
+      g.rect(x - 34, y - 110, 6, 112).fill('#FFFFFF').rect(x + 28, y - 110, 6, 112).fill('#FFFFFF');
+      g.rect(x - 33, y - 108, 4, 108).fill('#F0F0F0').rect(x + 29, y - 108, 4, 108).fill('#F0F0F0');
+      g.roundRect(x - 40, y - 140, 80, 36, 6).fill('#FFFFFF').roundRect(x - 36, y - 136, 72, 28, 5).fill('#E5484D');
+      g.roundRect(x - 30, y - 186, 60, 46, 8).fill('#FFFFFF').roundRect(x - 26, y - 182, 52, 38, 6).fill('#F9C846');
+      for (let k = y - 90; k < y; k += 22) g.rect(x - 30, k, 60, 5).fill('#FFFFFF'); break;
+    case 'palm': {
+      sh(50, 12, 0);
+      const top = y - 210;
+      g.moveTo(x, y).quadraticCurveTo(x + 30, y - 100, x + 10, top).stroke({ width: 26, color: '#FFFFFF', cap: 'round' });
+      g.moveTo(x, y).quadraticCurveTo(x + 30, y - 100, x + 10, top).stroke({ width: 18, color: '#B48A5A', cap: 'round' });
+      for (const a of [-2.6, -1.9, -1.2, -0.5, 0.2]) {
+        const ex = x + 10 + Math.cos(a) * 90, ey = top + Math.sin(a) * 50 + 30;
+        g.moveTo(x + 10, top).quadraticCurveTo((x + 10 + ex) / 2, top - 40, ex, ey).stroke({ width: 24, color: '#FFFFFF', cap: 'round' });
+        g.moveTo(x + 10, top).quadraticCurveTo((x + 10 + ex) / 2, top - 40, ex, ey).stroke({ width: 16, color: '#3E9B57', cap: 'round' });
+      }
+      g.circle(x + 4, top + 6, 9).fill('#7A5236').circle(x + 18, top + 8, 9).fill('#7A5236'); break;
+    }
+    case 'lighthouse':
+      sh(70, 16);
+      g.poly([x - 56, y, x - 34, y - 300, x + 34, y - 300, x + 56, y]).fill('#FFFFFF');
+      g.poly([x - 52, y - 2, x - 31, y - 296, x + 31, y - 296, x + 52, y - 2]).fill('#F4F6F8');
+      for (const [a, b] of [[30, 90], [150, 210]]) g.poly([x - 52 + a * 0.07, y - a, x - 52 + b * 0.07, y - b, x + 52 - b * 0.07, y - b, x + 52 - a * 0.07, y - a]).fill('#E5484D');
+      g.roundRect(x - 46, y - 330, 92, 34, 6).fill('#FFFFFF').roundRect(x - 42, y - 326, 84, 26, 4).fill('#2B3F55');
+      g.roundRect(x - 30, y - 382, 60, 54, 10).fill('#FFFFFF').roundRect(x - 26, y - 378, 52, 46, 8).fill('#FFE066');
+      g.poly([x - 38, y - 380, x, y - 420, x + 38, y - 380]).fill('#E5484D');
+      g.roundRect(x - 14, y - 60, 28, 60, 8).fill('#2B3F55'); break;
+    case 'waterslide': {
+      // a tall tower with a ladder, and a twisting blue chute down to the pool
+      sh(60, 12);
+      g.roundRect(x - 50, y - 300, 100, 302, 10).fill('#FFFFFF').roundRect(x - 44, y - 294, 88, 294, 8).fill('#F9A826');
+      for (let k = y - 280; k < y - 10; k += 28) g.rect(x - 30, k, 60, 8).fill('#FFE29A');
+      g.roundRect(x - 56, y - 316, 112, 24, 8).fill('#FFFFFF').roundRect(x - 52, y - 312, 104, 16, 6).fill('#D9822B');
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 44, color: '#FFFFFF', cap: 'round' });
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 34, color: '#2F7FD8', cap: 'round' });
+      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y - 120).stroke({ width: 10, color: '#7CC6E6', cap: 'round' });
+      break;
+    }
+    case 'lounge':
+      sh(26, 8);
+      g.roundRect(x - 24, y - 70, 48, 72, 8).fill('#FFFFFF').roundRect(x - 20, y - 66, 40, 64, 6).fill('#F7F7F2');
+      g.roundRect(x - 20, y - 66, 40, 22, 6).fill('#7FD1E8'); for (let k = y - 40; k < y - 4; k += 9) g.rect(x - 20, k, 40, 3).fill('#7FD1E8'); break;
+    case 'hay':
+      sh(36, 9);
+      g.roundRect(x - 36, y - 46, 72, 48, 10).fill('#FFFFFF').roundRect(x - 32, y - 42, 64, 40, 8).fill('#E8C35A');
+      g.rect(x - 32, y - 30, 64, 4).fill('#C9A23E').rect(x - 32, y - 16, 64, 4).fill('#C9A23E'); break;
+    case 'fence': {
+      const L = p.len ?? 100;
+      g.rect(x, y - 34, L, 6).fill('#FFFFFF').rect(x, y - 18, L, 6).fill('#FFFFFF');
+      g.rect(x, y - 33, L, 4).fill('#B9895A').rect(x, y - 17, L, 4).fill('#B9895A');
+      for (let k = x; k <= x + L; k += 70) g.roundRect(k - 5, y - 44, 10, 46, 3).fill('#FFFFFF').roundRect(k - 3, y - 42, 6, 42, 2).fill('#8A5A3B');
+      break;
+    }
+    case 'tent': {
+      const col = p.color ?? '#F9A826';
+      sh(72, 14);
+      g.poly([x - 76, y + 2, x, y - 120, x + 76, y + 2]).fill('#FFFFFF').poly([x - 70, y - 2, x, y - 112, x + 70, y - 2]).fill(col);
+      g.poly([x - 22, y - 2, x, y - 60, x + 22, y - 2]).fill('#2B3F55').poly([x, y - 112, x + 70, y - 2, x + 40, y - 2]).fill({ color: '#000000', alpha: 0.12 }); break;
+    }
+    case 'campfire':
+      sh(34, 8);
+      g.ellipse(x, y - 6, 34, 14).fill('#FFFFFF').ellipse(x, y - 6, 30, 11).fill('#8E8E8E');
+      g.roundRect(x - 26, y - 16, 52, 10, 4).fill('#7A5236').roundRect(x - 20, y - 22, 40, 10, 4).fill('#5E3E28');
+      g.poly([x - 18, y - 16, x - 6, y - 58, x + 4, y - 30, x + 12, y - 66, x + 20, y - 16]).fill('#F28C38');
+      g.poly([x - 9, y - 16, x - 2, y - 40, x + 5, y - 26, x + 10, y - 44, x + 13, y - 16]).fill('#FFD45C'); break;
+    case 'log':
+      sh(46, 8);
+      g.roundRect(x - 48, y - 30, 96, 32, 14).fill('#FFFFFF').roundRect(x - 44, y - 26, 88, 24, 11).fill('#8A5A3B');
+      g.ellipse(x + 38, y - 14, 8, 11).fill('#C9A27A'); break;
+    case 'rock':
+      sh(42, 10);
+      g.ellipse(x, y - 22, 44, 28).fill('#FFFFFF').ellipse(x, y - 22, 40, 24).fill('#9AA3AD').ellipse(x - 10, y - 30, 18, 9).fill('#B8C0C8'); break;
     case 'parked': break;   // drawn as a car sprite by the caller
   }
   c.addChild(g); c.zIndex = y;
@@ -357,6 +480,7 @@ export function drawWorld(layer: Container): { seats: Seat[] } {
   for (const p of PROPS) if (p.kind !== 'parked') layer.addChild(drawProp(p));
   for (const gl of GOALS) layer.addChild(drawGoal(gl.x, gl.y, gl.side));
   for (const [x, y] of TREES) layer.addChild(drawTree(x, y));
+  PINES.forEach(([x, y], i) => layer.addChild(drawPine(x, y, i)));
   const pg = drawPlayground();
   for (const p of pg.items) layer.addChild(p);
   return { seats: pg.seats };

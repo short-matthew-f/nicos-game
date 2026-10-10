@@ -405,6 +405,19 @@ with sync_playwright() as p:
     pg.click('#action'); pg.wait_for_timeout(200)
     gb = G()
     check(gb['money'] > m0 + 9 and gb['job'] is None and not any(f['id'] == 'radio' for f in gb['biz']['finds']), f"handed over: the radio's gone, paid more than it sells for ({m0} -> {gb['money']})")
+    # beyond the town: the beach stops at the sea, the pier goes out over it, animals live in the new places
+    pg.evaluate('()=>window.__game.place(3300, 4700)'); pg.wait_for_timeout(150)
+    gz = drag(0, 90, 2200)
+    check(4800 < gz['nico']['y'] < 5010, f"walking down the beach, Nico stops at the water's edge (y {gz['nico']['y']:.0f}; the sea starts about 4950)")
+    pg.evaluate('()=>window.__game.place(4400, 4600)'); pg.wait_for_timeout(150)
+    gz = drag(0, 90, 2200)
+    check(gz['nico']['y'] > 5000, f"but he can walk out along the pier (y {gz['nico']['y']:.0f})")
+    an = G()['animals']
+    check(len(an) >= 20 and {'cow', 'deer', 'gull', 'crab', 'rabbit', 'chicken'} <= {a['kind'] for a in an}, f"animals live out there ({len(an)})")
+    deer = next(a for a in an if a['kind'] == 'deer')
+    pg.evaluate(f"()=>window.__game.place({deer['x'] - 120}, {deer['y']})"); pg.wait_for_timeout(700)
+    d2 = next(a for a in G()['animals'] if a['kind'] == 'deer')
+    check(math.dist((d2['x'], d2['y']), (deer['x'] - 120, deer['y'])) > math.dist((deer['x'], deer['y']), (deer['x'] - 120, deer['y'])) + 40, f"a deer runs off when Nico comes close ({deer['x']:.0f},{deer['y']:.0f} -> {d2['x']:.0f},{d2['y']:.0f})")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')
