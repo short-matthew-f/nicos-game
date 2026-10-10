@@ -314,6 +314,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
+      spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       truck: { out: truck.out, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },

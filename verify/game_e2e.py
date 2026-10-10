@@ -18,6 +18,12 @@ with sync_playwright() as p:
     pg.goto(url); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)
     pg.wait_for_timeout(800)
     G = lambda: pg.evaluate('()=>JSON.parse(JSON.stringify(window.__game))')
+    # place Nico relative to a named spot (doors, car, slide...), so map changes don't break checks
+    def at(spot, dx=0, dy=0):
+        p = G()['spots'][spot]; x, y = p['x'] + dx, p['y'] + dy
+        pg.evaluate(f'()=>window.__game.place({x}, {y})'); return x, y
+    away = lambda: at('home')   # somewhere well off the roads
+    CARLEN = 112
     g0 = G()
     check(not errs, f'page errors: {errs}')
     check(g0['fps'] > 0, 'fps counter running')
@@ -62,7 +68,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(1200)
     sp = G()['cars'][ci]['speed']
     check(sp < 5, f'a car stops for Nico standing in its lane (speed {sp:.0f})')
-    pg.evaluate('()=>window.__game.place(60, 620)')
+    away()
     pg.wait_for_timeout(1500)
     check(G()['cars'][ci]['speed'] > 100, 'and drives on once he steps away')
     speeds = [c['speed'] for c in G()['cars']]
@@ -74,7 +80,7 @@ with sync_playwright() as p:
     pg.click('#fewer'); pg.wait_for_timeout(300)
     check(G()['people'] == 1, 'Clear removes them')
     # driving: walk up to the car, get in, steer with the same stick, get out
-    pg.evaluate('()=>window.__game.place(560, 1230)'); pg.wait_for_timeout(250)
+    at('car', 0, 100); pg.wait_for_timeout(250)
     check(G()['action'] == 'car' and pg.locator('#action').inner_text() == 'Get in', 'next to the car: a Get in button')
     pg.click('#action'); pg.wait_for_timeout(200)
     check(G()['mode'] == 'drive', 'tapping it gets in')
@@ -95,16 +101,16 @@ with sync_playwright() as p:
     # traffic brakes for Nico's car parked in its lane
     ci = next(i for i, c in enumerate(G()['cars']) if min(abs(math.sin(c['heading'])), abs(math.cos(c['heading']))) < 0.05)
     cc = G()['cars'][ci]
-    pg.evaluate(f"()=>window.__game.placeCar({cc['pos'][0] + math.cos(cc['heading']) * 160}, {cc['pos'][1] + math.sin(cc['heading']) * 160}, {cc['heading']})")
-    pg.evaluate('()=>window.__game.place(60, 620)'); pg.wait_for_timeout(1500)
+    pg.evaluate(f"()=>window.__game.placeCar({cc['pos'][0] + math.cos(cc['heading']) * CARLEN * 1.4}, {cc['pos'][1] + math.sin(cc['heading']) * CARLEN * 1.4}, {cc['heading']})")
+    away(); pg.wait_for_timeout(1500)
     check(G()['cars'][ci]['speed'] < 5, f"a car stops behind Nico's parked car ({G()['cars'][ci]['speed']:.0f})")
     # the save keeps money and where things are across a reload
-    pg.evaluate('()=>window.__game.placeCar(560, 1130, 0)'); pg.evaluate('()=>window.__game.place(700, 1250)'); pg.wait_for_timeout(5300)
+    pg.evaluate('()=>{const p=window.__game.parked; window.__game.placeCar(p.x, p.y, p.h)}'); hx, hy = at('home', 30, 10); pg.wait_for_timeout(5300)
     pg.reload(); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000); pg.wait_for_timeout(300)
     g = G()
-    check(abs(g['nico']['x'] - 700) < 2 and abs(g['nico']['y'] - 1250) < 2 and g['money'] == 20, f"a reload keeps Nico where he was ({g['nico']['x']:.0f},{g['nico']['y']:.0f}, ${g['money']})")
+    check(abs(g['nico']['x'] - hx) < 2 and abs(g['nico']['y'] - hy) < 2 and g['money'] == 20, f"a reload keeps Nico where he was ({g['nico']['x']:.0f},{g['nico']['y']:.0f}, ${g['money']})")
     # Burger Barn: the door offers lunch; buying costs money and makes Nico speedy
-    pg.evaluate('()=>window.__game.place(1660, 1085)'); pg.wait_for_timeout(250)
+    at('burger'); pg.wait_for_timeout(250)
     check(G()['action'] == 'burger' and pg.locator('#action').inner_text() == 'Order lunch', 'Burger Barn door: Order lunch')
     pg.click('#action'); pg.wait_for_timeout(200)
     check(pg.locator('#place').is_visible() and pg.locator('#place-title').inner_text() == 'Burger Barn', 'the menu opens')
@@ -113,24 +119,24 @@ with sync_playwright() as p:
     pg.click('#place-menu button[data-item="fries"]'); pg.wait_for_timeout(200); g = G()
     check(g['money'] == 17 and g['boost'] > 30 and not pg.locator('#place').is_visible(), f"fries cost $3 and give a boost (${g['money']}, {g['boost']:.0f}s)")
     check(pg.locator('#money').inner_text() == '$17' and pg.locator('#boost').is_visible(), 'the HUD shows the new money and the boost')
-    pg.evaluate('()=>window.__game.place(1660, 1300)'); pg.wait_for_timeout(100)
+    at('burger', 0, 90); pg.wait_for_timeout(100)
     x0 = G()['nico']['x']; pg.keyboard.down('d'); pg.wait_for_timeout(1000); pg.keyboard.up('d'); fast = G()['nico']['x'] - x0
     check(fast > 240 * 1.2, f"boosted walking is faster ({fast:.0f} px in 1 s)")
-    pg.evaluate('()=>window.__game.setMoney(2)'); pg.evaluate('()=>window.__game.place(1660, 1085)'); pg.wait_for_timeout(250)
+    pg.evaluate('()=>window.__game.setMoney(2)'); at('burger'); pg.wait_for_timeout(250)
     pg.click('#action'); pg.wait_for_timeout(200)
     check(pg.locator('#place-menu button[data-item="burger"]').is_disabled(), "can't buy a $5 burger with $2")
     pg.click('#place-close'); pg.wait_for_timeout(150)
     check(not pg.locator('#place').is_visible() and G()['money'] == 2, 'Leave closes it, money unchanged')
-    pg.evaluate('()=>window.__game.place(1400, 372)'); pg.wait_for_timeout(250)
+    at('school'); pg.wait_for_timeout(250)
     check(G()['action'] == 'school', 'the school door has something to say too')
     # playground: slide all the way down, and swing until the stick says stop
-    pg.evaluate('()=>window.__game.place(1175, 600)'); pg.wait_for_timeout(250)
+    sx, sy = at('slide'); pg.wait_for_timeout(250)
     check(G()['action'] == 'slide', 'next to the slide: Slide!')
     pg.click('#action'); pg.wait_for_timeout(1700); g = G()
-    check(g['play'] == 'slide' and g['nico']['y'] < 440, f"climbs the slide ({g['nico']['y']:.0f})")
+    check(g['play'] == 'slide' and g['nico']['y'] < sy - 110, f"climbs the slide ({g['nico']['y']:.0f})")
     pg.wait_for_timeout(1500); g = G()
-    check(g['mode'] == 'walk' and g['nico']['x'] > 1400, f"slides down and lands at the bottom ({g['nico']['x']:.0f})")
-    pg.evaluate('()=>window.__game.place(1515, 610)'); pg.wait_for_timeout(250)
+    check(g['mode'] == 'walk' and g['nico']['x'] > sx + 180, f"slides down and lands at the bottom ({g['nico']['x']:.0f})")
+    at('swing'); pg.wait_for_timeout(250)
     pg.click('#action'); pg.wait_for_timeout(300)
     ys = []
     for _ in range(12): pg.wait_for_timeout(200); ys.append(G()['nico']['y'])
@@ -139,10 +145,10 @@ with sync_playwright() as p:
     drag(80, 0, 400)
     check(G()['mode'] == 'walk', 'pushing the stick hops off the swing')
     # the fire truck: on the alarm it leaves the station, laps the ring road and comes home
-    pg.evaluate('()=>window.__game.place(2500, 1350)')
+    at('fire', 0, 300)
     check(not G()['truck']['out'], 'the fire truck waits in the station at first')
     pg.evaluate('()=>window.__game.alarm()'); pg.wait_for_timeout(1800); g = G()
-    check(g['truck']['out'] and g['truck']['speed'] > 100 and g['truck']['pos'][1] > 1080, f"on the alarm it drives out of the station ({g['truck']})")
+    check(g['truck']['out'] and g['truck']['speed'] > 100 and g['truck']['pos'][1] > G()['spots']['fire']['y'] - 20, f"on the alarm it drives out of the station ({g['truck']})")
     check('fire alarm' in pg.locator('#toast').inner_text(), 'a toast says the alarm is ringing (Nico is nearby)')
     try:
         pg.wait_for_function('!window.__game.truck.out', timeout=60000); back = True

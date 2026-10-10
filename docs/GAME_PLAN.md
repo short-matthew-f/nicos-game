@@ -62,6 +62,14 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - How time works: rent and wages (§13.6), and what failure costs (§13.7).
 - How deep factory planning goes (§13.5).
 
+## Nico's feedback on v1, 2026-10-09 (being worked through in this order)
+1. Trees are solid, so you can't drive through them. The playground equipment doesn't look wrong when you walk behind it, and you can't walk through it.
+2. **Scale:** buildings and the world are bigger, so Nico isn't as tall as the trees and houses. Cars grow too.
+3. Sitting properly on the slide and the swing (the swing bar was on his lap), with the equipment spaced further apart.
+4. **People he knows walking around town:** James (short brown hair with a side-swept fringe; navy hoodie or blue polo with khakis) and cousin Primo (younger and smaller; shoulder-length wavy light-brown hair worn loose; blue soccer jersey and camo cargo pants). The photos are reference only and never go in the repo, which is public.
+5. **"8 directions":** he can already walk in any direction. The art only faces 4 ways (side, front, back), so this needs 3/4 front and 3/4 back views drawn in the rig. Waiting to confirm that's what he meant.
+
 ## Idea parking lot (wanted, not scheduled)
+- **Customizing his house and his clothes** (Nico, longer term).
 - **Karate class** (Nico does karate). A dojo in the city with a timing or sequence minigame. Belts earned there show up on his outfit and could unlock a reusable skill.
 - **Hair down** as an alternative look.
