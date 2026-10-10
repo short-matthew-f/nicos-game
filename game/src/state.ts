@@ -1,6 +1,6 @@
 // The save: one small versioned object in localStorage. When the shape changes, bump
 // VERSION and add a step to migrate(), so a change of plan never wipes Nico's progress.
-export const VERSION = 3;
+export const VERSION = 4;
 export const START_MONEY = 20;
 const KEY = 'nico-city-save';
 
@@ -24,6 +24,8 @@ export function migrate(raw: unknown): Save {
   if (o.v === 1) { o.nico = null; o.car = null; o.driving = false; o.v = 2; }
   // v2 -> v3: the town shrank to a middle size (1.35x): same again
   if (o.v === 2) { o.nico = null; o.car = null; o.driving = false; o.v = 3; }
+  // v3 -> v4: the town was re-laid out block by block (buildings, park, field moved): same again
+  if (o.v === 3) { o.nico = null; o.car = null; o.driving = false; o.v = 4; }
   const num = (x: unknown, d: number) => (typeof x === 'number' && isFinite(x) ? x : d);
   const pt = (p: unknown) => (p && typeof p === 'object' && isFinite((p as { x: number }).x) && isFinite((p as { y: number }).y) ? p : null);
   return {

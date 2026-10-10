@@ -29,6 +29,10 @@ describe('save', () => {
     expect(migrate({ v: 2, money: 9, nico: { x: 5, y: 6 }, car: null, driving: false }))
       .toEqual({ v: VERSION, money: 9, nico: null, car: null, driving: false });
   });
+  it('a v3 save (before the re-layout) keeps its money but not its positions', () => {
+    expect(migrate({ v: 3, money: 31, nico: { x: 2200, y: 3200 }, car: { x: 1, y: 2, h: 0 }, driving: true }))
+      .toEqual({ v: VERSION, money: 31, nico: null, car: null, driving: false });
+  });
   it('a save from a newer game version is not misread', () => {
     expect(migrate({ v: VERSION + 1, money: 999 })).toEqual(fresh());
   });
