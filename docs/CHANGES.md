@@ -657,3 +657,8 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - Buying the workbench shows the bins and paint outlines straight away, not on the next visit.
 - **The user:** "the workbench is a lot taller than Nico." It was drawn 200 px tall against Nico's 132. Benches are now drawn from the floor up: legs to about his waist (`BENCH = 64` px), then the top seen from above. The paint station was redrawn the same way.
 - **Tests:** equipment order and a place for each; the paint bonus. e2e: buy all three, the bins open parts, the shelves count your finds, a painted car sells for $35 (186 checks).
+- **Stickers fold down from a corner** (user: "can it sort of fold down like the corner is being placed into place?"). The drop-and-wobble was replaced:
+  - The top-left corner sticks first, and a fold line sweeps diagonally to the bottom-right over 0.8 s (fast at first, easing as the last corner goes down).
+  - The stuck part is revealed with a mask.
+  - The part not stuck yet is mirrored across the fold and drawn as the sticker's white back, with a soft shadow and a crease along the fold, as if lifted and folded over.
+  - Then the white flash runs round the edge.

@@ -26,32 +26,66 @@ export function outlineArt(x: number, y: number, w: number, h: number, label: st
 }
 
 /** Things being stuck on right now (the game loop calls stickers.update). */
-const active: { c: Container; t: number; flash: Graphics; fy: number }[] = [];
-export const SLAP = 0.6;   // s
+type Pt = [number, number];
+interface Sticking { c: Container; t: number; mask: Graphics; flap: Graphics; flash: Graphics; box: { x: number; y: number; w: number; h: number } }
+const active: Sticking[] = [];
+export const FOLD = 0.8, FLASH = 0.35;   // s: folding down from the corner, then the flash round the edge
+export const SLAP = FOLD + FLASH;
 
-/** Stick `c` onto the world: it pivots round its foot (fx, fy) so it lands in place, not from (0, 0).
- * `box` is its outline, for the flash. */
+/** The part of polygon `poly` where f(p) <= 0 (one Sutherland-Hodgman pass). */
+function clip(poly: Pt[], f: (p: Pt) => number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], fa = f(a), fb = f(b);
+    if (fa <= 0) out.push(a);
+    if ((fa < 0 && fb > 0) || (fa > 0 && fb < 0)) { const k = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]); }
+  }
+  return out;
+}
+
+/** Stick `c` onto the world like a real sticker: its top-left corner goes down first and the rest
+ * folds down after it (the bit not stuck yet is lifted, folded back over, showing the sticker's white
+ * back), then a white flash runs round its edge. `box` is its outline. (fx, fy: its foot, for sorting.) */
 export function slapIn(c: Container, fx: number, fy: number, box: { x: number; y: number; w: number; h: number }) {
-  c.pivot.set(fx, fy); c.position.set(fx, fy);
+  void fx; void fy;
+  const mask = new Graphics(), flap = new Graphics();
+  c.addChild(mask); c.mask = mask;
+  flap.zIndex = c.zIndex + 0.5; c.parent?.addChild(flap);   // (outside the mask: the lifted flap hangs over the stuck part)
   const flash = new Graphics().roundRect(box.x, box.y, box.w, box.h, 20).stroke({ width: 14, color: '#FFFFFF' });
   flash.alpha = 0; c.addChild(flash);
-  active.push({ c, t: 0, flash, fy });
+  active.push({ c, t: 0, mask, flap, flash, box });
   update(0);
 }
 export function update(dt: number) {
   for (const a of active) {
     a.t += dt;
-    const u = Math.min(1, a.t / SLAP);
-    // drop in big and tilted, squash on landing, settle with a wobble
-    const drop = u < 0.45 ? 1 - u / 0.45 : 0;
-    const settle = u < 0.45 ? 0 : (u - 0.45) / 0.55;
-    const s = 1 + 0.35 * drop - 0.08 * Math.sin(settle * Math.PI) * (1 - settle);
-    a.c.scale.set(s * (1 + 0.06 * Math.sin(settle * Math.PI * 3) * (1 - settle)), s);
-    a.c.rotation = -0.12 * drop + 0.05 * Math.sin(settle * Math.PI * 4) * (1 - settle);
-    a.c.alpha = Math.min(1, 0.3 + u * 2.5);
-    a.flash.alpha = u < 0.45 ? 0 : Math.max(0, 1 - settle * 1.4);
+    const { x, y, w, h } = a.box;
+    if (a.t < FOLD) {
+      // the fold line sweeps from the top-left corner to the bottom-right, across the diagonal
+      const u = a.t / FOLD, e = 1 - (1 - u) * (1 - u);   // fast at first, settling as the last corner goes down
+      const L = Math.hypot(w, h), dx = w / L, dy = h / L, reach = w * dx + h * dy, s = e * reach;
+      const along = (p: Pt) => (p[0] - x) * dx + (p[1] - y) * dy - s;
+      const rect: Pt[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+      const stuck = clip(rect, along), loose = clip(rect, p => -along(p));
+      const flapPts = loose.map(p => { const k = 2 * along(p); return [p[0] - k * dx, p[1] - k * dy] as Pt; });   // folded back across the line
+      a.mask.clear(); if (stuck.length > 2) a.mask.poly(stuck.flat()).fill('#FFFFFF');
+      a.flap.clear();
+      if (flapPts.length > 2) {
+        a.flap.poly(flapPts.flatMap(p => [p[0] + 8, p[1] + 10])).fill({ color: NAVY, alpha: 0.16 });   // its shadow
+        a.flap.poly(flapPts.flat()).fill('#FFFFFF').stroke({ width: 2, color: '#D3DAE1' });        // the sticker's white back
+        // a soft crease along the fold (the points that sit on the fold line)
+        const crease = loose.filter(p => Math.abs(along(p)) < 0.5);
+        if (crease.length >= 2) a.flap.moveTo(crease[0][0], crease[0][1]).lineTo(crease[1][0], crease[1][1]).stroke({ width: 6, color: '#E9EEF3' });
+      }
+      a.flash.alpha = 0;
+    } else {
+      if (a.c.mask) { a.c.mask = null; a.mask.destroy(); a.flap.destroy(); }
+      a.flash.alpha = Math.max(0, 1 - (a.t - FOLD) / FLASH);
+    }
   }
   for (let i = active.length - 1; i >= 0; i--) if (active[i].t >= SLAP) {
-    const a = active[i]; a.c.scale.set(1); a.c.rotation = 0; a.c.alpha = 1; a.flash.destroy(); active.splice(i, 1);
+    const a = active[i];
+    if (a.c.mask) { a.c.mask = null; a.mask.destroy(); a.flap.destroy(); }
+    a.flash.destroy(); active.splice(i, 1);
   }
 }
