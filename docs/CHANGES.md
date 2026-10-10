@@ -408,7 +408,7 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 
 | Thing | Value |
 |---|---|
-| Starter unit | $10. Holds 4 wheels ($2 each), a teddy ($4) and a radio ($7). Shown in the first lineup, marked "Good first buy". Its guess is the close one. |
+| Starter unit | $10. Holds 4 wheels ($2 each), a teddy ($4) and a radio ($7). The only unit on the first visit, so the first buy can't be a loss (found in review: random units next to it could be bought first). Marked "Good first buy". Its guess is the close one. |
 | Workbench | $25 |
 | Wheel | $2 |
 | Axle | $3 |

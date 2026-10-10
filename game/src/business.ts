@@ -91,10 +91,11 @@ export function makeUnit(seed: number, name: string): Unit {
   return { name, size: sz.size, price, contents, peek };
 }
 
-/** Three units up for auction. The very first lineup always has the starter unit in it. */
+/** Units up for auction: three of them, except the very first visit, which has only the
+ * starter (so the first buy can't be a loss). */
 export function lineup(seed: number, firstTime: boolean): Unit[] {
-  const names = ['A', 'B', 'C'];
-  return names.map((nm, i) => firstTime && i === 0 ? STARTER : makeUnit(seed * 3 + i + 1, nm));
+  if (firstTime) return [STARTER];
+  return ['A', 'B', 'C'].map((nm, i) => makeUnit(seed * 3 + i + 1, nm));
 }
 
 /** The estimate shown before buying: the real total is always inside it. Appraisers guess

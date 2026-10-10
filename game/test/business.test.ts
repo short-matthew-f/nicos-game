@@ -70,8 +70,14 @@ describe('storage units', () => {
       for (const p of u.peek) expect(u.contents.some(c => c.id === p)).toBe(true);
     }
   });
-  it('the first lineup has the starter unit; later ones are all new', () => {
-    expect(lineup(1, true)[0]).toBe(STARTER);
+  it('the very first visit offers only units that make a profit (just the starter)', () => {
+    for (const seed of [1, 2, 7, 99]) for (const u of lineup(seed, true)) {
+      const finds = u.contents.filter(c => item(c.id).kind === 'find').reduce((t, c) => t + c.value, 0);
+      expect(finds, `${u.name}`).toBeGreaterThan(u.price);
+    }
+  });
+  it('the first lineup is the starter; later ones are three new units', () => {
+    expect(lineup(1, true)).toEqual([STARTER]);
     expect(lineup(1, false).includes(STARTER)).toBe(false);
     expect(lineup(2, false)).toHaveLength(3);
   });

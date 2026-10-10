@@ -3,12 +3,12 @@
 This is a digest of the handbook the user shared (2026-10-10). Four readers split its twelve documents and pulled out what applies to Nico's City. The handbook itself is not in this repo. Section numbers point back into it.
 
 ## Rules we're applying to v2 (the business loop)
-- **One new thing at a time.** Each system arrives after the last one is understood: units, then the workbench, then the build, the test, the sale, then Appraiser. Appraiser unlocks after 3 units, never in the first session's prototype moment. (03 §6–8)
+- **One new thing at a time.** Each system arrives after the last one is understood: units, then the workbench, then the build, the test, the sale, then Appraiser. Appraiser unlocks after 3 units. It arrives after a unit, not during a build or test, so it is never piled on the prototype moment. (03 §6–8)
 - **One goal on screen.** A single goal chip says what to do next. It is not a task list. (02 §9, §19; 06 §14)
-- **No unseen losses.** Before buying, show the price, a value range and a peek inside. The first unit always makes a profit and contains wheels for the car. (02 §11; handoff §5)
+- **No unseen losses.** Before buying, show the price, a value range and a peek inside. The first visit offers only the starter unit, which always makes a profit and contains wheels for the car. (02 §11; handoff §5)
 - **Costly taps are protected.** Buying a unit takes a second "Buy it" tap. Closing a card never spends money. A button works once (the card closes on the first tap), so a double-tap can't charge twice. (01 §2.1, §6.1; 10 §9)
 - **Drag and snap** (01 §6; 04 §4; 11 §5):
-  - the part lifts above the finger with a shadow on touch-down, and the source stays visible;
+  - the part lifts above the finger with a shadow on touch-down, so the finger doesn't hide it;
   - the matching slot glows;
   - a part snaps when dropped within about a slot's width;
   - a wrong drop slides the part back, with nothing used up.

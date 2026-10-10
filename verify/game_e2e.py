@@ -276,7 +276,7 @@ with sync_playwright() as p:
     def door(spot):
         at(spot); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(250)
     door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
-    check(G()['work']['screen'] == 'auction' and pg.locator('#work .lot').count() == 3, 'the storage units show an auction of three units')
+    check(G()['work']['screen'] == 'auction' and pg.locator('#work .lot').count() == 1, 'the first auction has just the starter unit (no losing first buy)')
     pg.click('[data-buy=A]'); pg.wait_for_timeout(150)
     check(G()['money'] == 20 and G()['work']['screen'] == 'auction', 'one tap on Buy only asks (money is safe from a mis-tap)')
     pg.click('[data-buy=A]'); pg.wait_for_timeout(300)
@@ -334,6 +334,7 @@ with sync_playwright() as p:
     # the Appraiser skill: earned on the third unit
     pg.evaluate("()=>{window.__game.setBiz({flips:2}); window.__game.setMoney(200)}")
     door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
+    check(pg.locator('#work .lot').count() == 3, 'after the first, three units to choose from')
     pg.click('[data-buy=B]'); pg.click('[data-buy=B]'); pg.wait_for_timeout(900)
     pg.click('#work .actions button'); pg.wait_for_timeout(2600); pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
     check('appraiser' in G()['biz']['skills'] and 'Appraiser' in pg.locator('#place-title').inner_text(), 'the third unit earns the Appraiser skill (with a card saying so)')

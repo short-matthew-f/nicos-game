@@ -106,8 +106,10 @@ export class Workshop {
   // ------------------------------------------------------------ the auction
   auction() {
     const b = this.host.biz, ap = b.skills.includes('appraiser');
-    this.show('auction', 'Storage unit auction', ap ? '🔍 Appraiser: your guesses are spot on.' : 'Peek through the doors. The price is on the tag; the guess is what the stuff inside might sell for.');
     const units = lineup(b.seed, b.flips === 0);
+    this.show('auction', 'Storage unit auction', ap ? '🔍 Appraiser: your guesses are spot on.'
+      : units.length === 1 ? 'Just one unit up today: a good one to start with. More next time! The guess is what the stuff inside might sell for.'
+      : 'Peek through the doors. The price is on the tag; the guess is what the stuff inside might sell for.');
     for (const u of units) {
       const card = h('div', 'lot'); card.dataset.unit = u.name;
       const door = h('div', 'door'); door.append(h('span', 'peek', [...u.peek.map(emoji), '❓'].join(' ')));
@@ -153,11 +155,12 @@ export class Workshop {
       this.sub.textContent = all ? `Worth $${worth(u)} in all (you paid $${u.price}). Tap a find to switch between Sell and Keep.` : 'Tap the boxes to open them.';
     };
     const reveal = async (i: number) => {
-      if (open[i]) return;
+      if (open[i] || this.screen !== 'unit') return;
       open[i] = true;
       const c = u.contents[i], rare = c.value >= 10, t = tiles[i];
       t.classList.add('opening'); sfx.pop();
       await wait(rare ? 380 : 140);
+      if (this.screen !== 'unit') return;
       if (rare) sfx.sparkle();
       t.classList.remove('box', 'opening'); t.classList.add('open'); if (rare) t.classList.add('rare');
       t.replaceChildren(h('div', 'big', emoji(c.id)), h('div', 'nm', name(c.id)), h('div', 'val', `$${sellPrice(c.value, ap)}`), h('div', 'choice'));
@@ -179,7 +182,10 @@ export class Workshop {
     });
     const openAll = async () => {
       if (open.every(Boolean)) return finish();
-      for (let i = 0; i < open.length; i++) if (!open[i]) { await reveal(i); await wait(110); }   // quick, but one at a time
+      for (let i = 0; i < open.length; i++) if (!open[i]) {   // quick, but one at a time
+        if (this.screen !== 'unit') return;   // left halfway: stop
+        await reveal(i); await wait(110);
+      }
     };
     const finish = () => {
       let got = 0, n = 0;
@@ -187,8 +193,9 @@ export class Workshop {
       if (got) { this.host.setMoney(this.host.money() + got); sfx.cash(n); }
       const profit = got - u.price;
       this.host.toast(got ? `Sold ${n} thing${n === 1 ? '' : 's'} for $${got}${profit > 0 ? ` (that's $${profit} more than you paid!)` : ''}` : 'All kept: they\'re on the shelf in your garage.');
+      const skills = unlocks(b);   // (before close, which saves)
       this.close();
-      for (const sk of unlocks(b)) this.host.skill(sk);
+      for (const sk of skills) this.host.skill(sk);
     };
     done.addEventListener('click', () => { if (open.every(Boolean)) finish(); });
     await wait(650);
