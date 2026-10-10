@@ -44,8 +44,9 @@ export function startUpdates(beforeRestart: () => void): Updater {
   let restartedInto: string | null = null;
   try {
     restartedInto = sessionStorage.getItem(JUST_RESTARTED);
-    // the ?v= in our own URL is only for cache-busting; tidy it away
-    if (location.search.includes('v=')) history.replaceState(null, '', location.pathname);
+    // tidy the address after a restart: drop ?v=, keep anything else (like ?debug)
+    const q = new URLSearchParams(location.search);
+    if (q.has('v')) { q.delete('v'); const rest = q.toString(); history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '')); }
   } catch { /* storage blocked */ }
 
   const pop = document.getElementById('update')!;
@@ -61,7 +62,8 @@ export function startUpdates(beforeRestart: () => void): Updater {
     if (!shown) return;
     beforeRestart();
     try { sessionStorage.setItem(JUST_RESTARTED, shown); } catch { /* fine */ }
-    location.replace(`${location.pathname}?v=${encodeURIComponent(shown)}`);
+    const q = new URLSearchParams(location.search); q.set('v', shown);
+    location.replace(`${location.pathname}?${q}`);
   });
   document.getElementById('update-later')!.addEventListener('click', () => { pop.hidden = true; });
 

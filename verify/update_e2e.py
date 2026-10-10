@@ -15,7 +15,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(url); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)
+    pg.goto(url + ('&' if '?' in url else '?') + 'debug'); pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)
     build = pg.evaluate('()=>window.__game.build')
     pop = pg.locator('#update')
     check(pg.evaluate('()=>window.__game.checkUpdate()') == 'current', 'same build: no update')
@@ -36,6 +36,7 @@ with sync_playwright() as p:
     pg.wait_for_function('window.__game && window.__game.nico', timeout=15000)
     check(pg.evaluate('()=>window.__marker') is None, 'Restart reloaded the page')
     check('v=' not in pg.url, f'the ?v= is tidied from the address ({pg.url})')
+    check('debug' in pg.url and pg.locator('#more').is_visible(), f'other settings in the address (?debug) survive the restart ({pg.url})')
     # the page served is still the old build (version.json is faked): don't nag in a loop
     pg.wait_for_timeout(3800)
     check(not pop.is_visible(), 'no re-prompt for the build it just restarted into')
