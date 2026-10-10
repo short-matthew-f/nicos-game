@@ -823,3 +823,25 @@ The user: "any space that exists should be able to be gone inside of."
 - **New people** (made up): the nurse, firefighter, farmer, ranger, lifeguard, ice cream server, toy shop owner, janitor, and moms, dads and grandmas. `people.py` gained bald and curly hair, glasses and a mustache for them. Their art loads in the background after the town is up, so starting the game is no slower.
 - **Doors now take you inside.** The menus and buying cards moved to the counter inside. The e2e door helper walks up to the counter, and the debug `place()` steps outside when it's given a spot out in town.
 - Tests: every building has an inside and a door; in every room, everything you can use, the person and the way out can be reached (17 more). e2e: 231 checks.
+
+### Poppop, Nonna and Yia-Yia (2026-10-10)
+Nico's grandparents, from family photos (reference only, not in the repo).
+- **The people:**
+  - **Poppop:** short, fluffy, wavy white hair receding at the front corners, a big white walrus mustache, glasses, and an orange-and-green plaid flannel. The user said his first hair "looked a little weird", so three agents each tried a direction (a natural fringe, fluffy sides, a short crop), all redone after the user sent a side photo. The user picked the first: tousled and fluffy, receding at the corners, ears showing.
+  - **Nonna:** short (4'11": Nico is almost as tall as her), with soft wavy grey hair, thin rimless glasses, a blue shirt and a grey cardigan.
+  - **Yia-Yia:** short grey hair, dark rectangular glasses, a bright blue fleece.
+  - `people.py` gained glasses (round or rectangular), a mustache, curly hair, a cardigan, and a plaid pattern.
+- **Poppop and Nonna's house**, at the edge of the woods (north-east, off the forest road): Nonna's kitchen.
+  - "A big bowl of pasta": sit at the table, +60 s speedy, every 3 minutes.
+  - **Pizzelle with Nonna:** a mini game. Batter on the iron, close it, open it when the steam stops; three perfect ones and she teaches you her recipe. Nonna's pizzelle become a fourth recipe at the bakery (`learn: 'pizzelle'`).
+- **Poppop's woodshop:** a red barn of a garage (barns now get big double doors with white X bracing). Inside: a tool wall, lumber, a workbench, the CNC router and the plasma cutter. Three projects with Poppop:
+  - **Birdhouse:** tap each nail three times. It goes up on a post in Nico's garden.
+  - **CNC router:** pick a star, a heart or a rocket, and watch the bit carve it. A carved "⭐ NICO ⭐" sign goes over his kitchen.
+  - **Plasma cutter:** hold the button to cut round a star, with sparks. A steel star goes on his wall.
+  - These are `earned` unlocks: never for sale, stuck on when made.
+- **Yia-Yia's studio** (south block, next to the Toy Shop):
+  - Her two paintings are on the wall, redrawn in the game's style from photos of her real ones: grasses round a carved stone pillar with a fish and a pink flower, and a portrait of a fair-haired girl in white on green. The photos aren't in the repo.
+  - **Paint with Yia-Yia:** finger-paint on a real canvas (9 colours, 3 brush sizes). "Hang it up!" saves it (a small JPEG in the save, the newest 8 kept). It hangs in her gallery, and the newest also hangs at home.
+- Grandparents' houses never catch fire. Their art loads in the background.
+- e2e: learn pizzelle, cut a plasma star, paint and hang a picture (235 checks).
+  - The item-request check now catches Maya between doors: while she waits at the school door, the door wins the tie.

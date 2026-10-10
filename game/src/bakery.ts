@@ -10,12 +10,14 @@ import * as store from './store';
 export const PANTRY: { id: string; price: number }[] = [
   { id: 'flour', price: 1 }, { id: 'sugar', price: 1 }, { id: 'butter', price: 1 }, { id: 'egg', price: 1 }, { id: 'chocolate', price: 2 },
 ];
-export interface Recipe { id: string; name: string; emoji: string; needs: Record<string, number>; makes: number; price: number; oven: number }
+export interface Recipe { id: string; name: string; emoji: string; needs: Record<string, number>; makes: number; price: number; oven: number; learn?: string }
 /** makes: how many come out of the oven; price: each; oven: seconds till it's golden (the timing game). */
 export const RECIPES: Recipe[] = [
   { id: 'cookie', name: 'chocolate chip cookies', emoji: '🍪', needs: { flour: 1, sugar: 1, butter: 1, egg: 1, chocolate: 1 }, makes: 4, price: 3, oven: 3.2 },
   { id: 'cupcake', name: 'cupcakes', emoji: '🧁', needs: { flour: 1, sugar: 1, butter: 1, egg: 2 }, makes: 3, price: 4, oven: 3.8 },
   { id: 'bread', name: 'loaves of bread', emoji: '🍞', needs: { flour: 2, egg: 1, butter: 1 }, makes: 2, price: 5, oven: 4.6 },
+  // Nonna's recipe: she teaches it at her house
+  { id: 'pizzelle', name: "Nonna's pizzelle", emoji: '🧇', needs: { flour: 1, sugar: 1, egg: 2, butter: 1 }, makes: 4, price: 3, oven: 2.6, learn: 'pizzelle' },
 ];
 export const recipe = (id: string) => RECIPES.find(r => r.id === id)!;
 
@@ -40,6 +42,7 @@ export const visitGap = (r: () => number = Math.random) => store.visitGap(BAKERY
 /** Why a recipe can't be baked now (null: it can). */
 export function cantBake(b: Biz, id: string): string | null {
   const r = recipe(id), room = BAKERY.rack - b.bakery.rack.length;
+  if (r.learn && !b.learned.includes(r.learn)) return 'Nonna can teach you this one';
   if (room <= 0) return 'the display case is full';
   const short = Object.entries(r.needs).filter(([k, n]) => (b.items[k] ?? 0) < n);
   if (short.length) return `need ${short.map(([k, n]) => `${n - (b.items[k] ?? 0)} ${k}`).join(', ')}`;

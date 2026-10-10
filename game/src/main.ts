@@ -1,4 +1,4 @@
-import { Application, Container, CullerPlugin, Graphics, Text, extensions } from 'pixi.js';
+import { Application, Container, CullerPlugin, Graphics, Sprite, Text, Texture, extensions } from 'pixi.js';
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
@@ -30,8 +30,8 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
-import { WALLPAPERS, RUGS, REDECORATE } from './decor';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, yiayiaPainting, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
+import { WALLPAPERS, RUGS, REDECORATE, PAINTINGS_KEPT } from './decor';
 import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
 import { RECIPES, PANTRY, BAKERY as BAKERY_RULES, recipe, cantBake, visit as bakeryVisit, whileAway as bakeryAway, emptyTill as bakeryEmpty, visitGap as bakeryGap, HENS } from './bakery';
 import type { Shop } from './store';
@@ -124,7 +124,7 @@ async function main() {
   // fire calls: when the alarm rings, a building near the truck's route catches fire (just
   // smoke and flames in a front window) and the truck stops there to spray it out
   const fireScene = new FireScene(); layer.addChild(fireScene.view);
-  const fireCandidates = BUILDINGS.filter(b => b.id !== 'home' && b.id !== 'fire').filter(b => {
+  const fireCandidates = BUILDINGS.filter(b => !['home', 'fire', 'nonna', 'woodshop', 'yiayia'].includes(b.id)).filter(b => {
     const s = truck.nearestS(b.x + b.w / 2, b.y + b.d), [px, py] = truck.loop.at(s);
     return Math.hypot(px - (b.x + b.w / 2), py - (b.y + b.d)) < 420;
   });
@@ -363,6 +363,7 @@ async function main() {
     skill: sk => showSkill(sk),
     made: () => redrawRack(),
     baked: () => redrawCase(),
+    made2: (what, data) => madeWith(what, data),
   });
   const biz = state.biz;
   // Bibs and Bobs kept selling while Nico was away (up to a few hours' worth; only what's on its shelves)
@@ -523,12 +524,67 @@ async function main() {
     };
     if (r.person) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
     if (id === 'fire') { const t = r.things.find(q => q.kind === 'emoji'); if (t && truck.out) rl.children.find(c => c.zIndex === (t as { y: number }).y)?.removeFromParent(); }   // (the truck's out on a call)
+    if (id === 'yiayia') hangGallery(rl);
     showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
     if (r.person) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
     sfx.door();
   }
   /** The building's own business (its menu, buying, selling...), from the counter. */
-  const placeAction = (id: string) => { const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p); };
+  const placeAction = (id: string) => {
+    if (GRAN[id]) { GRAN[id](); return; }
+    const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p);
+  };
+  // ---- the grandparents: Nonna's pasta and pizzelle, Poppop's woodshop projects, Yia-Yia's easel
+  let pastaIn = 0;
+  const done2 = (id: string) => isUnlocked(biz, id);
+  const GRAN: Record<string, () => void> = {
+    nonna: () => showCard('nonna', '👵 Nonna', `Nonna: “${pick(['Ciao, Nico! You look hungry. Sit, sit!', 'Mangia! You\'re a growing boy.', 'I made too much pasta again. Help me eat it!'])}”`, [
+      { label: '🍝 A big bowl of pasta', sub: pastaIn > 0 ? 'still full!' : 'free', id: 'pasta', disabled: pastaIn > 0, onClick: () => {
+        pastaIn = 180; const t = INTERIORS.nonna.things.find(q => q.kind === 'block' && q.use?.sit && q.use.label.includes('table'));
+        if (t && t.kind === 'block') { nico.x = t.x + t.w / 2; nico.y = t.y + t.d + 50; sitOnBench(t.x + t.w / 2, t.y + t.d + 6); }
+        boost = Math.min(BOOST.max, boost + 60); sfx.coin(); toast('🍝 Nonna brings a huge bowl of pasta. Mangia! You feel super speedy! ⚡');
+      } },
+      { label: biz.learned.includes('pizzelle') ? '🧇 Make pizzelle with Nonna' : '🧇 Learn to make pizzelle', sub: biz.learned.includes('pizzelle') ? 'you know how!' : 'her secret recipe', id: 'pizzelle', onClick: () => work.pizzelle() },
+    ], 'Grazie!'),
+    poppop: () => showCard('poppop', '👴 Poppop', `Poppop: “${pick(['Hey there, kiddo! What shall we make today?', 'Safety glasses on. Now, what are we building?', 'I\'ve got some nice oak here. Want to make something?'])}”`, [
+      { label: '🐦 Build a birdhouse', sub: done2('birdhouse') ? 'made one!' : 'hammer and nails', id: 'proj:birdhouse', onClick: () => work.birdhouse() },
+      { label: '🤖 Carve a sign on the CNC router', sub: done2('sign') ? 'make a new one' : 'the machine carves it', id: 'proj:cnc', onClick: () => work.cnc() },
+      { label: '⚡ Cut a metal star (plasma cutter)', sub: done2('metalstar') ? 'made one!' : 'sparks!', id: 'proj:plasma', onClick: () => work.plasma() },
+    ], 'Thanks, Poppop!'),
+    yiayia: () => showCard('yiayia', '🎨 Yia-Yia', `Yia-Yia: “${pick(['Hello, my darling! Shall we paint?', 'The light is lovely today. Let\'s paint!', 'Your last one was wonderful. Another?'])}” ${biz.paintings.length ? `(${biz.paintings.length} of your paintings are on the walls.)` : ''}`, [
+      { label: '🎨 Paint a picture', sub: 'at the easel', id: 'paint', onClick: () => work.paint() },
+    ], 'Bye, Yia-Yia!'),
+    birdhouse: () => work.birdhouse(), cnc: () => work.cnc(), plasma: () => work.plasma(), paint: () => work.paint(),
+  };
+  /** Something made with a grandparent: it goes where it belongs (the bakery's recipes, Nico's house and garden, the gallery). */
+  function madeWith(what: string, data?: string) {
+    if (what === 'pizzelle') { const first = !biz.learned.includes('pizzelle'); if (first) biz.learned.push('pizzelle'); boost = Math.min(BOOST.max, boost + 20); toast(first ? '🧇 You learned Nonna\'s pizzelle! Bake them at your bakery.' : '🧇 Warm pizzelle! Crunchy and sweet. ⚡'); }
+    if (what === 'birdhouse' && !isUnlocked(biz, 'birdhouse')) { biz.unlocked.push('birdhouse'); placeBirdhouse(); }
+    if (what === 'sign') { if (!isUnlocked(biz, 'sign')) biz.unlocked.push('sign'); if (data) biz.home.sign = data; }
+    if (what === 'metalstar' && !isUnlocked(biz, 'metalstar')) biz.unlocked.push('metalstar');
+    if (what === 'painting' && data) { biz.paintings.push(data); biz.paintings.splice(0, Math.max(0, biz.paintings.length - PAINTINGS_KEPT)); if (room?.id === 'yiayia') enterInside('yiayia', [nico.x, nico.y]); }
+    persist();
+  }
+  /** A painting from a data URL (loaded into a sprite once the image has decoded), framed at x, y, w x h. */
+  function framedPainting(data: string, x: number, y: number, w: number, h: number): Container {
+    const c = new Container(), g = new Graphics().roundRect(x - 8, y - 8, w + 16, h + 16, 6).fill('#FFFFFF').roundRect(x - 5, y - 5, w + 10, h + 10, 4).fill('#C9A04A');
+    c.addChild(g);
+    const img = new Image(); img.onload = () => { if (c.destroyed) return; const sp = new Sprite(Texture.from(img)); sp.position.set(x, y); sp.width = w; sp.height = h; c.addChild(sp); }; img.src = data;
+    return c;
+  }
+  /** Yia-Yia's gallery: her two paintings, then Nico's (newest first), along the studio wall. */
+  function hangGallery(layer: Container) {
+    const slots = [80, 290, 500, 710, 920].map(x => ({ x, y: 40, w: 170, h: 130 }));
+    slots.forEach((q, i) => {
+      if (i < 2) { const c = new Container(), fr = new Graphics().roundRect(q.x - 8, q.y - 8, q.w + 16, q.h + 16, 6).fill('#FFFFFF').roundRect(q.x - 5, q.y - 5, q.w + 10, q.h + 10, 4).fill(i ? '#9AA6B2' : '#B89A4A');
+        const art = yiayiaPainting(i as 0 | 1, q.w, q.h); art.position.set(q.x, q.y); c.addChild(fr, art); c.zIndex = 1; layer.addChild(c); return; }
+      const p = biz.paintings[biz.paintings.length - 1 - (i - 2)];
+      if (p) { const c = framedPainting(p, q.x, q.y, q.w, q.h); c.zIndex = 1; layer.addChild(c); }
+      else { const e = new Graphics().roundRect(q.x, q.y, q.w, q.h, 6).stroke({ width: 4, color: '#C9D3DC' }); e.zIndex = 1; layer.addChild(e); }
+    });
+  }
+  let birdhouseView: Container | null = null;
+  function placeBirdhouse() { if (birdhouseView) return; birdhouseView = birdhouseArt(470, 1700); layer.addChild(birdhouseView); }
   function insideSpots(): Spot[] {
     if (!room) return [];
     const r: Interior = INTERIORS[room.id], out: Spot[] = [];
@@ -572,6 +628,7 @@ async function main() {
       if (isUnlocked(biz, u.id)) rl.addChild(homeDecor(u.id));
       else { const [x, y, w, h] = decorBox(u.id); const o = outlineArt(x, y, w, h, u.label, u.price); o.zIndex = u.id === 'posters' ? 2 : y; o.scale.set(1); o.visible = canUnlock(biz, u.id); rl.addChild(o); outlines[u.id] = o; }
     }
+    if (biz.paintings.length) { const pc = framedPainting(biz.paintings[biz.paintings.length - 1], 832, 58, 96, 68); pc.zIndex = 1; rl.addChild(pc); }   // (your newest painting, from Yia-Yia's)
     showRoom({ kind: 'home', id: 'home', w: HOME_ROOM.w, h: HOME_ROOM.h, view, layer: rl, windows, lamp, outlines,
       solids: [{ x: 0, y: 0, w: HOME_ROOM.w, d: HOME_ROOM.wall + 14 }, ...Object.values(f).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d })), ...decorSolids()] }, at);
     sfx.door();
@@ -587,6 +644,8 @@ async function main() {
   let tvGlow: Graphics | null = null, fish: Graphics[] = [], petCat: Container | null = null;
   function homeDecor(id: string): Container {
     const c = new Container(); c.sortableChildren = true;
+    if (id === 'sign') { const a = decorArt('sign'), q = HOME_DECOR.sign, t = new Text({ text: `${biz.home.sign ?? '⭐'} NICO ${biz.home.sign ?? '⭐'}`, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#5A3A22' } });
+      t.anchor.set(0.5); t.position.set(q.x + q.w / 2, q.y + q.h / 2); c.addChild(a, t); c.zIndex = 1; return c; }
     if (id === 'cat') { const k = drawCat(); k.position.set(HOME_DECOR.cat.x, HOME_DECOR.cat.y); k.scale.set(1.3); c.addChild(k); c.zIndex = HOME_DECOR.cat.y; petCat = c; return c; }
     const a = decorArt(id); c.addChild(a); c.zIndex = a.zIndex;
     if (id === 'tv') { tvGlow = tvScreen(); tvGlow.alpha = 0.1; c.addChild(tvGlow); }
@@ -1501,7 +1560,7 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
-    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
+    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; pastaIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
     if (room?.kind === 'home') {   // the fish swim round their tank (faster when they've just been fed)
       fishFed = Math.max(0, fishFed - dt); const T = HOME_DECOR.fishtank, sp = fishFed > 0 ? 2.5 : 1, tt = performance.now() / 1000;
       fish.forEach((g, i) => { if (g.destroyed) return; const u = tt * 0.5 * sp + i * 2.1, x = T.x + T.w / 2 + Math.sin(u) * (T.w / 2 - 26); g.position.set(x, T.y + T.d - T.h + 24 + i * 18 + Math.sin(u * 1.7) * 4); g.scale.x = Math.cos(u) >= 0 ? 1 : -1; });
@@ -1662,7 +1721,7 @@ async function main() {
       unlocked: [...biz.unlocked], solidAt: (x: number, y: number) => !freeAt(x, y, SOLIDS, WORLD),
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
-      sounds: { ...played }, scatters, player, awayFor: (sec: number) => { biz.shop.last = biz.bakery.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { for (const k in visitIn) visitIn[k] = 0; }, baking: { ...work.baking }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
+      sounds: { ...played }, scatters, player, last2: work.last2, awayFor: (sec: number) => { biz.shop.last = biz.bakery.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { for (const k in visitIn) visitIn[k] = 0; }, baking: { ...work.baking }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

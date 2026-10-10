@@ -240,7 +240,8 @@ describe('photos', () => {
 describe('unlocks (bought and stuck onto the world)', () => {
   it('each costs something, can only be bought once, and things inside the shed need the shed first', () => {
     const b = freshBiz();
-    for (const u of UNLOCKS) expect(u.price, u.id).toBeGreaterThan(0);
+    for (const u of UNLOCKS) if (!u.earned) expect(u.price, u.id).toBeGreaterThan(0);
+    for (const u of UNLOCKS) if (u.earned) expect(canUnlock(b, u.id), `${u.id}: made with ${u.earned}, never for sale`).toBe(false);
     expect(canUnlock(b, 'workbench')).toBe(false);
     expect(unlock(b, 'shed', unlockOf('shed').price - 1)).toBe(false);
     expect(unlock(b, 'shed', 99)).toBe(true); expect(unlock(b, 'shed', 99)).toBe(false);

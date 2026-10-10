@@ -70,19 +70,62 @@ def shaggy_qback(h, hl):
             f'C17,-92 14,-80 15,-62 C10,-54 4,-50 -2,-52 C-8,-48 -14,-52 -20,-48 C-26,-52 -31,-58 -33,-66 C-35,-72 -34,-78 -34,-82 Z" fill="{h}"/>'
             f'<path d="M-18,-106 C-6,-112 6,-110 14,-104" fill="none" stroke="{hl}" stroke-width="3.5" stroke-linecap="round"/>')
 
-# bald on top, a fringe of hair round the sides and back (Poppop)
+# Poppop (redrawn from photos, 2026-10-10): short, fluffy, wavy white hair, receding at the front corners,
+# cut above the ears. (The style is still called 'bald': the first try was.)
+def _ear(x, y, rx=4.5, ry=6.5):
+    return f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}" fill="{rig.SK2}"/>'
+
+_LINE = 'fill="none" stroke="#000" stroke-opacity=".09" stroke-width="2.4" stroke-linecap="round"'
+
 def bald_side(h):
-    return (f'<path d="M-4,-71 C-18,-69 -32,-78 -32,-92 C-32,-99 -28,-104 -23,-106 C-25,-97 -23,-87 -15,-80 C-11,-77 -7,-75 -4,-71 Z" fill="{h}"/>'
-            f'<path d="M6,-74 C2,-80 2,-90 8,-94 C10,-88 10,-80 6,-74 Z" fill="{h}"/>')
+    # hairline set back from the brow, fluffy over the crown, round the back to the nape;
+    # the ear shows below it
+    return (f'<path d="M20,-104 C24,-110 22,-116 15,-117 C11,-122 2,-123 -3,-119 '
+        f'C-9,-123 -19,-120 -21,-113 C-29,-112 -34,-104 -32,-97 C-37,-92 -36,-82 -32,-78 '
+        f'C-35,-71 -30,-63 -23,-63 C-20,-60 -15,-60 -12,-63 C-11,-70 -8,-75 -7,-80 '
+        f'C-8,-86 -4,-91 2,-91 C4,-88 5,-85 7,-84 C9,-88 9,-93 12,-97 C14,-101 17,-103 20,-104 Z" fill="{h}"/>'
+        f'<path d="M-6,-112 C-14,-108 -20,-100 -22,-92" {_LINE}/>'
+        f'<path d="M8,-110 C2,-108 -2,-104 -4,-99" {_LINE}/>'
+        + _ear(-1, -82))
+
 def bald_front(h):
-    return (f'<path d="M-31,-78 C-35,-90 -31,-100 -24,-104 C-27,-95 -27,-86 -25,-77 Z" fill="{h}"/>'
-            f'<path d="M31,-78 C35,-90 31,-100 24,-104 C27,-95 27,-86 25,-77 Z" fill="{h}"/>')
+    # receding at both corners, a fluffy forelock in the middle, short over the ears
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M0,-120 C6,-123 14,-121 17,-116 C24,-117 31,-111 31,-104 C36,-99 35,-91 31,-87 '
+        f'L28,-88 C28,-94 26,-98 22,-100 C20,-104 17,-107 13,-106 C10,-103 7,-102 4,-103 '
+        f'C2,-101 -2,-101 -4,-103 C-7,-102 -10,-103 -13,-106 C-17,-107 -20,-104 -22,-100 '
+        f'C-26,-98 -28,-94 -28,-88 L-31,-87 C-35,-91 -36,-99 -31,-104 C-31,-111 -24,-117 -17,-116 '
+        f'C-14,-121 -6,-123 0,-120 Z" fill="{h}"/>'
+        f'<path d="M-12,-113 C-6,-116 4,-116 10,-112" {_LINE}/>')
+
 def bald_back(h):
-    return f'<path d="M-31,-84 C-30,-74 -22,-68 0,-67 C22,-68 30,-74 31,-84 C28,-89 20,-91 0,-91 C-20,-91 -28,-89 -31,-84 Z" fill="{h}"/>'
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M0,-120 C6,-123 14,-121 17,-116 C24,-117 31,-111 31,-104 C36,-99 35,-91 31,-86 '
+        f'C33,-78 29,-70 23,-67 C19,-63 13,-64 9,-65 C5,-62 -5,-62 -9,-65 C-13,-64 -19,-63 -23,-67 '
+        f'C-29,-70 -33,-78 -31,-86 C-35,-91 -36,-99 -31,-104 C-31,-111 -24,-117 -17,-116 '
+        f'C-14,-121 -6,-123 0,-120 Z" fill="{h}"/>'
+        f'<path d="M-16,-104 C-8,-109 6,-109 14,-103" {_LINE}/>'
+        f'<path d="M-14,-80 C-6,-76 6,-76 14,-80" {_LINE}/>')
+
 def bald_qfront(h):
-    return f'<path d="M-33,-88 C-34,-80 -31,-72 -25,-68 L-21,-71 C-24,-78 -24,-88 -20,-97 C-26,-99 -31,-95 -33,-88 Z" fill="{h}"/>'
+    # head centre (2,-86): receded hairline across the brow, fluffy over the crown and back,
+    # the near ear (drawn by the rig) showing at the left
+    return (f'<path d="M2,-120 C8,-123 16,-121 19,-116 C26,-116 32,-110 32,-103 C34,-98 33,-93 31,-90 '
+        f'C29,-95 27,-99 23,-101 C19,-105 15,-106 11,-104 C7,-102 3,-103 0,-105 C-4,-104 -8,-101 -11,-98 '
+        f'C-14,-96 -16,-92 -16,-88 C-19,-89 -22,-87 -23,-84 C-23,-79 -23,-74 -24,-69 '
+        f'C-28,-67 -32,-69 -33,-73 C-37,-78 -36,-86 -33,-90 C-37,-97 -33,-106 -27,-109 '
+        f'C-25,-116 -17,-120 -11,-118 C-7,-122 -2,-122 2,-120 Z" fill="{h}"/>'
+        f'<path d="M-6,-113 C-14,-110 -20,-104 -23,-96" {_LINE}/>'
+        f'<path d="M14,-114 C8,-113 4,-111 1,-108" {_LINE}/>')
+
 def bald_qback(h):
-    return f'<path d="M-33,-84 C-32,-74 -22,-68 -4,-67 C10,-68 17,-73 18,-80 C14,-90 6,-96 -6,-97 C-22,-96 -31,-92 -33,-84 Z" fill="{h}"/>'
+    # head centre (-2,-86): the near ear (drawn by the rig) on the right
+    return (f'<path d="M-2,-120 C4,-123 12,-121 15,-116 C21,-115 25,-109 24,-103 C26,-98 23,-93 20,-90 '
+        f'C18,-86 18,-82 18,-78 C18,-72 14,-67 9,-66 C5,-62 -3,-62 -7,-65 C-11,-63 -17,-63 -21,-66 '
+        f'C-27,-68 -32,-74 -33,-80 C-37,-86 -37,-96 -33,-102 C-34,-110 -27,-117 -20,-116 '
+        f'C-16,-121 -8,-122 -2,-120 Z" fill="{h}"/>'
+        f'<path d="M-20,-104 C-12,-109 0,-109 8,-104" {_LINE}/>'
+        f'<path d="M-18,-80 C-10,-76 0,-76 8,-79" {_LINE}/>')
 
 # short and curly (Nonna): a close cap with a row of curls round the crown
 def _curls(h, hl, cx, cy, a0, a1, n=7, r=30):
@@ -121,8 +164,14 @@ def face_extras(look, view):
         elif view == 'qfront':
             out += f'<path d="M-6,-70 Q-1,-81 9,-77 Q19,-81 24,-70 Q19,-64 14,-69 Q9,-67 3,-69 Q-2,-64 -6,-70 Z" fill="{m}"/>'
     if look.glasses:
-        frame, lens = look.glasses
+        frame, lens = look.glasses[:2]
         st = f'fill="{lens}" stroke="{frame}" stroke-width="2.6"'
+        if len(look.glasses) > 2 and look.glasses[2] == 'rect':   # rectangular frames (Yia-Yia)
+            st = f'fill="{lens}" stroke="{frame}" stroke-width="3.4"'
+            if view == 'side': return out + f'<rect x="10" y="-91" width="17" height="11" rx="3" {st}/><path d="M10,-86 L-6,-84" stroke="{frame}" stroke-width="2.6"/>'
+            if view == 'front': return out + f'<rect x="-19" y="-90" width="17" height="11" rx="3" {st}/><rect x="2" y="-90" width="17" height="11" rx="3" {st}/><path d="M-2,-86 L2,-86" stroke="{frame}" stroke-width="2.6"/>'
+            if view == 'qfront': return out + f'<rect x="-8" y="-90" width="15" height="11" rx="3" {st}/><rect x="11" y="-90" width="12" height="11" rx="3" {st}/><path d="M7,-86 L11,-86" stroke="{frame}" stroke-width="2.4"/>'
+            return out
         if view == 'side':
             out += f'<circle cx="18" cy="-85" r="8" {st}/><path d="M10,-86 L-6,-84" stroke="{frame}" stroke-width="2.4"/>'
         elif view == 'front':
@@ -303,6 +352,11 @@ LOOKS = {
                   shirt='#C9C6BC', shirt2='#6E8FC4', sleeve='#C9C6BC', trim='#8FAAD6',
                   pants='#4A4E7A', pants2='#3E4268', shoe='#C9A08E', shoe2='#B58C7A', height=1.04,   # (4'11": Nico's almost as tall as her)
                   glasses=('#C9CED6', '#EEF4FA')),
+    # Yia-Yia (Nico's other grandma, an artist): short straight grey hair, dark rectangular glasses,
+    # a bright blue fleece zipped over a blue top, dark trousers, sneakers
+    'yiayia': Look('yiayia', skin='#F2CDB4', skin2='#E0B398', hair='#BDBDB8', hl='#D8D8D4', style='short', top='track',
+                   shirt='#2F6FD0', shirt2='#2559B0', sleeve='#2F6FD0', trim='#1E4C9A',
+                   pants='#23262E', pants2='#1B1E25', shoe='#2B2E36', shoe2='#F4F6F8', height=1.12, glasses=('#1E2733', '#DCEAF5', 'rect')),
     # Tempo: short dark-brown hair, brown eyes; an all-red tracksuit (white zip and stripes)
     'tempo': Look('tempo', skin='#EDC3A0', skin2='#DBA682', hair='#3B271B', style='short', top='track',
                   shirt='#D9322E', shirt2='#B82723', sleeve='#D9322E', trim='#FFFFFF',

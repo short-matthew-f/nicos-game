@@ -69,6 +69,11 @@ export const BUILDINGS: Building[] = [
   house('h5', 60, 2700, '#BFE0DA', '#D77B72'),
   house('h6', 400, 2700, '#F7E3C4', '#3E8F8A'),
   house('h7', 230, 3170, '#F2D6A2', '#5B78AA'),
+  // Nico's grandparents: Poppop and Nonna's house at the edge of the woods, Poppop's woodshop next door
+  // (a red barn of a garage), and Yia-Yia's painting studio on the south block
+  { id: 'nonna', label: 'POPPOP & NONNA', x: 5150, y: 1370, w: 360, d: 200, h: 240, wall: '#E8D7B8', roof: '#4E6B3A', trim: '#FFFFFF', kind: 'house' },
+  { id: 'woodshop', label: 'WOODSHOP', x: 5580, y: 1400, w: 300, d: 170, h: 220, wall: '#B8382F', roof: '#5E2A24', trim: '#FFFFFF', kind: 'barn' },
+  { id: 'yiayia', label: "YIA-YIA'S STUDIO", x: 2530, y: 2780, w: 340, d: 200, h: 250, wall: '#F4F1EA', roof: '#2F6FD0', trim: '#F9C846', kind: 'shop' },
   // beyond the town (zones.ts)
   ...ZONE_BUILDINGS.map(b => ({ ...b, kind: (b.id === 'barn' ? 'barn' : 'shop') as Building['kind'] })),
 ];

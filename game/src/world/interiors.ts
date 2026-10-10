@@ -104,6 +104,31 @@ export const INTERIORS: Record<string, Interior> = {
     big(1050, 440, '🐻', 120, { label: '🐻 Pat the (stuffed) bear', lines: ["It's a stuffed bear. Phew!"] }, [100, 40]),
     block(80, 600, 260, 60, 50, '#6B4430', '#4E3220', undefined, sitHere('🪵 Sit on the log bench')),
   ], { who: 'ranger', name: 'the ranger', x: 650, y: 412, lines: ['Got photos for me?'], action: 'cabin' }),
+  // Nico's grandparents (from family photos, reference only): Nonna's kitchen, Poppop's woodshop (a red barn
+  // garage, with a CNC router and a plasma cutter), Yia-Yia's painting studio
+  nonna: room('nonna', 'Poppop and Nonna', { wall: '#F2E2B6', stripe: '#F7EBCB', trim: '#8A5A3B', floor: ['#C9874A', '#BE7C40'] }, [
+    onWall(120, 40, 160, 110, '#BFE3F5'), onWall(860, 50, 230, 120, '#FFFFFF', undefined, '👵 👴 👦', { label: '🖼️ Look at the family photos', lines: ['A photo of you as a baby, covered in tomato sauce.', 'Poppop and Nonna on their wedding day.', 'Everyone at the lake. Poppop is wearing his plaid shirt (of course).'] }),
+    block(80, 262, 360, 70, 80, '#9AA6B2', '#F4F6F8', '🍅 🧄 🫒 🧀'),   // the counter
+    block(480, 262, 200, 70, 90, '#2C3440', '#5B6472', '🍝'),            // the stove (Nonna's pot of sauce)
+    block(470, 520, 300, 120, 60, '#C9874A', '#8A5A3B', '🍽️ 🍽️', sitHere('🍽️ Sit at the table')),
+    block(880, 560, 260, 70, 70, '#D77B72', '#B85C4E', undefined, sitHere('🛋️ Sit on the quilt couch')),
+    big(1130, 400, '🪴', 70, undefined, [50, 30]),
+  ], { who: 'nonna', name: 'Nonna', x: 580, y: 250, lines: ['Ciao, Nico! Are you hungry? You look hungry.'], action: 'nonna' }),
+  woodshop: room('woodshop', "Poppop's woodshop", { wall: '#B85C4E', stripe: '#A84E42', trim: '#5E2A24', floor: ['#C9B48A', '#BEA77C'] }, [
+    onWall(80, 40, 380, 170, '#C9A46A', undefined, '🔨 🪚 🪛 🔧 📐', { label: '🔨 Look at the tool wall', lines: ['Every tool has a hook. Poppop knows where everything is.'] }),
+    onWall(980, 50, 140, 100, '#BFE3F5'),
+    block(80, 400, 340, 80, 70, '#D9A066', '#8A5A3B', '🪵 📏', { label: '🪚 Build a birdhouse', action: 'birdhouse' }),
+    block(520, 262, 280, 120, 110, '#5B6472', '#2C3440', '⚙️ 🤖', { label: '🤖 The CNC router', action: 'cnc' }),
+    block(870, 300, 260, 100, 70, '#9AA6B2', '#5B6472', '⚡ 🔥', { label: '⚡ The plasma cutter', action: 'plasma' }),
+    block(80, 600, 300, 50, 60, '#C9874A', '#8A5A3B', '🪵 🪵 🪵', { label: '🪵 Look at the lumber', lines: ['Oak, maple, pine and cherry. It smells like sawdust in here.'] }),
+    rug(560, 600, 300, 120, '#E8D7B8'),   // (sawdust)
+  ], { who: 'poppop', name: 'Poppop', x: 700, y: 560, lines: ['Hey there, kiddo! Want to make something?', 'Measure twice, cut once.', 'Safety glasses on! Good.'], action: 'poppop' }),
+  yiayia: room('yiayia', "Yia-Yia's studio", { wall: '#FFFFFF', trim: '#2F6FD0', floor: ['#E9EEF3', '#DCE3EA'], tiles: true }, [
+    block(110, 520, 160, 50, 160, '#B9895A', '#8A5A3B', '🖼️', { label: '🎨 Paint a picture', action: 'paint' }),   // the easel
+    block(330, 560, 260, 70, 60, '#F4F1EA', '#C9D3DC', '🎨 🖌️ 🫙 🖍️'),
+    block(880, 560, 240, 70, 60, '#F9C846', '#E3A92A', undefined, sitHere('🪑 Sit and admire the art')),
+    big(1130, 380, '🪴', 70, undefined, [50, 30]),
+  ], { who: 'yiayia', name: 'Yia-Yia', x: 760, y: 420, lines: ['Hello, my darling! Shall we paint?', 'Every painting is a good painting.', 'Look at those colours! You\'re an artist.'], action: 'yiayia' }),
   h1: house('h1', "Maya's house", '#FBE3C7', '#F28C38', 'mom', "Maya's mom", ['Hi Nico! Maya\'s out playing.', 'Would you like some lemonade?'], { label: '🍋 Lemonade', boost: 20 }),
   h2: house('h2', "Leo's house", '#D6EEE9', '#3E8F8A', 'dad', "Leo's dad", ['Leo? He\'s at the ice cream shop, as usual.', 'Want a granola bar?'], { label: '🥜 Granola bar', boost: 20 }),
   h3: house('h3', "Sam's house", '#F7E9C8', '#5B78AA', 'grandma', "Sam's grandma", ['Oh, hello dear! Sam\'s at the toy shop.', 'Have a cookie, fresh out of the oven.'], { label: '🍪 A warm cookie', boost: 25 }),

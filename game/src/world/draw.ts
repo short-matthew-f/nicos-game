@@ -125,7 +125,13 @@ export function drawBuilding(b: Building): Container {
     g.roundRect(cx - 34, wy, 68, 52, 6).fill(frame).roundRect(cx - 28, wy + 6, 56, 40, 4).fill(winC)
      .rect(cx - 1.5, wy + 6, 3, 40).fill(frame);
   }
-  if (b.id !== 'garage') g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 8).fill(shade(b.wall, 0.62))
+  if (b.kind === 'barn') {   // big barn doors, white X bracing (the farm, the work shed, Poppop's woodshop)
+    const bw = Math.min(150, b.w * 0.5), bh = Math.min(150, b.h - 46), bx = b.x + b.w / 2 - bw / 2, by = b.y + b.d - bh;
+    g.rect(bx - 6, by - 6, bw + 12, bh + 6).fill('#FFFFFF').rect(bx, by, bw, bh).fill(shade(b.wall, 0.8));
+    for (const x0 of [bx, bx + bw / 2]) g.moveTo(x0 + 4, by + 4).lineTo(x0 + bw / 2 - 4, by + bh - 4).moveTo(x0 + bw / 2 - 4, by + 4).lineTo(x0 + 4, by + bh - 4).stroke({ width: 6, color: '#FFFFFF' });
+    g.rect(bx + bw / 2 - 2, by, 4, bh).fill('#FFFFFF');
+  }
+  else if (b.id !== 'garage') g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 8).fill(shade(b.wall, 0.62))
    .circle(doorX + doorW - 14, b.y + b.d - doorH / 2, 4).fill(shade(b.wall, 0.4));
   for (const x of b.bays ?? []) {   // open vehicle bays, dark inside
     g.roundRect(x - 78, front + 30, 156, b.h - 30, 6).fill(frame).roundRect(x - 70, front + 38, 140, b.h - 38, 4).fill('#2C3440');

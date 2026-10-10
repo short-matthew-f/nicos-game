@@ -6,7 +6,7 @@ import {
   item, use, has, product, runProgram, RAMP, ROBOT_LEVEL, type Move,
   type Biz, type Skill,
 } from './business';
-import { sfx } from './sound';
+import { sfx, audio } from './sound';
 import { PLANS, type Slot } from './plans';
 import { design, make, cantMake, pieceValue, bonusOf, type Piece } from './jewelry';
 import { SHELL_KINDS } from './world/beach';
@@ -23,6 +23,7 @@ export interface WorkHost {
   skill(s: Skill): void;               // a new skill was earned
   made?(p: Piece): void;               // a piece of jewelry was hung on the shop's shelves
   baked?(): void;                      // a tray came out of the bakery's oven (into the display case)
+  made2?(what: string, data?: string): void;   // something made with the grandparents (pizzelle, a birdhouse, a sign, a star, a painting)
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -515,5 +516,166 @@ export class Workshop {
       sfx.door(); requestAnimationFrame(tick);
     };
     drawAdd();
+  }
+
+  // ------------------------------------------------------------ with the grandparents
+  /** for tests: how the last thing with the grandparents went */
+  last2: { what: string; ok: boolean } | null = null;
+  private finish2(what: string, msg: string, data?: string) {
+    this.last2 = { what, ok: true }; this.host.made2?.(what, data); this.host.save(); sfx.cheer();
+    this.sub.textContent = msg; this.actions.replaceChildren();
+    this.button('Done', () => this.close(), 'primary').dataset.done = '1';
+  }
+  /** Nonna's pizzelle: batter on the iron, close the lid, open it when it stops steaming (golden). */
+  pizzelle() {
+    this.show('pizzelle', 'Pizzelle with Nonna', 'Nonna: "A spoon of batter in the middle, close the iron, and open it when the steam stops!"');
+    const svg = s('svg', { viewBox: '0 0 600 260', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 260, rx: 18, fill: '#FFF4DA' }));
+    const iron = s('g') as SVGGElement; at(iron, 300, 140);
+    const plate = s('circle', { cx: 0, cy: 0, r: 90, fill: '#5B6472', stroke: '#2B3F55', 'stroke-width': 5 });
+    const batter = s('circle', { cx: 0, cy: 0, r: 0, fill: '#F2E2B6' });
+    const lid = s('ellipse', { cx: 0, cy: -10, rx: 96, ry: 0, fill: '#3E4A5A', stroke: '#2B3F55', 'stroke-width': 5 });
+    const steam = s('g') as SVGGElement;
+    iron.append(plate, batter, s('rect', { x: 90, y: -8, width: 120, height: 16, rx: 8, fill: '#2B3F55' }), lid, steam);
+    svg.append(iron); this.stage.append(svg);
+    const strip = h('div', 'strip'); this.stage.append(strip); strip.textContent = 'Step 1: the batter';
+    let made = 0, closedAt = 0, timer = 0;
+    const GOLD = 2.4;
+    const pour = this.button('🥄 Batter on the iron', () => {
+      batter.setAttribute('r', '62'); sfx.pop(); pour.disabled = true; close.disabled = false; strip.textContent = 'Step 2: close the iron';
+    }, 'primary'); pour.dataset.pour = '1';
+    const close = this.button('⬇️ Close the iron', () => {
+      lid.setAttribute('ry', '88'); sfx.snap(); close.disabled = true; open.disabled = false; closedAt = performance.now(); strip.textContent = 'Sizzle... open it when the steam stops!';
+      const puff = () => {
+        if (this.screen !== 'pizzelle' || !closedAt) return;
+        const t = (performance.now() - closedAt) / 1000;
+        if (t < GOLD - 0.3) { const c = s('circle', { cx: (Math.random() - 0.5) * 120, cy: -60, r: 12, fill: '#FFFFFF', opacity: 0.8 }); steam.append(c); setTimeout(() => c.remove(), 500); }
+        timer = window.setTimeout(puff, 150);
+      };
+      puff();
+    }); close.disabled = true; close.dataset.close = '1';
+    const open = this.button('⬆️ Open it!', () => {
+      const t = (performance.now() - closedAt) / 1000; closedAt = 0; clearTimeout(timer); lid.setAttribute('ry', '0');
+      const ok = t >= GOLD - 0.6 && t <= GOLD + 1.4;
+      batter.setAttribute('fill', t < GOLD - 0.6 ? '#F7EBCB' : t > GOLD + 1.4 ? '#8A5A3B' : '#E3B061');
+      for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; iron.append(s('circle', { cx: Math.cos(a) * 34, cy: Math.sin(a) * 34, r: 9, fill: 'none', stroke: '#C9874A', 'stroke-width': 2 })); }
+      open.disabled = true;
+      if (ok) { made++; sfx.sparkle(); }
+      else sfx.boing();
+      strip.textContent = ok ? `A perfect pizzelle! (${made}/3)` : t < GOLD ? 'Too soon: still pale. Nonna: "Patience!"' : 'A little dark. Nonna: "Still delicious!"';
+      if (made >= 3) { this.finish2('pizzelle', 'Nonna: "Bravo! Now you know my pizzelle. Bake them in your bakery!" 🧇 You learned Nonna\'s pizzelle.'); return; }
+      setTimeout(() => { if (this.screen !== 'pizzelle') return; batter.setAttribute('r', '0'); batter.setAttribute('fill', '#F2E2B6'); pour.disabled = false; strip.textContent = `Another! (${made}/3 perfect)`; }, 900);
+    }); open.disabled = true; open.dataset.open = '1';
+  }
+  /** Poppop's birdhouse: tap each nail to hammer it in (three taps a nail). */
+  birdhouse() {
+    this.show('birdhouse', 'A birdhouse with Poppop', 'Poppop: "Hold it steady, I\'ll hold the board. Tap each nail to hammer it in!"');
+    const svg = s('svg', { viewBox: '0 0 600 280', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 280, rx: 18, fill: '#FFF4DA' }),
+      s('path', { d: 'M180,120 L300,40 L420,120 Z', fill: '#B9895A', stroke: '#2B3F55', 'stroke-width': 4 }),
+      s('rect', { x: 200, y: 120, width: 200, height: 140, fill: '#D9A066', stroke: '#2B3F55', 'stroke-width': 4 }),
+      s('circle', { cx: 300, cy: 170, r: 24, fill: '#5A3A22' }), s('rect', { x: 290, y: 205, width: 20, height: 6, fill: '#8A5A3B' }));
+    const spots = [[215, 135], [385, 135], [215, 245], [385, 245], [250, 92], [350, 92]];
+    let done = 0;
+    spots.forEach(([x, y], i) => {
+      const g = s('g') as SVGGElement; at(g, x, y); g.dataset.nail = String(i); g.style.cursor = 'pointer';
+      const head = s('rect', { x: -7, y: -30, width: 14, height: 6, rx: 2, fill: '#9AA6B2', stroke: '#2B3F55', 'stroke-width': 2 }), shaft = s('rect', { x: -2, y: -24, width: 4, height: 24, fill: '#9AA6B2' });
+      g.append(s('circle', { cx: 0, cy: -14, r: 26, fill: 'transparent' }), shaft, head); svg.append(g);
+      let hits = 0;
+      g.addEventListener('click', () => {
+        if (hits >= 3) return; hits++; sfx.snap(); audio.noise(0.06, 0.4, 1800);
+        const down = hits * 8; head.setAttribute('y', String(-30 + down)); shaft.setAttribute('height', String(Math.max(0, 24 - down)));
+        if (hits === 3) { done++; if (done === spots.length) this.finish2('birdhouse', 'Poppop: "Look at that! A real birdhouse." 🐦 It\'s up in your garden, by your house.'); }
+      });
+    });
+    this.stage.append(svg);
+  }
+  /** The CNC router: pick a design, and watch it carve the sign. */
+  cnc() {
+    this.show('cnc', 'The CNC router', 'Poppop: "Pick a design, and the machine carves it into the wood all by itself!"');
+    const designs: [string, string][] = [['⭐ A star', 'M300,40 L330,120 L415,120 L346,170 L372,250 L300,200 L228,250 L254,170 L185,120 L270,120 Z'],
+      ['❤️ A heart', 'M300,250 C180,170 190,70 260,70 C285,70 300,90 300,110 C300,90 315,70 340,70 C410,70 420,170 300,250 Z'],
+      ['🚀 A rocket', 'M300,40 C340,80 345,150 330,210 L270,210 C255,150 260,80 300,40 Z M270,180 L235,240 L270,215 Z M330,180 L365,240 L330,215 Z']];
+    designs.forEach(([label, d]) => {
+      const b = this.button(label, () => {
+        this.actions.replaceChildren(); this.stage.replaceChildren();
+        const svg = s('svg', { viewBox: '0 0 600 290', class: 'blueprint' }) as SVGSVGElement;
+        svg.append(s('rect', { x: 0, y: 0, width: 600, height: 290, rx: 18, fill: '#2C3440' }), s('rect', { x: 150, y: 20, width: 300, height: 250, rx: 10, fill: '#D9A066' }));
+        const cut = s('path', { d, fill: 'none', stroke: '#8A5A3B', 'stroke-width': 9, 'stroke-linejoin': 'round' }) as SVGPathElement;
+        const bit = s('circle', { r: 9, fill: '#C9D3DC', stroke: '#FFFFFF', 'stroke-width': 3 });
+        svg.append(cut, bit); this.stage.append(svg);
+        const L = cut.getTotalLength?.() || 800; cut.style.strokeDasharray = `${L}`; cut.style.strokeDashoffset = `${L}`;
+        const t0 = performance.now(), T = 3500; sfx.roll();
+        const step = () => {
+          if (this.screen !== 'cnc') return;
+          const k = Math.min(1, (performance.now() - t0) / T); cut.style.strokeDashoffset = `${L * (1 - k)}`;
+          const p = cut.getPointAtLength?.(L * k); if (p) { bit.setAttribute('cx', String(p.x)); bit.setAttribute('cy', String(p.y)); }
+          if (k < 1) requestAnimationFrame(step); else this.finish2('sign', `Poppop: "Beautiful work." Your carved ${label.split(' ').slice(1).join(' ')} sign is on the wall at home.`, label.split(' ')[0]);
+        };
+        requestAnimationFrame(step);
+      });
+      b.dataset.design = label.split(' ')[0];
+    });
+  }
+  /** The plasma cutter: hold the button to cut round the star; sparks fly. */
+  plasma() {
+    this.show('plasma', 'The plasma cutter', 'Poppop: "Safety glasses on! Hold the button to cut the metal, all the way round."');
+    const svg = s('svg', { viewBox: '0 0 600 290', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 290, rx: 18, fill: '#2C3440' }), s('rect', { x: 150, y: 20, width: 300, height: 250, rx: 6, fill: '#9AA6B2' }));
+    const d = 'M300,40 L330,120 L415,120 L346,170 L372,250 L300,200 L228,250 L254,170 L185,120 L270,120 Z';
+    svg.append(s('path', { d, fill: 'none', stroke: '#5B6472', 'stroke-width': 3, 'stroke-dasharray': '8 6' }));
+    const cut = s('path', { d, fill: 'none', stroke: '#FFB03A', 'stroke-width': 5 }) as SVGPathElement;
+    const torch = s('circle', { r: 8, fill: '#FFFFFF' }), sparks = s('g') as SVGGElement;
+    svg.append(cut, torch, sparks); this.stage.append(svg);
+    const strip = h('div', 'strip'); this.stage.append(strip); strip.textContent = 'Hold to cut: 0%';
+    const L = cut.getTotalLength?.() || 900; cut.style.strokeDasharray = `${L}`; cut.style.strokeDashoffset = `${L}`;
+    let k = 0, holding = false, last = 0;
+    const hold = this.button('⚡ Hold to cut', () => {}, 'primary'); hold.dataset.cut = '1';
+    const tick = (now: number) => {
+      if (this.screen !== 'plasma') return;
+      const dt = last ? (now - last) / 1000 : 0; last = now;
+      if (holding && k < 1) {
+        k = Math.min(1, k + dt / 4); cut.style.strokeDashoffset = `${L * (1 - k)}`;
+        const p = cut.getPointAtLength?.(L * k);
+        if (p) { torch.setAttribute('cx', String(p.x)); torch.setAttribute('cy', String(p.y));
+          for (let i = 0; i < 2; i++) { const sp = s('circle', { cx: p.x, cy: p.y, r: 2.5, fill: '#FFE066' }); sparks.append(sp); const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 40;
+            sp.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${Math.cos(a) * v}px, ${Math.sin(a) * v + 20}px)`, opacity: 0 }], { duration: 400 }); setTimeout(() => sp.remove(), 400); } }
+        strip.textContent = `Hold to cut: ${Math.round(k * 100)}%`;
+        if (k >= 1) { holding = false; this.finish2('metalstar', 'Poppop: "Now THAT is a star." ⭐ Your metal star is up on the wall at home.'); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    const on = (e: Event) => { e.preventDefault(); holding = true; audio.noise(0.3, 0.15, 5000); }, off = () => { holding = false; };
+    hold.addEventListener('pointerdown', on); hold.addEventListener('pointerup', off); hold.addEventListener('pointerleave', off);
+    requestAnimationFrame(tick);
+  }
+  /** Yia-Yia's easel: finger-paint on a canvas, then hang it up. */
+  paint() {
+    this.show('paint', 'Paint with Yia-Yia', 'Yia-Yia: "Pick a colour and paint with your finger. Anything you like!"');
+    const cv = document.createElement('canvas'); cv.width = 600; cv.height = 400; cv.className = 'canvas';
+    cv.style.cssText = 'width:100%;max-height:calc(100vh - 300px);aspect-ratio:3/2;background:#FFFFFF;border-radius:12px;touch-action:none;display:block;box-shadow:0 0 0 4px #E9DCC7';
+    const c = cv.getContext('2d')!; c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, 600, 400); c.lineCap = c.lineJoin = 'round';
+    this.stage.append(cv);
+    const pal = h('div', 'picks shells'); this.stage.append(pal);
+    let color = '#E5484D', size = 14, down = false, lx = 0, ly = 0, strokes = 0;
+    for (const col of ['#E5484D', '#F28C38', '#F9C846', '#3BB273', '#2F7FD8', '#7B5BA6', '#8A5A3B', '#2B3F55', '#FFFFFF']) {
+      const b = h('button'); b.type = 'button'; b.dataset.color = col; b.innerHTML = `<span class="dot" style="background:${col}"></span>`;
+      b.addEventListener('click', () => { color = col; for (const q of Array.from(pal.children)) q.classList.toggle('on', q === b); }); pal.append(b);
+    }
+    for (const [label, sz] of [['thin', 6], ['thick', 14], ['huge', 34]] as [string, number][]) { const b = h('button', '', label); b.type = 'button'; b.addEventListener('click', () => { size = sz; }); pal.append(b); }
+    (pal.children[0] as HTMLElement).classList.add('on');
+    const xy = (e: PointerEvent) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * 600 / r.width, (e.clientY - r.top) * 400 / r.height]; };
+    cv.addEventListener('pointerdown', e => { down = true; [lx, ly] = xy(e); c.fillStyle = color; c.beginPath(); c.arc(lx, ly, size / 2, 0, Math.PI * 2); c.fill(); strokes++; });
+    const move = (e: PointerEvent) => { if (!down) return; const [x, y] = xy(e); c.strokeStyle = color; c.lineWidth = size; c.beginPath(); c.moveTo(lx, ly); c.lineTo(x, y); c.stroke(); lx = x; ly = y; };
+    const up = () => { down = false; };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+    this.cleanup = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    this.button('🧽 Start over', () => { c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, 600, 400); strokes = 0; }).dataset.clear = '1';
+    this.button('🖼️ Hang it up!', () => {
+      if (!strokes) { this.sub.textContent = 'Yia-Yia: "Paint something first, my darling!"'; return; }
+      const small = document.createElement('canvas'); small.width = 240; small.height = 160; small.getContext('2d')!.drawImage(cv, 0, 0, 240, 160);
+      this.cleanup?.(); this.cleanup = null; cv.style.pointerEvents = 'none'; pal.remove();
+      this.finish2('painting', 'Yia-Yia: "Magnifico! It goes on the wall." 🖼️ Your painting is hanging in the studio (and at home).', small.toDataURL('image/jpeg', 0.8));
+    }, 'primary').dataset.hang = '1';
   }
 }

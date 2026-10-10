@@ -26,6 +26,8 @@ export const PLACES: Place[] = [
   { building: 'poolhouse', title: 'Pool', text: 'The lifeguard says the pool opens very soon. "Bring your swimsuit!"' },
   { building: 'cabin', title: 'Ranger station', action: 'Visit the ranger', text: 'Maps, binoculars and a big book of animals.' },
   { building: 'storage', title: 'Storage Units', action: 'Auction', text: 'Storage unit auctions.' },
+  // Nico's grandparents
+  { building: 'nonna', title: 'Poppop and Nonna', text: '' }, { building: 'woodshop', title: "Poppop's woodshop", text: '' }, { building: 'yiayia', title: "Yia-Yia's studio", text: '' },
   // the houses round town (you can go in: world/interiors.ts)
   { building: 'h1', title: "Maya's house", text: '' }, { building: 'h2', title: "Leo's house", text: '' }, { building: 'h3', title: "Sam's house", text: '' },
   { building: 'h5', title: "Ava's house", text: '' }, { building: 'h6', title: "Mrs. Kim's house", text: '' }, { building: 'h7', title: "Mr. Brooks's house", text: '' },

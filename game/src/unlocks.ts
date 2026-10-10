@@ -8,6 +8,7 @@ export interface Unlock {
   room: 'world' | 'shed' | 'home';   // where it goes
   text: string;                 // what it does (on the buy card)
   after?: string;               // only offered once this one's unlocked
+  earned?: string;              // not for sale: made with someone (who), and stuck on when it's done
 }
 export const UNLOCKS: Unlock[] = [
   { id: 'shed', label: '🏚️ Work shed', price: 15, room: 'world', text: 'Your own work shed, right next to your house. Put tools and equipment in it to make things.' },
@@ -24,12 +25,16 @@ export const UNLOCKS: Unlock[] = [
   { id: 'tv', label: '📺 TV and game console', price: 20, room: 'home', text: 'A TV with a game console. Sit on the beanbag and play!' },
   { id: 'fishtank', label: '🐠 Fish tank', price: 15, room: 'home', text: 'A fish tank with three little fish swimming round.' },
   { id: 'cat', label: '🐱 A pet cat', price: 25, room: 'home', text: 'A fluffy cat of your own! She watches the fish all day and purrs when you pet her.' },
+  // made in Poppop's woodshop (not for sale)
+  { id: 'birdhouse', label: '🐦 Birdhouse', price: 0, room: 'world', earned: 'Poppop', text: 'A birdhouse you built with Poppop, in your garden.' },
+  { id: 'sign', label: '🪵 Carved sign', price: 0, room: 'home', earned: 'Poppop', text: 'A wooden sign you carved on Poppop\'s CNC router.' },
+  { id: 'metalstar', label: '⭐ Metal star', price: 0, room: 'home', earned: 'Poppop', text: 'A steel star you cut with Poppop\'s plasma cutter.' },
   { id: 'paint', label: '🎨 Paint station', price: 20, room: 'shed', after: 'workbench', text: 'Give every toy you build a shiny coat of paint: painted toys sell for $5 more.' },
 ];
 export const unlockOf = (id: string) => UNLOCKS.find(u => u.id === id)!;
 export const isUnlocked = (b: Biz, id: string) => b.unlocked.includes(id);
 /** Can it be bought now (not already, and whatever it needs is there)? */
-export const canUnlock = (b: Biz, id: string) => !isUnlocked(b, id) && (!unlockOf(id).after || isUnlocked(b, unlockOf(id).after!));
+export const canUnlock = (b: Biz, id: string) => !unlockOf(id).earned && !isUnlocked(b, id) && (!unlockOf(id).after || isUnlocked(b, unlockOf(id).after!));
 /** Buy it: false if it can't be bought or Nico can't pay. (The workbench also sets biz.workbench.) */
 export function unlock(b: Biz, id: string, money: number): boolean {
   if (!canUnlock(b, id) || unlockOf(id).price > money) return false;

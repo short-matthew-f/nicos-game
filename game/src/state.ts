@@ -4,7 +4,7 @@ import { freshBiz, freshDoors, HALL, ITEMS, type Biz } from './business';
 import { migrateUnlocks } from './unlocks';
 import { freshShop, DESIGNS, SHOP, type Shop } from './jewelry';
 import { RECIPES, BAKERY } from './bakery';
-import { WALLPAPERS, RUGS } from './decor';
+import { WALLPAPERS, RUGS, PAINTINGS_KEPT } from './decor';
 
 export const VERSION = 6;
 export const START_MONEY = 20;
@@ -90,7 +90,10 @@ function cleanBiz(raw: unknown): Biz {
     found: [...new Set([...strs(b.found), ...Object.keys(counts(b.shells))])],   // (a save from before the shop: what's in hand was found)
     shop: cleanShop(b.shop),
     bakery: cleanShop(b.bakery, RECIPES.map(r => r.id), BAKERY.rack, false),
-    home: { wall: typeof b.home?.wall === 'string' && b.home.wall in WALLPAPERS ? b.home.wall : f.home.wall, rug: typeof b.home?.rug === 'string' && b.home.rug in RUGS ? b.home.rug : f.home.rug },
+    home: { wall: typeof b.home?.wall === 'string' && b.home.wall in WALLPAPERS ? b.home.wall : f.home.wall, rug: typeof b.home?.rug === 'string' && b.home.rug in RUGS ? b.home.rug : f.home.rug,
+      ...(typeof b.home?.sign === 'string' && b.home.sign.length <= 8 ? { sign: b.home.sign } : {}) },
+    paintings: strs(b.paintings).filter(p => p.startsWith('data:image/') && p.length < 120_000).slice(-PAINTINGS_KEPT),
+    learned: strs(b.learned),
   };
   migrateUnlocks(out);   // (a save with a workbench already has its shed)
   return out;

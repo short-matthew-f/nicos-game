@@ -248,6 +248,7 @@ with sync_playwright() as p:
     check(G()['mode'] == 'walk', 'the stick stands him up')
     # odd jobs: Mr. Brooks has a "!" job; take it, do the steps, get paid
     def near(who):
+        pg.evaluate("()=>window.__game.exitRooms()")
         t = next(x for x in G()['townsfolk'] if x['who'] == who)
         pg.evaluate(f"()=>window.__game.place({t['x'] + 40}, {t['y'] + 10})"); pg.wait_for_timeout(150)
     m0 = G()['money']
@@ -449,8 +450,14 @@ with sync_playwright() as p:
     room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250); room_at('leave'); pg.click('#action'); pg.wait_for_timeout(250)
     # item requests: someone asks for a thing; the storage units are sure to have one; keep it, hand it over
     pg.evaluate("()=>{window.__game.setBiz({finds: []}); window.__game.offerWant('maya', 'radio')}"); pg.wait_for_timeout(200)
+    pg.evaluate("()=>{window.__game.exitRooms(); window.__game.place(4600, 2600)}")   # (stand well away, so she keeps walking)
+    for _ in range(40):   # (when she's waiting right at a door, the door wins the tie: catch her between doors)
+        _g = G(); _t = next(x for x in _g['townsfolk'] if x['who'] == 'maya')
+        if all(math.dist((v['x'], v['y']), (_t['x'], _t['y'])) > 140 for k, v in _g['spots'].items() if k in ('school', 'h1', 'h2', 'h3', 'hospital')): break
+        pg.wait_for_timeout(500)
     near('maya')
-    check('❗' in pg.locator('#action').inner_text(), f"Maya has a request (❗) ({pg.locator('#action').inner_text()})")
+    _g = G(); _t = next(x for x in _g['townsfolk'] if x['who'] == 'maya')
+    check('❗' in pg.locator('#action').inner_text(), f"Maya has a request (❗) ({pg.locator('#action').inner_text()}; maya {_t}; room {_g['room']}; nico {_g['nico']['x']:.0f},{_g['nico']['y']:.0f}; near {sorted((math.dist((v['x'], v['y']), (_g['nico']['x'], _g['nico']['y'])), k) for k, v in _g['spots'].items())[:3]})")
     pg.click('#action'); pg.wait_for_timeout(150)
     check('radio' in pg.locator('#place-text').inner_text(), f"she asks for a radio ({pg.locator('#place-text').inner_text()})")
     pg.click('#place-menu button[data-item="accept"]'); pg.wait_for_timeout(200)
@@ -698,6 +705,25 @@ with sync_playwright() as p:
     check(len(G()['biz']['bakery']['rack']) == 3, 'a customer walked in and bought a cookie')
     pg.screenshot(path='/tmp/bakery_in.png')
     pg.evaluate("()=>window.__game.exitRooms()")
+    # the grandparents: Nonna's pizzelle (learned for the bakery), Poppop's plasma star, a painting at Yia-Yia's
+    pg.evaluate("()=>window.__game.setBiz({learned:[], paintings:[]})"); pg.wait_for_timeout(1500)   # (their art loads in the background)
+    door('nonna'); pg.wait_for_timeout(300)
+    check(pg.locator('#place-menu button[data-item=pizzelle]').count() == 1 and pg.locator('#place-menu button[data-item=pasta]').count() == 1, "Nonna offers pasta and pizzelle")
+    pg.click('#place-menu button[data-item=pizzelle]'); pg.wait_for_timeout(300)
+    for _ in range(3):
+        pg.click('#work [data-pour]'); pg.wait_for_timeout(100); pg.click('#work [data-close]'); pg.wait_for_timeout(2500); pg.click('#work [data-open]'); pg.wait_for_timeout(1000)
+    check(G()['biz']['learned'] == ['pizzelle'], f"three perfect pizzelle: Nonna's recipe learned ({G()['biz']['learned']})")
+    pg.click('#work [data-done]')
+    door('woodshop'); pg.wait_for_timeout(300); pg.click('#place-menu button[data-item="proj:plasma"]'); pg.wait_for_timeout(300)
+    bb = pg.locator('#work [data-cut]').bounding_box(); pg.mouse.move(bb['x'] + 20, bb['y'] + 20); pg.mouse.down(); pg.wait_for_timeout(4600); pg.mouse.up(); pg.wait_for_timeout(200)
+    check('metalstar' in G()['unlocked'], 'held the plasma cutter all the way round: a metal star for his wall')
+    pg.click('#work [data-done]')
+    door('yiayia'); pg.wait_for_timeout(300); pg.click('#place-menu button[data-item=paint]'); pg.wait_for_timeout(300)
+    box = pg.locator('#work canvas').bounding_box()
+    pg.mouse.move(box['x'] + 60, box['y'] + 60); pg.mouse.down(); pg.mouse.move(box['x'] + 300, box['y'] + 200, steps=10); pg.mouse.up()
+    pg.click('#work [data-hang]'); pg.wait_for_timeout(300)
+    check(len(G()['biz']['paintings']) == 1 and G()['biz']['paintings'][0].startswith('data:image/jpeg'), 'painted a picture at Yia-Yia\'s: it hangs on her wall')
+    pg.click('#work [data-done]'); pg.evaluate("()=>window.__game.exitRooms()")
     # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
     ws = [t['who'] for t in G()['townsfolk']]

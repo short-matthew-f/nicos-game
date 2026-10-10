@@ -14,4 +14,5 @@ export const RUGS: Record<string, { label: string; rings: [string, string, strin
   forest: { label: '🌲 Forest', rings: ['#3E8F5A', '#A6CF7E', '#3E8F5A'] },
   candy: { label: '🍭 Candy', rings: ['#F06A8A', '#FFFFFF', '#7B5BA6'] },
 };
+export const PAINTINGS_KEPT = 8;   // Yia-Yia's gallery keeps your newest paintings
 export const REDECORATE = 5;   // $ to change the walls or the rug

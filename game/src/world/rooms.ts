@@ -492,6 +492,7 @@ export function drawBakeryRoom(): { view: Container; layer: Container } {
 }
 /** One baked thing, sitting at (0, 0). */
 export function bakedArt(id: string): Graphics {
+  if (id === 'pizzelle') return pizzelleArt();
   const g = new Graphics(), W = '#FFFFFF';
   if (id === 'cookie') {
     g.circle(0, -12, 17).fill(W).circle(0, -12, 14).fill('#D9A066');
@@ -564,7 +565,9 @@ export const HOME_DECOR: Record<string, { x: number; y: number; w: number; d: nu
   beanbag: { x: 150, y: 770, w: 110, d: 40, h: 50 },      // ...and the beanbag in front of it
   fishtank: { x: 980, y: 640, w: 190, d: 50, h: 150 },
   plant: { x: 1190, y: 520, w: 60, d: 36, h: 130 },
-  cat: { x: 900, y: 770, w: 0, d: 0, h: 0 },               // she sits watching the fish
+  cat: { x: 900, y: 770, w: 0, d: 0, h: 0 },
+  sign: { x: 940, y: 50, w: 170, d: 0, h: 60 },             // made at Poppop's (on the wall over the kitchen)
+  metalstar: { x: 1150, y: 14, w: 76, d: 0, h: 76 },               // she sits watching the fish
 };
 /** The art for a piece of decor, standing on its slot. */
 export function decorArt(id: string): Container {
@@ -606,6 +609,17 @@ export function decorArt(id: string): Container {
       g.moveTo(s.x + 40, top + s.h - 84).quadraticCurveTo(s.x + 30, top + 40, s.x + 46, top + 20).stroke({ width: 5, color: '#3E8F5A' });   // a water plant
       c.zIndex = F; break;
     }
+    case 'sign': {   // a carved wooden sign (sign: the design carved into it)
+      g.roundRect(s.x - BAND, s.y - BAND, s.w + 2 * BAND, s.h + 2 * BAND, 10).fill('#FFFFFF').roundRect(s.x, s.y, s.w, s.h, 8).fill('#D9A066').roundRect(s.x + 6, s.y + 6, s.w - 12, s.h - 12, 6).stroke({ width: 3, color: '#8A5A3B' });
+      c.zIndex = 1; break;
+    }
+    case 'metalstar': {
+      const pts: number[] = [], cx = s.x + s.w / 2, cy = s.y + s.h / 2;
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 15 : 36; pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+      g.poly(pts.map((v, i) => v + (i % 2 ? 0 : 0))).stroke({ width: 8, color: '#FFFFFF' }).poly(pts).fill('#9AA6B2').poly(pts).stroke({ width: 2, color: '#5B6472' });
+      g.moveTo(cx - 10, cy - 14).lineTo(cx + 2, cy - 22).stroke({ width: 3, color: '#E9EEF3' });
+      c.zIndex = 1; break;
+    }
     case 'plant':
       shadow();
       g.poly([s.x + 8, F - 50, s.x + s.w - 8, F - 50, s.x + s.w - 14, F, s.x + 14, F]).fill('#FFFFFF').poly([s.x + 12, F - 46, s.x + s.w - 12, F - 46, s.x + s.w - 17, F - 4, s.x + 17, F - 4]).fill('#C8463D');
@@ -619,3 +633,40 @@ export function decorArt(id: string): Container {
 /** The TV's screen (it lights up when someone's playing) and the fish (they swim): drawn separately to animate. */
 export function tvScreen(): Graphics { const s = HOME_DECOR.tv, g = new Graphics(); g.roundRect(s.x + 22, s.y + s.d - s.h + 7, s.w - 44, s.h - 70, 6).fill('#FFFFFF'); g.zIndex = s.y + s.d + 1; return g; }
 export function fishArt(color: string): Graphics { const g = new Graphics(); g.ellipse(0, 0, 9, 5).fill(color).poly([-8, 0, -15, -5, -15, 5]).fill(color).circle(4, -1, 1.4).fill('#2B3F55'); g.zIndex = HOME_DECOR.fishtank.y + HOME_DECOR.fishtank.d + 1; return g; }
+
+/** The birdhouse Nico built with Poppop, on a post in his garden (a bird visits now and then). */
+export function birdhouseArt(x: number, y: number): Container {
+  const c = new Container(), g = new Graphics();
+  g.ellipse(x + 4, y + 2, 16, 5).fill({ color: NAVY, alpha: 0.2 });
+  g.rect(x - 4 - BAND / 2, y - 110, 8 + BAND, 112).fill('#FFFFFF').rect(x - 4, y - 108, 8, 108).fill('#8A5A3B');
+  g.poly([x - 34, y - 110, x, y - 142, x + 34, y - 110]).fill('#FFFFFF').roundRect(x - 26 - BAND, y - 112, 52 + 2 * BAND, 46 + BAND, 4).fill('#FFFFFF');
+  g.roundRect(x - 26, y - 110, 52, 42, 3).fill('#D9A066').poly([x - 30, y - 110, x, y - 138, x + 30, y - 110]).fill('#B8382F').circle(x, y - 92, 8).fill('#5A3A22').rect(x - 6, y - 78, 12, 3).fill('#8A5A3B');
+  c.addChild(g); c.zIndex = y; return c;
+}
+/** A pizzelle (Nonna's waffle cookie), for the bakery case. */
+export function pizzelleArt(): Graphics {
+  const g = new Graphics(); g.circle(0, -12, 17).fill('#FFFFFF').circle(0, -12, 14).fill('#E8C27A');
+  for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.circle(Math.cos(a) * 7, -12 + Math.sin(a) * 7, 3).stroke({ width: 1.5, color: '#C9974A' }); }
+  return g;
+}
+/** Yia-Yia's own paintings, redrawn in the game's style from her real ones (the photos stay out of the repo):
+ * long grasses round a carved stone pillar with a fish on it and one pink flower, on gold; and a portrait of a
+ * fair-haired little girl wrapped in white, on deep green. w x h, from (0, 0). */
+export function yiayiaPainting(which: 0 | 1, w: number, h: number): Graphics {
+  const g = new Graphics();
+  if (which === 0) {
+    g.rect(0, 0, w, h).fill('#C9A848');
+    for (let i = 0; i < 60; i++) g.rect((i * 37) % w, (i * 53) % h, 6, 6).fill({ color: i % 3 ? '#E3C877' : '#8E9A4A', alpha: 0.7 });
+    g.rect(w * 0.45, h * 0.32, w * 0.36, h * 0.12).fill('#E9E4D8').rect(w * 0.48, h * 0.44, w * 0.3, h * 0.16).fill('#A8A4B4').rect(w * 0.47, h * 0.6, w * 0.32, h * 0.1).fill('#E9E4D8').rect(w * 0.5, h * 0.7, w * 0.26, h * 0.3).fill('#F4F1EA');
+    g.ellipse(w * 0.63, h * 0.52, w * 0.09, h * 0.035).fill('#3A3A40');   // the fish
+    for (let i = 0; i < 14; i++) { const x0 = (i / 14) * w, c = i % 2 ? '#3E6B2E' : '#55803A'; g.moveTo(x0, h).bezierCurveTo(x0 + w * 0.1, h * 0.5, x0 + w * 0.25, h * 0.3, x0 + w * (i % 3 ? 0.3 : -0.1), h * 0.1).stroke({ width: 3, color: c }); }
+    g.circle(w * 0.3, h * 0.38, w * 0.05).fill('#F2B8C6').circle(w * 0.3, h * 0.38, w * 0.015).fill('#C9708A');   // the pink flower
+  } else {
+    g.rect(0, 0, w, h * 0.62).fill('#5C6B3A').rect(0, h * 0.62, w, h * 0.38).fill('#3E6E66');
+    g.ellipse(w / 2, h * 0.62, w * 0.3, h * 0.2).fill('#F4F6F2').ellipse(w / 2, h * 0.72, w * 0.36, h * 0.1).fill('#DCEEF0');   // the white bundle
+    g.ellipse(w / 2, h * 0.3, w * 0.16, h * 0.12).fill('#E8D07A');                                                                  // fair hair
+    g.circle(w / 2, h * 0.33, w * 0.11).fill('#F2CDB4').rect(w * 0.39, h * 0.22, w * 0.22, h * 0.05).fill('#E8D07A');               // face, fringe
+    g.circle(w * 0.46, h * 0.33, w * 0.022).fill('#4F8FA0').circle(w * 0.54, h * 0.33, w * 0.022).fill('#4F8FA0').ellipse(w / 2, h * 0.39, w * 0.025, h * 0.012).fill('#D98A8A');
+  }
+  return g;
+}
