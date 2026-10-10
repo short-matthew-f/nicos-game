@@ -64,10 +64,13 @@ export function drawBuilding(b: Building): Container {
   const n = Math.max(1, Math.floor((b.w - 60) / 90));
   for (let i = 0; i < n; i++) {
     const cx = b.x + (b.w / (n + 1)) * (i + 1);
-    if (Math.abs(cx - (doorX + doorW / 2)) < 50) continue;
+    if (Math.abs(cx - (doorX + doorW / 2)) < 50 || b.bays?.some(x => Math.abs(cx - x) < 80)) continue;
     g.roundRect(cx - 22, front + 18, 44, 30, 5).fill(frame).roundRect(cx - 18, front + 22, 36, 22, 3).fill(winC);
   }
   g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 6).fill(shade(b.wall, 0.62));
+  for (const x of b.bays ?? []) {   // open vehicle bays, dark inside
+    g.roundRect(x - 48, front + 14, 96, b.h - 14, 6).fill(frame).roundRect(x - 42, front + 20, 84, b.h - 20, 4).fill('#2C3440');
+  }
   c.addChild(g);
   if (b.label) {
     const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 20, fill: '#2B3F55', letterSpacing: 1 } });

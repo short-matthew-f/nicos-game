@@ -2,6 +2,8 @@ import { Application, Container } from 'pixi.js';
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
+import { FireTruck } from './world/firetruck';
+import { Siren } from './sound';
 import { loadNicoArt, NicoView } from './rig/nico';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
@@ -44,6 +46,10 @@ async function main() {
   const cars = makeTraffic(3);
   for (const c of cars) layer.addChild(c.view);
   const lead = leaders(cars);
+  const truck = new FireTruck();
+  layer.addChild(truck.view);
+  const siren = new Siren();
+  let wasOut = false;
 
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
@@ -156,6 +162,7 @@ async function main() {
     // stand Nico d px ahead of car i, in its lane (for the car-stops check)
     inFrontOf: (i: number, d: number) => { const c = cars[i], [x, y] = c.pos, h = c.loop.heading(c.s); nico.x = x + Math.cos(h) * d; nico.y = y + Math.sin(h) * d; },
     act: () => { action.spot?.run(); },
+    alarm: () => truck.alarm(),
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };
   (window as unknown as { __game: unknown }).__game = game;
@@ -246,7 +253,8 @@ async function main() {
     } else if (mode === 'drive') {
       const prevH = car.h;
       if (frozen) steer(car, 0, 0, dt); else steer(car, input.vx, input.vy, dt);
-      moveCar(car, prevH, dt, SOLIDS, WORLD, carCirclesOf(cars));
+      const truckCircles: [number, number, number][] = truck.out ? truck.points().map(([x, y]) => [x, y, 30]) : [];
+      moveCar(car, prevH, dt, SOLIDS, WORLD, [...carCirclesOf(cars), ...truckCircles]);
     }
     carView.position.set(car.x, car.y);
     turnCar(car.h);
@@ -270,9 +278,20 @@ async function main() {
     }
 
     // traffic brakes for Nico on foot, and for every part of his car
-    const blockers: [number, number][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y]);
-    if (mode !== 'drive') blockers.push([nico.x, nico.y]);
-    for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], blockers);
+    // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
+    const mine: [number, number][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y]);
+    if (mode !== 'drive') mine.push([nico.x, nico.y]);
+    const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
+    for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
+    const truckOut = truck.update(dt, [...mine, ...cars.filter(c => c.blockedBy !== 'truck').flatMap(c => {
+      const [x, y] = c.pos, h = c.loop.heading(c.s);
+      return [[x - Math.cos(h) * 40, y - Math.sin(h) * 40], [x, y], [x + Math.cos(h) * 40, y + Math.sin(h) * 40]] as [number, number][];
+    })]);
+    if (truckOut && !wasOut) {
+      const [tx, ty] = truck.pos;
+      if (Math.hypot(tx - (mode === 'drive' ? car.x : nico.x), ty - (mode === 'drive' ? car.y : nico.y)) < 1600) toast('🚒 The fire alarm is ringing!');
+    }
+    wasOut = truckOut;
 
     // action button
     spots[0].x = car.x; spots[0].y = car.y;
@@ -291,10 +310,13 @@ async function main() {
     const cy = Math.min(WORLD.h - vh / 2, Math.max(vh / 2, fy));
     world.position.set(app.screen.width / 2 - cx * zoom, app.screen.height / 2 - cy * zoom);
 
+    siren.update(dt, truckOut ? Math.hypot(truck.pos[0] - cx, truck.pos[1] - cy) : null);
+
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
+      truck: { out: truck.out, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },
       cars: cars.map(c => ({ speed: c.speed, pos: c.pos, heading: c.loop.heading(c.s) })), fps, people: walkers.length + 1, zoom,

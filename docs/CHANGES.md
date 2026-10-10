@@ -182,3 +182,14 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
     - Swing: builds up, then swings.
   - e2e, 46 checks: the Burger Barn door, the menu opens, frozen while open, fries take $3 and give a boost, the HUD updates, boosted walking is faster, a $5 burger is disabled with $2, Leave, the school door, climbs the slide, lands at the bottom, the swing moves, Hop off is offered, the stick hops off.
   - Mutations: no boost and no stick-to-hop-off each went red in the e2e. Breaking the "enough money" check went red in Vitest only: the e2e stays green because the UI disables the button separately.
+
+## 2026-10-09: v1 slice 3 (the fire truck)
+- **Decisions:**
+  - The fire station has two open bays. The first alarm comes 25 s after load, then every 70–130 s. The truck pulls out of the left bay with its lights flashing and a siren (WebAudio, which starts after the first tap; volume falls off with distance from the screen centre). It laps the outer ring road with traffic and comes back in through the right bay. It starts and ends hidden behind the station's front wall, and a toast says "The fire alarm is ringing!" if Nico is within 1600 px.
+  - **Traffic:** cars brake for the truck. The truck brakes for Nico, his car and any car that isn't itself waiting for the truck, so the two can never wait on each other. Nico's car bumps into the truck.
+- **Correction:** the first route turned west while still inside the doorway and cut across the wall. The route now starts deeper inside and turns at y=1145.
+- **Tests:**
+  - Vitest, 98 tests: the route stays on roads, the apron or inside the station; waits, then laps and comes home with a new wait; stops for someone in the way; 240 s with rapid alarms plus traffic never leaves the truck stuck for 6 s.
+  - e2e, 50 checks: waits at first; drives out on the alarm; the toast; home within a minute.
+  - Mutation: removing the truck's braking went red.
+  - **Not proven:** the "don't yield to cars waiting for the truck" rule. A 4-minute simulation never deadlocked even without it (the truck was stuck at most 0.2 s), so it guards a jam that hasn't been seen.

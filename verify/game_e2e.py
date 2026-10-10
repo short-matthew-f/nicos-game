@@ -138,6 +138,16 @@ with sync_playwright() as p:
     check(pg.locator('#action').inner_text() == 'Hop off', 'Hop off is offered')
     drag(80, 0, 400)
     check(G()['mode'] == 'walk', 'pushing the stick hops off the swing')
+    # the fire truck: on the alarm it leaves the station, laps the ring road and comes home
+    pg.evaluate('()=>window.__game.place(2500, 1350)')
+    check(not G()['truck']['out'], 'the fire truck waits in the station at first')
+    pg.evaluate('()=>window.__game.alarm()'); pg.wait_for_timeout(1800); g = G()
+    check(g['truck']['out'] and g['truck']['speed'] > 100 and g['truck']['pos'][1] > 1080, f"on the alarm it drives out of the station ({g['truck']})")
+    check('fire alarm' in pg.locator('#toast').inner_text(), 'a toast says the alarm is ringing (Nico is nearby)')
+    try:
+        pg.wait_for_function('!window.__game.truck.out', timeout=60000); back = True
+    except Exception: back = False
+    check(back, f"it finishes its lap and goes home within a minute ({G()['truck']})")
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')

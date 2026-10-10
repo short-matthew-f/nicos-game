@@ -13,6 +13,7 @@ export interface Building {
   x: number; y: number; w: number; d: number; h: number;
   wall: string; roof: string; trim?: string;
   kind: 'house' | 'shop' | 'civic';
+  bays?: number[];   // big vehicle doors: centre x of each
 }
 
 const house = (id: string, x: number, y: number, wall: string, roof: string): Building =>
@@ -34,7 +35,7 @@ export const BUILDINGS: Building[] = [
   // centre: burger place
   { id: 'burger', label: 'BURGER BARN', x: 1500, y: 880, w: 320, d: 170, h: 120, wall: '#F9A826', roof: '#D9534F', trim: '#FFE29A', kind: 'shop' },
   // east-middle: fire station
-  { id: 'fire', label: 'FIRE STATION', x: 2520, y: 880, w: 420, d: 200, h: 140, wall: '#D9534F', roof: '#8C2F2B', trim: '#FFFFFF', kind: 'civic' },
+  { id: 'fire', label: 'FIRE STATION', x: 2520, y: 880, w: 420, d: 200, h: 140, wall: '#D9534F', roof: '#8C2F2B', trim: '#FFFFFF', kind: 'civic', bays: [2620, 2840] },
   // south-west: houses
   house('h5', 80, 1900, '#BFE0DA', '#D77B72'),
   house('h6', 420, 1900, '#F7E3C4', '#3E8F8A'),
@@ -87,6 +88,15 @@ export const PARKED_CAR = { x: 560, y: 1130, h: 0 };
 /** The spot in front of a building's door, where its action button appears. */
 export function doorOf(b: Building): [number, number] {
   return [b.x + b.w / 2, b.y + b.d + 26];
+}
+
+/** The fire truck's run: out of the left bay, a lap of the outer ring road (with
+ * traffic, counter-clockwise), and back in through the right bay. It starts and ends
+ * inside the station, hidden behind its front wall. */
+export function fireRoute(): [number, number][] {
+  const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
+  return [[2620, 900], [2620, 1145], [x1 + LANE, 1145], [x1 + LANE, y0 - LANE], [x0 - LANE, y0 - LANE],
+          [x0 - LANE, y1 + LANE], [x1 + LANE, y1 + LANE], [x1 + LANE, 1190], [2840, 1190], [2840, 900]];
 }
 
 export interface Rect { x: number; y: number; w: number; d: number }

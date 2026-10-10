@@ -36,20 +36,22 @@ export class Car {
   readonly view: Container;
   private turn: (h: number) => void;
   speed = MAX;
+  blockedBy: string | null = null;   // tag of what it's stopped for, if anything
   constructor(readonly loop: Loop, public s: number, color: string, taxi = false) {
     ({ view: this.view, turn: this.turn } = carSprite(color, taxi));
   }
   get pos() { return this.loop.at(this.s); }
   /** Drive on, braking for the car ahead and for anything (Nico, his car, the fire
    * truck) standing in the zone in front. */
-  update(dt: number, ahead: Car | null, blockers: [number, number][]) {
+  update(dt: number, ahead: Car | null, blockers: [number, number, string?][]) {
     const [x, y] = this.pos, h = this.loop.heading(this.s);
     const fx = Math.cos(h), fy = Math.sin(h);
     let blocked = false;
+    this.blockedBy = null;
     for (const b of blockers) {
       const rx = b[0] - x, ry = b[1] - y;
       const along = rx * fx + ry * fy, side = Math.abs(-rx * fy + ry * fx);
-      if (along > 30 && along < 150 && side < 52) { blocked = true; break; }
+      if (along > 30 && along < 150 && side < 52) { blocked = true; this.blockedBy = b[2] ?? null; break; }
     }
     if (ahead) {
       const gap = ((ahead.s - this.s) % this.loop.length + this.loop.length) % this.loop.length;
