@@ -76,9 +76,9 @@ describe('farm animals', () => {
   });
 });
 
-import { SHED, SHOP } from '../src/world/map';
+import { SHED, SHOP, BAKERY } from '../src/world/map';
 import { onBeach } from '../src/world/beach';
-describe.each([['the work shed', SHED], ['Bibs and Bobs', SHOP]])('%s', (_, SHED) => {
+describe.each([['the work shed', SHED], ['Bibs and Bobs', SHOP], ["Nico's Bakery", BAKERY]])('%s', (_, SHED) => {
   it('has room to go up: nothing in its space or its doorway, off the roads, and its door opens onto free ground', () => {
     const drawnShed = { x: SHED.x, y: SHED.y - SHED.h, w: SHED.w, d: SHED.d + SHED.h };
     const [dx, dy] = doorOf(SHED), lane = { x: dx - 50, y: dy - 10, w: 100, d: 60 };

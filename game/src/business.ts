@@ -17,7 +17,13 @@ export const ITEMS: Item[] = [
   { id: 'gear', label: '⚙️ Gear', kind: 'part', value: [1, 3] },
   { id: 'battery', label: '🔋 Battery', kind: 'part', value: [2, 4] },
   { id: 'bulb', label: '💡 Light bulb', kind: 'part', value: [1, 2] },
-  { id: 'twine', label: '🧵 Hemp twine', kind: 'part', value: [1, 1], where: 'shop' },   // (bought, never in a unit; shell jewelry at Bibs and Bobs: jewelry.ts)
+  { id: 'twine', label: '🧵 Hemp twine', kind: 'part', value: [1, 1], where: 'shop' },
+  // baking (Nico's Bakery: bakery.ts): from the pantry shelf, eggs from the farm's hen house
+  { id: 'flour', label: '🌾 Flour', kind: 'part', value: [1, 1], where: 'shop' },
+  { id: 'sugar', label: '🍬 Sugar', kind: 'part', value: [1, 1], where: 'shop' },
+  { id: 'butter', label: '🧈 Butter', kind: 'part', value: [1, 1], where: 'shop' },
+  { id: 'egg', label: '🥚 Egg', kind: 'part', value: [1, 1], where: 'shop' },
+  { id: 'chocolate', label: '🍫 Chocolate', kind: 'part', value: [1, 2], where: 'shop' },   // (bought, never in a unit; shell jewelry at Bibs and Bobs: jewelry.ts)
   // things people leave in storage units
   { id: 'teddy', label: '🧸 Old teddy', kind: 'find', value: [2, 5] },
   { id: 'radio', label: '📻 Radio', kind: 'find', value: [4, 9] },
@@ -271,8 +277,9 @@ export interface Biz {
   shown: string[];                 // animals whose photo the ranger has paid for
   found: string[];                 // shell kinds ever found (shells get used up making jewelry)
   shop: Shop;                      // Bibs and Bobs, the beach shop (jewelry.ts)
+  bakery: Shop;                    // Nico's Bakery (bakery.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop() });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop() });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>

@@ -750,3 +750,29 @@ Nico wanted to go inside his house. The user asked "How can Nico sleep?"
 - **Sleeping:** at night the bed says "Go to sleep". Nico climbs in, tucked under the blanket with his head on the pillow, and the screen fades to night with floating Zzz. It's morning when he wakes: the clock jumps to sunrise and he's full of energy (+30 s speedy). By day it's "Take a nap" (+15 s speedy, no time skip).
 - The furniture is data (`HOME_FURNITURE`), ready for decorating.
 - e2e: in, sleep at night and wake at sunrise, a snack, out (214 checks).
+
+### Nico's Bakery (2026-10-10)
+Nico: "he wants to be able to open a bakery."
+- **A $40 sticker** on the south-west block, between the houses and Parts & Tools. A bush moved out of its way, and it's on the minimap's big map too.
+- **Inside:**
+  - a candy-stripe wall and a checkerboard floor;
+  - the oven and the mixing table;
+  - a glass display case in the middle (what's for sale sits inside it);
+  - the pantry shelf, and the counter with the till;
+  - a chalk menu board.
+- **Recipes** (`bakery.ts`):
+  - chocolate chip cookies (4 at $3);
+  - cupcakes (3 at $4);
+  - loaves of bread (2 at $5).
+- **Ingredients:** flour, sugar, butter and chocolate come from the pantry shelf, one at a time or "everything for cookies". Eggs are free at the farm: tap the barn door to collect what the hens have laid, one every 25 s, up to 6.
+- **The baking mini game** (`Workshop.bake`):
+  1. Tap each ingredient into the bowl.
+  2. Stir six times.
+  3. Into the oven: a needle runs along a bar, and you tap "Take it out!" in the gold zone.
+  - Golden sells for $1 more each; a little early or late is fine; doughy or burnt sells for half.
+- **Selling** uses the same visitors-and-till as Bibs and Bobs, now shared in `store.ts`. Food sells faster (a visitor every 15 to 30 s, 3 in 10 buy) but for less. Customers walk up to the case and say "Yum, I'll have that! 💰". It keeps selling while Nico is away, like the shop (up to 3 hours, only what's in the case).
+- Tests:
+  - recipes, the oven's timing, baking and the case limit, customers, the till, catching up, the save;
+  - a greedy hour of nonstop golden trays earns about $3.30 a minute after ingredients (the test fails above $6);
+  - the layout test covers the bakery;
+  - e2e: buy it, eggs from the farm, the pantry kit, mix, stir, take it out golden, 4 cookies in the case, a customer buys one (222 checks).

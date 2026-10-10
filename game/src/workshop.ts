@@ -10,6 +10,7 @@ import { sfx } from './sound';
 import { PLANS, type Slot } from './plans';
 import { design, make, cantMake, pieceValue, bonusOf, type Piece } from './jewelry';
 import { SHELL_KINDS } from './world/beach';
+import { recipe, cantBake, bake, doneness, priceFor, BAKE, type Doneness } from './bakery';
 export { PLANS };
 
 export interface WorkHost {
@@ -21,6 +22,7 @@ export interface WorkHost {
   opened(on: boolean): void;           // pause the world while a screen is up
   skill(s: Skill): void;               // a new skill was earned
   made?(p: Piece): void;               // a piece of jewelry was hung on the shop's shelves
+  baked?(): void;                      // a tray came out of the bakery's oven (into the display case)
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -414,5 +416,104 @@ export class Workshop {
       this.button('Done', () => this.close(), 'primary').dataset.done = '1';
     };
     draw();
+  }
+
+  // ------------------------------------------------------------ the bakery: into the bowl, stir, bake
+  /** for tests: the bake in progress (what's gone in, stirs, oven seconds) and how the last one came out */
+  baking: { added: string[]; stirs: number; oven: number; result: Doneness | null } = { added: [], stirs: 0, oven: 0, result: null };
+  bake(id: string) {
+    const b = this.host.biz, r = recipe(id);
+    if (cantBake(b, id)) return;
+    const need = Object.entries(r.needs).flatMap(([k, n]) => Array(n).fill(k) as string[]);
+    const EMOJI: Record<string, string> = { flour: '🌾', sugar: '🍬', butter: '🧈', egg: '🥚', chocolate: '🍫' };
+    this.baking = { added: [], stirs: 0, oven: 0, result: null };
+    this.show('bake', `Bake ${r.name}`, 'Tap each ingredient to put it in the bowl.');
+    const svg = s('svg', { viewBox: '0 0 600 260', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 260, rx: 18, fill: '#FFF4DA' }));
+    const bowl = s('g') as SVGGElement; at(bowl, 300, 150);
+    const mix = s('ellipse', { cx: 0, cy: -10, rx: 0, ry: 0, fill: '#F2E2B6' });
+    bowl.append(s('path', { d: 'M-130,-30 Q-120,90 0,95 Q120,90 130,-30 Z', fill: '#7FD1E8', stroke: '#2B3F55', 'stroke-width': 5 }), mix,
+      s('ellipse', { cx: 0, cy: -30, rx: 130, ry: 26, fill: 'none', stroke: '#2B3F55', 'stroke-width': 5 }));
+    const bits = s('g') as SVGGElement; bowl.append(bits);
+    svg.append(bowl); this.stage.append(svg);
+    const strip = h('div', 'strip'); this.stage.append(strip);
+    const pad = h('div', 'picks shells'); this.stage.append(pad);
+    const left = () => need.filter((k, i) => need.slice(0, i + 1).filter(q => q === k).length > this.baking.added.filter(q => q === k).length);
+    const COL: Record<string, string> = { flour: '#FFFFFF', sugar: '#F7C8D0', butter: '#F9E39A', egg: '#F9C846', chocolate: '#5A3A22' };
+    // 1. into the bowl
+    const drawAdd = () => {
+      const l = left();
+      strip.textContent = l.length ? `Still to go in: ${l.map(k => EMOJI[k]).join(' ')}` : 'All in! Now stir it up.';
+      pad.replaceChildren();
+      for (const k of [...new Set(need)]) {
+        const bt = h('button'); bt.type = 'button'; bt.dataset.ing = k; bt.disabled = !l.includes(k);
+        bt.innerHTML = `<span style="font-size:28px">${EMOJI[k]}</span> ${k}`;
+        bt.addEventListener('click', () => {
+          if (!left().includes(k)) return;
+          this.baking.added.push(k); sfx.pop();
+          const n = this.baking.added.length; mix.setAttribute('rx', String(30 + n * 14)); mix.setAttribute('ry', String(8 + n * 3));
+          for (let i = 0; i < 5; i++) bits.append(s('circle', { cx: (Math.random() - 0.5) * 140, cy: -10 + (Math.random() - 0.5) * 30, r: 6, fill: COL[k], stroke: '#2B3F55', 'stroke-width': 1.5 }));
+          drawAdd(); if (!left().length) stirStep();
+        });
+        pad.append(bt);
+      }
+    };
+    // 2. stir
+    const STIRS = 6;
+    const stirStep = () => {
+      this.sub.textContent = `Stir it ${STIRS} times!`; pad.replaceChildren();
+      const st = this.button('🥄 Stir!', () => {
+        this.baking.stirs++; sfx.tap(); bits.style.transform = `rotate(${this.baking.stirs * 60}deg)`; bits.style.transition = 'transform .25s';
+        bits.style.opacity = String(1 - this.baking.stirs / STIRS); mix.setAttribute('fill', this.baking.stirs >= STIRS / 2 ? '#E9C98A' : '#F2E2B6');
+        strip.textContent = `Stir! ${this.baking.stirs}/${STIRS}`;
+        if (this.baking.stirs >= STIRS) { st.remove(); ovenStep(); }
+      }, 'primary'); st.dataset.stir = '1';
+      strip.textContent = `Stir! 0/${STIRS}`;
+    };
+    // 3. the oven: take it out when it's golden
+    const ovenStep = () => {
+      this.sub.textContent = `Into the oven! Take it out when it's golden (the gold part of the bar).`;
+      bowl.remove(); strip.textContent = '🔥 Baking... watch the needle!';
+      const oven = s('g') as SVGGElement; at(oven, 300, 120);
+      const tray = s('rect', { x: -150, y: 10, width: 300, height: 34, rx: 8, fill: '#F2E2B6', stroke: '#2B3F55', 'stroke-width': 4 });
+      oven.append(s('rect', { x: -200, y: -95, width: 400, height: 200, rx: 18, fill: '#9AA6B2', stroke: '#2B3F55', 'stroke-width': 5 }),
+        s('rect', { x: -175, y: -65, width: 350, height: 145, rx: 12, fill: '#F28C38' }), tray);
+      for (let i = 0; i < r.makes; i++) oven.append(s('circle', { cx: -110 + i * (220 / Math.max(1, r.makes - 1)), cy: 4, r: 16, fill: '#F2E2B6', stroke: '#2B3F55', 'stroke-width': 3, class: 'dough' }));
+      svg.append(oven);
+      const MAX = r.oven + 2.5, W = 500;
+      const bar = s('g') as SVGGElement; at(bar, 50, 238);
+      const x = (t: number) => W * t / MAX;
+      bar.append(s('rect', { x: 0, y: -12, width: W, height: 24, rx: 12, fill: '#E9EEF3', stroke: '#2B3F55', 'stroke-width': 3 }),
+        s('rect', { x: x(r.oven - BAKE.ok), y: -12, width: x(2 * BAKE.ok), height: 24, fill: '#F9E39A' }),
+        s('rect', { x: x(r.oven - BAKE.golden), y: -12, width: x(2 * BAKE.golden), height: 24, fill: '#F9C846' }));
+      const needle = s('rect', { x: -3, y: -20, width: 6, height: 40, rx: 3, fill: '#E5484D' }); bar.append(needle);
+      svg.append(bar);
+      const t0 = performance.now(); let done = false;
+      const shade = (t: number) => { const k = Math.min(1, t / r.oven), burnt = Math.max(0, (t - r.oven - BAKE.ok) / 1.5);
+        return burnt > 0 ? `rgb(${Math.round(201 - 120 * Math.min(1, burnt))},${Math.round(135 - 90 * Math.min(1, burnt))},${Math.round(74 - 40 * Math.min(1, burnt))})` : `rgb(${Math.round(242 - 41 * k)},${Math.round(226 - 91 * k)},${Math.round(182 - 108 * k)})`; };
+      const tick = () => {
+        if (done || this.screen !== 'bake') return;
+        const t = (performance.now() - t0) / 1000; this.baking.oven = t;
+        at(needle as unknown as SVGGraphicsElement, x(Math.min(t, MAX)), 0);
+        for (const d of Array.from(oven.querySelectorAll('.dough'))) d.setAttribute('fill', shade(t));
+        if (t >= MAX) { out(); return; }
+        requestAnimationFrame(tick);
+      };
+      const out = () => {
+        if (done) return; done = true;
+        const d = doneness(r, this.baking.oven), got = bake(b, id, d);
+        if (!got) { this.close(); return; }
+        this.baking.result = d; this.host.save(); this.host.baked?.();
+        if (d === 'golden') sfx.cheer(); else if (d === 'ok') sfx.sparkle(); else sfx.boing();
+        const say = { golden: 'Perfectly golden!', ok: 'Nicely baked.', doughy: 'A bit doughy in the middle...', burnt: 'Oops, a little burnt!' }[d];
+        this.sub.textContent = `${r.emoji} ${say} ${got.length} ${r.name} in the display case at $${priceFor(r, d)} each.`;
+        this.actions.replaceChildren();
+        const again = this.button('Bake again', () => this.bake(id)); again.dataset.again = '1'; again.disabled = !!cantBake(b, id);
+        this.button('Done', () => this.close(), 'primary').dataset.done = '1';
+      };
+      const take = this.button('🧤 Take it out!', out, 'primary'); take.dataset.take = '1';
+      sfx.door(); requestAnimationFrame(tick);
+    };
+    drawAdd();
   }
 }

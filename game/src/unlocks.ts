@@ -15,6 +15,7 @@ export const UNLOCKS: Unlock[] = [
   { id: 'shelves', label: '🗄️ Shelves', price: 10, room: 'shed', after: 'shed', text: 'Show off everything you\'ve kept: storage finds, beach treasure, and more.' },
   { id: 'bins', label: '🧰 Parts bins', price: 15, room: 'shed', after: 'workbench', text: 'Order parts right here in your shed: no trip to Parts & Tools.' },
   { id: 'shop', label: '🐚 Bibs and Bobs', price: 25, room: 'world', text: 'Your own little shop on the beach. String shells into bracelets, necklaces and wind chimes, put them on the shelves, and visitors will buy them (even while you\'re away). Collect the money from the till.' },
+  { id: 'bakery', label: '🧁 Nico\'s Bakery', price: 40, room: 'world', text: 'Your own bakery! Bake cookies, cupcakes and bread (golden ones sell for more), fill the display case, and people will pop in to buy them. Eggs are free at the farm\'s hen house.' },
   { id: 'paint', label: '🎨 Paint station', price: 20, room: 'shed', after: 'workbench', text: 'Give every toy you build a shiny coat of paint: painted toys sell for $5 more.' },
 ];
 export const unlockOf = (id: string) => UNLOCKS.find(u => u.id === id)!;

@@ -77,6 +77,8 @@ export const BUILDINGS: Building[] = [
  * then a building he can go into. Not in BUILDINGS (it isn't there at first), but kept clear of
  * lamps and props either way. */
 export const SHED: Building = { id: 'shed', label: 'WORK SHED', x: 60, y: 1950, w: 280, d: 160, h: 200, wall: '#B5654F', roof: '#6B4E3A', trim: '#F2D6A2', kind: 'barn' };
+/** Nico's Bakery (an unlockable): on the south-west block, between the houses and Parts & Tools. */
+export const BAKERY: Building = { id: 'bakery', label: "NICO'S BAKERY", x: 740, y: 2850, w: 300, d: 180, h: 230, wall: '#F7D9C4', roof: '#C8463D', trim: '#FFFFFF', kind: 'shop' };
 /** Bibs and Bobs, Nico's beach shop (an unlockable too): at the top of the sand, its door onto the beach. */
 export const SHOP: Building = { id: 'bibs', label: 'BIBS AND BOBS', x: 3430, y: 4370, w: 300, d: 150, h: 210, wall: '#FFE3B3', roof: '#2F9FB8', trim: '#FFFFFF', kind: 'shop' };
 
@@ -141,7 +143,7 @@ export const PROPS: Prop[] = [
   { kind: 'mailbox', x: 160, y: 1650 }, { kind: 'flowers', x: 400, y: 1640, color: '#F06A8A' },
   { kind: 'flowers', x: 470, y: 1880, color: '#F9C846' }, { kind: 'flowers', x: 560, y: 1930, color: '#B48AE6' }, { kind: 'bush', x: 440, y: 2060 },   // (moved over for the work shed)
   { kind: 'mailbox', x: 100, y: 2930 }, { kind: 'mailbox', x: 440, y: 2930 }, { kind: 'mailbox', x: 270, y: 3400 },
-  { kind: 'bush', x: 1030, y: 470 }, { kind: 'bush', x: 360, y: 2900 }, { kind: 'bush', x: 720, y: 2880 },
+  { kind: 'bush', x: 1030, y: 470 }, { kind: 'bush', x: 360, y: 2900 }, { kind: 'bush', x: 700, y: 2960 },
   // the hospital car park: an ambulance and two cars
   { kind: 'parked', x: 4260, y: 560, h: Math.PI / 2, color: '#FFFFFF', stripe: '#D9534F' },
   { kind: 'parked', x: 4430, y: 560, h: Math.PI / 2, color: '#5B8FD6' }, { kind: 'parked', x: 4600, y: 660, h: -Math.PI / 2, color: '#E8B64A' },
@@ -242,7 +244,7 @@ export function propSolid(p: Prop): Rect | null {
 const hit = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
 /** Buildings as drawn (front wall and roof included), for keeping props out of them. */
 const drawnRect = (b: Building): Rect => ({ x: b.x - 10, y: b.y - b.h - 10, w: b.w + 20, d: b.d + b.h + 50 });
-const busy: Rect[] = [...[...BUILDINGS, SHED, SHOP].map(drawnRect), ...[SHED, SHOP].map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
+const busy: Rect[] = [...[...BUILDINGS, SHED, SHOP, BAKERY].map(drawnRect), ...[SHED, SHOP, BAKERY].map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
   ...ROAD_SEGS.map(r => roadRect(r, SIDEWALK)),
   // keep a clear lane from each door down toward the street
   ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }),

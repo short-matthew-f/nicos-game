@@ -3,6 +3,7 @@
 // the shop's shelves, and visitors drop in, browse, and now and then buy one. The money waits in the
 // till until he comes to empty it: passive income. Data first; main.ts and workshop.ts call these.
 import type { Biz } from './business';
+import * as store from './store';
 
 /** What each kind of shell adds to a piece's price (the rare ones are worth more). */
 export const SHELL_VALUE: Record<string, number> = { scallop: 1, spiral: 1, clam: 1, cowrie: 1, starfish: 2, sanddollar: 3 };
@@ -28,20 +29,15 @@ export function bonusOf(shells: string[]): { label: string; amount: number } | n
 }
 export const pieceValue = (d: Design, shells: string[]) => d.base + shells.reduce((t, s) => t + (SHELL_VALUE[s] ?? 0), 0) + (bonusOf(shells)?.amount ?? 0);
 
-// ---- the shop
-export interface Piece { id: string; shells: string[]; price: number }
-export interface Shop {
-  rack: Piece[];     // on the shelves, for sale
-  till: number;      // takings waiting to be collected
-  sold: number;      // pieces sold, ever
-  last: number;      // when the shop was last open with Nico playing (ms since 1970; 0: never)
-}
-export const freshShop = (): Shop => ({ rack: [], till: 0, sold: 0, last: 0 });
+// ---- the shop (the selling itself is store.ts, shared with the bakery)
+export type Piece = store.Piece & { shells: string[] };
+export type Shop = store.Shop;
+export const freshShop = store.freshShop;
 /** rack: pieces the shelves hold. visit: seconds between visitors (lo..hi). buy: the chance a visitor
  * buys something. away: the longest time away that still counts (s). (A greedy hour earns under $6 a
  * minute: test/jewelry.test.ts.) */
 export const SHOP = { rack: 8, visit: [20, 40] as [number, number], buy: 0.17, away: 3 * 3600, twine: 'twine' };
-export const visitGap = (r: () => number = Math.random) => SHOP.visit[0] + r() * (SHOP.visit[1] - SHOP.visit[0]);
+export const visitGap = (r: () => number = Math.random) => store.visitGap(SHOP, r);
 
 /** Why a design can't be made right now (null: it can). */
 export function cantMake(b: Biz, id: string): string | null {
@@ -64,25 +60,6 @@ export function make(b: Biz, id: string, shells: string[]): Piece | null {
   b.shop.rack.push(p);
   return p;
 }
-/** A visitor looks round: maybe they buy something (off the shelves, the money into the till).
- * `at`: the piece they were looking at (else one at random). */
-export function visit(b: Biz, r: () => number = Math.random, at?: number): Piece | null {
-  if (!b.shop.rack.length || r() >= SHOP.buy) return null;
-  const i = at !== undefined && at >= 0 && at < b.shop.rack.length ? at : Math.floor(r() * b.shop.rack.length);
-  const [p] = b.shop.rack.splice(i, 1);
-  b.shop.till += p.price; b.shop.sold++;
-  return p;
-}
-/** Catch up on the time Nico was away (up to SHOP.away): a visitor every so often, as if he'd been
- * playing. Returns what sold. Then the clock is set to now. */
-export function whileAway(b: Biz, now: number, r: () => number = Math.random): Piece[] {
-  const out: Piece[] = [];
-  if (b.shop.last > 0 && now > b.shop.last) {
-    let s = Math.min(SHOP.away, (now - b.shop.last) / 1000);
-    while ((s -= visitGap(r)) > 0 && b.shop.rack.length) { const p = visit(b, r); if (p) out.push(p); }
-  }
-  b.shop.last = now;
-  return out;
-}
-/** Empty the till: what was in it. */
-export function emptyTill(b: Biz): number { const n = b.shop.till; b.shop.till = 0; return n; }
+export const visit = (b: Biz, r: () => number = Math.random, at?: number) => store.visit(b.shop, SHOP, r, at) as Piece | null;
+export const whileAway = (b: Biz, now: number, r: () => number = Math.random) => store.whileAway(b.shop, SHOP, now, r) as Piece[];
+export const emptyTill = (b: Biz) => store.emptyTill(b.shop);

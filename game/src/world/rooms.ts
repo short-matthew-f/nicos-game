@@ -458,3 +458,99 @@ export function kitchenArt(): Container {
   g.rect(fx + 16, front - 132, 26, 20).fill('#FFFFFF').rect(fx + 18, front - 130, 22, 3).fill('#E5484D');   // mom's note on the fridge
   c.addChild(g); c.zIndex = F; return c;
 }
+
+// ---- Nico's Bakery (bakery.ts): the oven and the mixing table, a glass display case in the middle
+// where what he bakes sits until someone buys it, the pantry shelf, and the counter with the till.
+export const BAKERY_ROOM = { w: 1200, h: 820, wall: 260 };
+export const BAKERY_EXIT: [number, number] = [BAKERY_ROOM.w / 2, BAKERY_ROOM.h - 30];
+export const BAKERY_SLOTS = {
+  oven: { x: 70, y: 262, w: 230, d: 60, h: 200 },
+  table: { x: 110, y: 560, w: 280, d: 50, h: 60 },
+  case: { x: 430, y: 470, w: 380, d: 80, h: 90 },
+  pantry: { x: 880, y: 262, w: 260, d: 36, h: 200 },
+  counter: { x: 880, y: 560, w: 260, d: 60, h: 60 },
+};
+/** Spots inside the display case, two rows of four. */
+export const CASE_SPOTS: [number, number][] = [0, 1].flatMap(r => [0, 1, 2, 3].map(i => [BAKERY_SLOTS.case.x + 58 + i * 88, BAKERY_SLOTS.case.y - 60 + r * 46] as [number, number]));
+export const caseBrowseAt = (i: number): [number, number] => [CASE_SPOTS[i % CASE_SPOTS.length][0], BAKERY_SLOTS.case.y + BAKERY_SLOTS.case.d + 46];
+export function drawBakeryRoom(): { view: Container; layer: Container } {
+  const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
+  const { w, h, wall } = BAKERY_ROOM;
+  g.rect(-3000, -3000, w + 6000, h + 6000).fill('#2B2320');
+  for (let j = 0; wall + j * 50 < h; j++) for (let i = 0; i * 50 < w; i++) g.rect(i * 50, wall + j * 50, 50, 50).fill((i + j) % 2 ? '#F4F6F8' : '#F2B8B5');   // checkerboard floor
+  g.rect(0, 0, w, wall).fill('#F7D9C4');
+  for (let x = 0; x < w; x += 40) g.rect(x, 0, 20, wall).fill({ color: '#FFFFFF', alpha: 0.35 });   // candy-stripe wallpaper
+  g.rect(0, wall - 12, w, 12).fill('#C8463D');
+  // the menu board
+  g.roundRect(440 - BAND, 40 - BAND, 360 + 2 * BAND, 150 + 2 * BAND, 12).fill('#FFFFFF').roundRect(440, 40, 360, 150, 10).fill('#2F3B33');
+  g.roundRect(BAKERY_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');
+  const t = new Text({ text: "NICO'S BAKERY\n🍪 $3  🧁 $4  🍞 $5", style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#FFFFFF', align: 'center', lineHeight: 40 } });
+  t.anchor.set(0.5); t.position.set(620, 115);
+  view.addChild(g, t, layer);
+  return { view, layer };
+}
+/** One baked thing, sitting at (0, 0). */
+export function bakedArt(id: string): Graphics {
+  const g = new Graphics(), W = '#FFFFFF';
+  if (id === 'cookie') {
+    g.circle(0, -12, 17).fill(W).circle(0, -12, 14).fill('#D9A066');
+    for (const [x, y] of [[-6, -16], [5, -18], [-2, -7], [7, -9]]) g.circle(x, y, 2.6).fill('#5A3A22');
+  } else if (id === 'cupcake') {
+    g.poly([-16, -16, 16, -16, 11, 4, -11, 4]).fill(W).poly([-13, -15, 13, -15, 9, 2, -9, 2]).fill('#7FD1E8');
+    g.circle(0, -24, 15).fill(W).circle(0, -23, 12).fill('#F7C8D0').circle(-5, -28, 6).fill('#F7C8D0').circle(0, -34, 3.5).fill('#E5484D');
+  } else {
+    g.roundRect(-24, -26, 48, 28, 13).fill(W).roundRect(-21, -23, 42, 23, 11).fill('#C9874A');
+    for (const x of [-10, 0, 10]) g.moveTo(x - 4, -20).lineTo(x + 4, -14).stroke({ width: 2.5, color: '#E8B47A' });
+  }
+  return g;
+}
+export function ovenArt(): Container {
+  const s = BAKERY_SLOTS.oven, c = new Container(), g = new Graphics(), F = s.y + s.d, top = F - s.h;
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 2 * BAND, 12).fill('#FFFFFF').roundRect(s.x, top, s.w, s.h, 10).fill('#9AA6B2');
+  g.roundRect(s.x + 20, top + 54, s.w - 40, s.h - 80, 10).fill('#2C3440').roundRect(s.x + 30, top + 64, s.w - 60, s.h - 100, 8).fill('#F28C38');   // the glowing window
+  g.rect(s.x + 26, top + 40, s.w - 52, 8).fill('#5B6472');                                                                                    // the handle
+  for (let i = 0; i < 3; i++) g.circle(s.x + 40 + i * 30, top + 20, 9).fill('#2C3440');                                                     // knobs
+  c.addChild(g); c.zIndex = F; return c;
+}
+export function mixTableArt(): Container {
+  const s = BAKERY_SLOTS.table, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - BENCH, depth = 34;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + BENCH + 2 * BAND, 9).fill('#FFFFFF');
+  g.roundRect(s.x, front, s.w, BENCH, 6).fill('#B9895A').roundRect(s.x, front - depth, s.w, depth + 4, 8).fill('#F2D6A2');
+  g.ellipse(s.x + 90, front - depth + 4, 40, 16).fill('#FFFFFF').ellipse(s.x + 90, front - depth + 2, 34, 12).fill('#7FD1E8').ellipse(s.x + 90, front - depth - 2, 26, 7).fill('#FFF4DA');   // a mixing bowl
+  g.roundRect(s.x + 170, front - depth - 6, 70, 14, 7).fill('#D9A066');   // a rolling pin
+  c.addChild(g); c.zIndex = F; return c;
+}
+/** The glass display case: a counter with glass shelves (what's for sale goes in CASE_SPOTS). */
+export function caseArt(): { back: Container; glass: Container } {
+  const s = BAKERY_SLOTS.case, back = new Container(), g = new Graphics(), F = s.y + s.d, top = F - s.h - 70;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 70 + 2 * BAND, 10).fill('#FFFFFF');
+  g.roundRect(s.x, top, s.w, 70, 8).fill('#FFF4DA').rect(s.x, top + 46, s.w, 4).fill('#E9DCC7');   // the shelves inside
+  g.roundRect(s.x, F - s.h, s.w, s.h, 8).fill('#E5484D').rect(s.x, F - s.h + 20, s.w, 8).fill({ color: '#FFFFFF', alpha: 0.6 });   // the front
+  back.addChild(g); back.zIndex = s.y;
+  const glass = new Container(), q = new Graphics();
+  q.roundRect(s.x + 4, top + 2, s.w - 8, 72, 8).fill({ color: '#BFE3F5', alpha: 0.25 }).moveTo(s.x + 30, top + 10).lineTo(s.x + 70, top + 62).stroke({ width: 4, color: '#FFFFFF', alpha: 0.6 });
+  glass.addChild(q); glass.zIndex = s.y + 2;
+  return { back, glass };
+}
+export function pantryArt(): Container {
+  const s = BAKERY_SLOTS.pantry, c = new Container(), g = new Graphics(), top = s.y - s.h;
+  g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + s.d + 2 * BAND, 8).fill('#FFFFFF').roundRect(s.x, top, s.w, s.h + s.d, 6).fill('#8A5A3B');
+  const boards = [top + 70, top + 150];
+  for (const by of boards) g.rect(s.x + 8, by, s.w - 16, 10).fill('#D9A066');
+  c.addChild(g);
+  ['🌾', '🍬', '🧈', '🥚', '🍫', '🌾', '🍬', '🥚'].forEach((e, i) => {
+    const t = new Text({ text: e, style: { fontSize: 34 } }); t.anchor.set(0.5, 1); t.position.set(s.x + 36 + (i % 4) * 62, boards[Math.floor(i / 4)] + 2); c.addChild(t);
+  });
+  c.zIndex = s.y + s.d; return c;
+}
+export function bakeryCounterArt(): Container {
+  const s = BAKERY_SLOTS.counter, c = new Container(), g = new Graphics(), F = s.y + s.d, front = F - 74, depth = 36;
+  g.ellipse(s.x + s.w / 2 + 8, F - 2, s.w / 2 + 8, 12).fill({ color: NAVY, alpha: 0.18 });
+  g.roundRect(s.x - BAND, front - depth - BAND, s.w + 2 * BAND, depth + 74 + 2 * BAND, 9).fill('#FFFFFF');
+  g.roundRect(s.x, front, s.w, 74, 6).fill('#C8463D').roundRect(s.x, front - depth, s.w, depth + 4, 6).fill('#F2D6A2');
+  const tx = s.x + s.w - 110, ty = front - depth + 4;
+  g.roundRect(tx - BAND, ty - 46 - BAND, 84 + 2 * BAND, 50 + 2 * BAND, 8).fill('#FFFFFF').roundRect(tx, ty - 46, 84, 50, 7).fill('#2F7FD8').roundRect(tx + 10, ty - 40, 64, 16, 4).fill('#BFF0C8');
+  c.addChild(g); c.zIndex = F; return c;
+}
