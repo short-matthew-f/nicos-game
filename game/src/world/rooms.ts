@@ -5,6 +5,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { NAVY, BAND } from './draw';
 import type { Rect } from './map';
+import { WALLPAPERS, RUGS } from '../decor';
 
 export interface Room {
   id: string;                         // the building it's inside
@@ -384,17 +385,17 @@ export const HOME_FURNITURE: Record<string, { x: number; y: number; w: number; d
 };
 /** Where Nico's head goes on the pillow (he's tucked in under the blanket). */
 export const PILLOW: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w / 2, HOME_FURNITURE.bed.y + 50];
-export function drawHomeRoom(): { view: Container; layer: Container; windows: Graphics } {
+export function drawHomeRoom(paper = WALLPAPERS.blue, rug = RUGS.sunny): { view: Container; layer: Container; windows: Graphics } {
   const view = new Container(), g = new Graphics(), layer = new Container(); layer.sortableChildren = true;
   const { w, h, wall } = HOME_ROOM;
   g.rect(-3000, -3000, w + 6000, h + 6000).fill('#2B2320');
   for (let y = wall; y < h; y += 40) g.rect(0, y, w, 40).fill(((y - wall) / 40) % 2 ? '#D9B48A' : '#D1AA7E').rect(0, y + 38, w, 2).fill('#B8915F');   // wooden floor
-  g.rect(0, 0, w, wall).fill('#C9DDF2');
-  for (let x = 0; x < w; x += 46) g.rect(x, 0, 18, wall).fill({ color: '#FFFFFF', alpha: 0.18 });   // striped wallpaper
-  g.rect(0, wall - 14, w, 14).fill('#8FA9C4');
-  g.ellipse(w / 2 + 40, 620, 330, 150).fill('#FFFFFF').ellipse(w / 2 + 40, 620, 320, 142).fill('#E5484D').ellipse(w / 2 + 40, 620, 250, 105).fill('#F2C14E').ellipse(w / 2 + 40, 620, 170, 70).fill('#E5484D');   // a round rug
-  // pictures on the wall
-  g.roundRect(380 - BAND, 60 - BAND, 90 + 2 * BAND, 70 + 2 * BAND, 6).fill('#FFFFFF').roundRect(380, 60, 90, 70, 4).fill('#7FD1C1').circle(405, 82, 9).fill('#F9C846').poly([380, 130, 420, 95, 450, 115, 470, 100, 470, 130]).fill('#3E8F5A');
+  g.rect(0, 0, w, wall).fill(paper.wall);
+  for (let x = 0; x < w; x += 46) g.rect(x, 0, 18, wall).fill({ color: paper.stripe, alpha: 0.3 });   // striped wallpaper
+  g.rect(0, wall - 14, w, 14).fill(paper.trim);
+  g.ellipse(w / 2 + 40, 560, 330, 150).fill('#FFFFFF').ellipse(w / 2 + 40, 560, 320, 142).fill(rug.rings[0]).ellipse(w / 2 + 40, 560, 250, 105).fill(rug.rings[1]).ellipse(w / 2 + 40, 560, 170, 70).fill(rug.rings[2]);   // a round rug
+  // a picture on the wall
+  const px = 840; g.roundRect(px - BAND, 60 - BAND, 80 + 2 * BAND, 64 + 2 * BAND, 6).fill('#FFFFFF').roundRect(px, 60, 80, 64, 4).fill('#7FD1C1').circle(px + 22, 80, 8).fill('#F9C846').poly([px, 124, px + 36, 92, px + 56, 110, px + 80, 96, px + 80, 124]).fill('#3E8F5A');
   g.roundRect(SHOP_EXIT[0] - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the front door
   const windows = new Graphics();
   for (const x of [540, 700]) windows.roundRect(x, 50, 120, 120, 8).fill('#FFFFFF');
@@ -554,3 +555,67 @@ export function bakeryCounterArt(): Container {
   g.roundRect(tx - BAND, ty - 46 - BAND, 84 + 2 * BAND, 50 + 2 * BAND, 8).fill('#FFFFFF').roundRect(tx, ty - 46, 84, 50, 7).fill('#2F7FD8').roundRect(tx + 10, ty - 40, 64, 16, 4).fill('#BFF0C8');
   c.addChild(g); c.zIndex = F; return c;
 }
+
+/** Things Nico can buy for his house (unlocks.ts, room 'home'): footprint (solid; d 0 for things on the wall) and drawn height. */
+export const HOME_DECOR: Record<string, { x: number; y: number; w: number; d: number; h: number }> = {
+  posters: { x: 100, y: 40, w: 180, d: 0, h: 110 },        // on the wall above the bed
+  bookshelf: { x: 410, y: 262, w: 110, d: 36, h: 200 },
+  tv: { x: 100, y: 640, w: 210, d: 50, h: 120 },          // a TV on a low cabinet, facing the room...
+  beanbag: { x: 150, y: 770, w: 110, d: 40, h: 50 },      // ...and the beanbag in front of it
+  fishtank: { x: 980, y: 640, w: 190, d: 50, h: 150 },
+  plant: { x: 1190, y: 520, w: 60, d: 36, h: 130 },
+  cat: { x: 900, y: 770, w: 0, d: 0, h: 0 },               // she sits watching the fish
+};
+/** The art for a piece of decor, standing on its slot. */
+export function decorArt(id: string): Container {
+  const s = HOME_DECOR[id], c = new Container(), g = new Graphics(), F = s.y + s.d, top = F - s.h;
+  const shadow = () => g.ellipse(s.x + s.w / 2 + 6, F - 2, s.w / 2 + 6, 10).fill({ color: NAVY, alpha: 0.18 });
+  switch (id) {
+    case 'posters':
+      g.roundRect(s.x - BAND, s.y - BAND, 80 + 2 * BAND, 110 + 2 * BAND, 6).fill('#FFFFFF').roundRect(s.x, s.y, 80, 110, 4).fill('#3BB273')
+       .circle(s.x + 40, s.y + 70, 18).fill('#FFFFFF').circle(s.x + 40, s.y + 70, 6).fill('#2B3F55').rect(s.x + 34, s.y + 20, 12, 30).fill('#F9C846');   // a soccer poster
+      g.roundRect(s.x + 100 - BAND, s.y - BAND, 80 + 2 * BAND, 110 + 2 * BAND, 6).fill('#FFFFFF').roundRect(s.x + 100, s.y, 80, 110, 4).fill('#2E3A66')
+       .poly([s.x + 140, s.y + 15, s.x + 155, s.y + 60, s.x + 125, s.y + 60]).fill('#E5484D').rect(s.x + 128, s.y + 60, 24, 30).fill('#E9EEF3').poly([s.x + 132, s.y + 90, s.x + 148, s.y + 90, s.x + 140, s.y + 104]).fill('#F28C38');   // a rocket
+      for (const [x, y] of [[s.x + 112, s.y + 22], [s.x + 168, s.y + 40], [s.x + 116, s.y + 92]]) g.circle(x, y, 2).fill('#FFFFFF');
+      c.zIndex = 1; break;
+    case 'bookshelf': {
+      g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 2 * BAND, 8).fill('#FFFFFF').roundRect(s.x, top, s.w, s.h, 6).fill('#8A5A3B');
+      const cols = ['#E5484D', '#2F7FD8', '#F9C846', '#3BB273', '#7B5BA6', '#F28C38'];
+      for (let r = 0; r < 3; r++) {
+        const by = top + 60 + r * 58; g.rect(s.x + 6, by, s.w - 12, 8).fill('#D9A066');
+        for (let i = 0; i < 6; i++) g.rect(s.x + 10 + i * 15, by - 40 + (i % 3) * 4, 12, 40 - (i % 3) * 4).fill(cols[(i + r * 2) % 6]);
+      }
+      c.zIndex = F; break;
+    }
+    case 'tv': {
+      shadow();
+      g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 2 * BAND, 8).fill('#FFFFFF');
+      g.roundRect(s.x, F - 50, s.w, 50, 6).fill('#5B6472').rect(s.x + 20, F - 34, 60, 18).fill('#2C3440');   // the cabinet, the console in it
+      g.roundRect(s.x + 15, top, s.w - 30, s.h - 56, 8).fill('#1E2733');                                       // the TV
+      c.zIndex = F; break;
+    }
+    case 'beanbag':
+      shadow();
+      g.ellipse(s.x + s.w / 2, F - 22, s.w / 2 + BAND, 30 + BAND).fill('#FFFFFF').ellipse(s.x + s.w / 2, F - 22, s.w / 2, 30).fill('#F28C38').ellipse(s.x + s.w / 2 - 14, F - 34, 22, 10).fill({ color: '#FFFFFF', alpha: 0.3 });
+      c.zIndex = F; break;
+    case 'fishtank': {
+      shadow();
+      g.roundRect(s.x - BAND, top - BAND, s.w + 2 * BAND, s.h + 2 * BAND, 8).fill('#FFFFFF');
+      g.roundRect(s.x, F - 60, s.w, 60, 6).fill('#8A5A3B');                                                                 // the stand
+      g.roundRect(s.x + 6, top, s.w - 12, s.h - 64, 6).fill('#7FD1E8').rect(s.x + 6, top + s.h - 84, s.w - 12, 20).fill('#E8CF8E');   // water, sand
+      g.moveTo(s.x + 40, top + s.h - 84).quadraticCurveTo(s.x + 30, top + 40, s.x + 46, top + 20).stroke({ width: 5, color: '#3E8F5A' });   // a water plant
+      c.zIndex = F; break;
+    }
+    case 'plant':
+      shadow();
+      g.poly([s.x + 8, F - 50, s.x + s.w - 8, F - 50, s.x + s.w - 14, F, s.x + 14, F]).fill('#FFFFFF').poly([s.x + 12, F - 46, s.x + s.w - 12, F - 46, s.x + s.w - 17, F - 4, s.x + 17, F - 4]).fill('#C8463D');
+      for (const [dx, dy, r] of [[0, -95, 26], [-20, -75, 22], [20, -78, 22], [-6, -118, 18], [14, -110, 16]]) g.circle(s.x + s.w / 2 + dx, F + dy, r + BAND).fill('#FFFFFF');
+      for (const [dx, dy, r] of [[0, -95, 26], [-20, -75, 22], [20, -78, 22], [-6, -118, 18], [14, -110, 16]]) g.circle(s.x + s.w / 2 + dx, F + dy, r).fill(dy < -100 ? '#5DB86F' : '#3E8F5A');
+      c.zIndex = F; break;
+  }
+  c.addChild(g);
+  return c;
+}
+/** The TV's screen (it lights up when someone's playing) and the fish (they swim): drawn separately to animate. */
+export function tvScreen(): Graphics { const s = HOME_DECOR.tv, g = new Graphics(); g.roundRect(s.x + 22, s.y + s.d - s.h + 7, s.w - 44, s.h - 70, 6).fill('#FFFFFF'); g.zIndex = s.y + s.d + 1; return g; }
+export function fishArt(color: string): Graphics { const g = new Graphics(); g.ellipse(0, 0, 9, 5).fill(color).poly([-8, 0, -15, -5, -15, 5]).fill(color).circle(4, -1, 1.4).fill('#2B3F55'); g.zIndex = HOME_DECOR.fishtank.y + HOME_DECOR.fishtank.d + 1; return g; }

@@ -74,7 +74,10 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 
 - Bibs and Bobs, the beach shop: string shells into jewelry, visitors buy it, and it keeps selling while Nico is away.
 
+- Tempo (red tracksuit), day and night, real sounds, weight, Primo climbing roofs, Nico's house inside (sleep, decorate), Nico's Bakery.
+
 ## Next
+- Switching between Nico, James, Primo (and Tempo): play as any of them.
 - Ice cream shop interior (same room system), then other insides (Toy Shop, Parts & Tools) if Nico wants them.
 - Parked: the kite, house cleaning, and hiring a worker. The worker could reuse the shop's answer to how time works: it runs while the game is open, plus a capped catch-up on load.
 

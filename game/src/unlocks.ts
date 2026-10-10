@@ -5,7 +5,7 @@ import type { Biz } from './business';
 
 export interface Unlock {
   id: string; label: string; price: number;
-  room: 'world' | 'shed';       // where it goes
+  room: 'world' | 'shed' | 'home';   // where it goes
   text: string;                 // what it does (on the buy card)
   after?: string;               // only offered once this one's unlocked
 }
@@ -16,6 +16,14 @@ export const UNLOCKS: Unlock[] = [
   { id: 'bins', label: '🧰 Parts bins', price: 15, room: 'shed', after: 'workbench', text: 'Order parts right here in your shed: no trip to Parts & Tools.' },
   { id: 'shop', label: '🐚 Bibs and Bobs', price: 25, room: 'world', text: 'Your own little shop on the beach. String shells into bracelets, necklaces and wind chimes, put them on the shelves, and visitors will buy them (even while you\'re away). Collect the money from the till.' },
   { id: 'bakery', label: '🧁 Nico\'s Bakery', price: 40, room: 'world', text: 'Your own bakery! Bake cookies, cupcakes and bread (golden ones sell for more), fill the display case, and people will pop in to buy them. Eggs are free at the farm\'s hen house.' },
+  // decorating Nico's house (Nico, 2026-10-10: "he wants to be able to decorate his house")
+  { id: 'plant', label: '🪴 Big plant', price: 5, room: 'home', text: 'A big leafy plant in a pot. Very fancy.' },
+  { id: 'posters', label: '🖼️ Posters', price: 3, room: 'home', text: 'Posters for your wall: a soccer star and a rocket.' },
+  { id: 'bookshelf', label: '📚 Bookshelf', price: 10, room: 'home', text: 'A tall shelf full of books (and your best finds on top).' },
+  { id: 'beanbag', label: '🫘 Beanbag', price: 5, room: 'home', text: 'A squishy beanbag to flop into.' },
+  { id: 'tv', label: '📺 TV and game console', price: 20, room: 'home', text: 'A TV with a game console. Sit on the beanbag and play!' },
+  { id: 'fishtank', label: '🐠 Fish tank', price: 15, room: 'home', text: 'A fish tank with three little fish swimming round.' },
+  { id: 'cat', label: '🐱 A pet cat', price: 25, room: 'home', text: 'A fluffy cat of your own! She watches the fish all day and purrs when you pet her.' },
   { id: 'paint', label: '🎨 Paint station', price: 20, room: 'shed', after: 'workbench', text: 'Give every toy you build a shiny coat of paint: painted toys sell for $5 more.' },
 ];
 export const unlockOf = (id: string) => UNLOCKS.find(u => u.id === id)!;

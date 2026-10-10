@@ -776,3 +776,19 @@ Nico: "he wants to be able to open a bakery."
   - a greedy hour of nonstop golden trays earns about $3.30 a minute after ingredients (the test fails above $6);
   - the layout test covers the bakery;
   - e2e: buy it, eggs from the farm, the pantry kit, mix, stir, take it out golden, 4 cookies in the case, a customer buys one (222 checks).
+
+### Decorating the house (2026-10-10)
+Nico: "he wants to be able to decorate his house."
+- **Things to buy for the house:** sticker unlocks, `room: 'home'`. Each shows as a dashed outline with a price in its spot, and when bought it sticks on with the fold, a thud and dust. Each one does something:
+  - 🖼️ **Posters** ($3) above the bed: a soccer star and a rocket.
+  - 📚 **Bookshelf** ($10): read a book.
+  - 🪴 **Big plant** ($5): water it.
+  - 🫘 **Beanbag** ($5): flop into it.
+  - 📺 **TV and game console** ($20): sit on the beanbag to play. The screen flickers and a level gets beaten every few seconds.
+  - 🐠 **Fish tank** ($15): three fish swim round it; feed them and they zoom.
+  - 🐱 **A pet cat** ($25): she sits watching the fish, breathing, and purrs when you pet her.
+- **🎨 Redecorate** (by the door) picks the wallpaper and the rug, $5 a change:
+  - six wallpapers: sky blue, mint, sunny yellow, peach, space, team red;
+  - four rugs: red and yellow, ocean, forest, candy.
+  - Saved in `biz.home`; the colours are data in `decor.ts`.
+- e2e: buy a beanbag and a TV, play games and beat a level, space wallpaper (228 checks).

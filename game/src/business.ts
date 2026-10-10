@@ -278,8 +278,9 @@ export interface Biz {
   found: string[];                 // shell kinds ever found (shells get used up making jewelry)
   shop: Shop;                      // Bibs and Bobs, the beach shop (jewelry.ts)
   bakery: Shop;                    // Nico's Bakery (bakery.ts)
+  home: { wall: string; rug: string };   // how his house is decorated (the colours: rooms.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop() });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' } });   // (keys of WALLPAPERS / RUGS: decor.ts)
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>

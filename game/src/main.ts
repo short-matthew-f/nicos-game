@@ -30,7 +30,8 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
+import { WALLPAPERS, RUGS, REDECORATE } from './decor';
 import { RECIPES, PANTRY, BAKERY as BAKERY_RULES, recipe, cantBake, visit as bakeryVisit, whileAway as bakeryAway, emptyTill as bakeryEmpty, visitGap as bakeryGap, HENS } from './bakery';
 import type { Shop } from './store';
 import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, emptyTill, visitGap, design } from './jewelry';
@@ -224,7 +225,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep' | 'games'; t: number; from: [number, number]; seat: number } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -240,6 +241,7 @@ async function main() {
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
     if (play.kind === 'camera') viewfinder.hidden = true;
+    if (play.kind === 'games') { nico.x = play.from[0]; nico.y = play.from[1] + 70; if (tvGlow) tvGlow.alpha = 0.1; }
     if (play.kind === 'sleep') { nico.x = BED_SIDE[0]; nico.y = BED_SIDE[1]; sleepEl.classList.remove('on'); }
     if (play.kind === 'eat') { nico.x = play.from[0] + STOOL; nico.y = play.from[1] + SEAT; tableTray?.view.destroy(); tableTray = null; }
     if (play.kind === 'swim') { waterSkin.visible = ring.visible = false; nico.view.root.mask = null; swimMask.clear(); floating = false; const [ox, oy] = climbOut(nico.x, nico.y); nico.x = ox; nico.y = oy; }
@@ -512,16 +514,86 @@ async function main() {
   const BED_SIDE: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w + 70, HOME_FURNITURE.bed.y + HOME_FURNITURE.bed.d - 20];
   let snackIn = 0;   // s till the fridge has another snack
   let eggs: number = HENS.max;   // eggs waiting at the farm (the hens lay more as time goes by)
-  function enterHome() {
-    const { view, layer: rl, windows } = drawHomeRoom(), { bed, blanket } = bedArt(), stand = nightstandArt();
+  function enterHome(at: [number, number] = [HOME_EXIT[0], HOME_EXIT[1] - 70]) {
+    const { view, layer: rl, windows } = drawHomeRoom(WALLPAPERS[biz.home.wall], RUGS[biz.home.rug]), { bed, blanket } = bedArt(), stand = nightstandArt();
     const lamp = light(stand.bulb[0], stand.bulb[1], 110, 90, 0xFFD98A, 0.8); lamp.zIndex = 9999;
     rl.addChild(bed, blanket, stand.view, couchArt(), kitchenArt(), lamp);
     paintWindows(windows, darkness(clock));
-    const f = HOME_FURNITURE;
-    showRoom({ kind: 'home', id: 'home', w: HOME_ROOM.w, h: HOME_ROOM.h, view, layer: rl, windows, lamp,
-      solids: [{ x: 0, y: 0, w: HOME_ROOM.w, d: HOME_ROOM.wall + 14 }, ...Object.values(f).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d }))] }, [HOME_EXIT[0], HOME_EXIT[1] - 70]);
+    const f = HOME_FURNITURE, outlines: Record<string, Container> = {};
+    // decorations: the ones he's bought, and outlines (with prices) for the rest
+    for (const u of UNLOCKS.filter(q => q.room === 'home')) {
+      if (isUnlocked(biz, u.id)) rl.addChild(homeDecor(u.id));
+      else { const [x, y, w, h] = decorBox(u.id); const o = outlineArt(x, y, w, h, u.label, u.price); o.zIndex = u.id === 'posters' ? 2 : y; o.scale.set(1); o.visible = canUnlock(biz, u.id); rl.addChild(o); outlines[u.id] = o; }
+    }
+    showRoom({ kind: 'home', id: 'home', w: HOME_ROOM.w, h: HOME_ROOM.h, view, layer: rl, windows, lamp, outlines,
+      solids: [{ x: 0, y: 0, w: HOME_ROOM.w, d: HOME_ROOM.wall + 14 }, ...Object.values(f).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d })), ...decorSolids()] }, at);
     sfx.door();
   }
+  const decorSolids = () => UNLOCKS.filter(u => u.room === 'home' && isUnlocked(biz, u.id)).map(u => HOME_DECOR[u.id]).filter(q => q && q.d > 0).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d }));
+  /** The outline box for a decoration (x, y, w, h). */
+  function decorBox(id: string): [number, number, number, number] {
+    const q = HOME_DECOR[id];
+    if (id === 'cat') return [q.x - 45, q.y - 70, 90, 80];
+    return [q.x - 10, q.y + q.d - q.h - 10, q.w + 20, q.h + 20];
+  }
+  /** A decoration's art (the TV's screen and the fish move: kept for the loop). */
+  let tvGlow: Graphics | null = null, fish: Graphics[] = [], petCat: Container | null = null;
+  function homeDecor(id: string): Container {
+    const c = new Container(); c.sortableChildren = true;
+    if (id === 'cat') { const k = drawCat(); k.position.set(HOME_DECOR.cat.x, HOME_DECOR.cat.y); k.scale.set(1.3); c.addChild(k); c.zIndex = HOME_DECOR.cat.y; petCat = c; return c; }
+    const a = decorArt(id); c.addChild(a); c.zIndex = a.zIndex;
+    if (id === 'tv') { tvGlow = tvScreen(); tvGlow.alpha = 0.1; c.addChild(tvGlow); }
+    if (id === 'fishtank') fish = ['#F28C38', '#F9C846', '#E5484D'].map(col => { const g = fishArt(col); c.addChild(g); return g; });
+    return c;
+  }
+  /** Redecorate: pick the wallpaper and the rug. */
+  function showRedecorate() {
+    const pickIt = (kind: 'wall' | 'rug', key: string) => () => {
+      if (biz.home[kind] === key || state.money < REDECORATE) return;
+      state.money -= REDECORATE; biz.home[kind] = key; showMoney(); persist(); sfx.sparkle();
+      enterHome([nico.x, nico.y]); toast(kind === 'wall' ? `🎨 New wallpaper: ${WALLPAPERS[key].label}!` : `🎨 A new rug: ${RUGS[key].label}!`);
+    };
+    showCard('redecorate', '🎨 Redecorate', `Pick new wallpaper or a new rug ($${REDECORATE} each).`, [
+      ...Object.entries(WALLPAPERS).map(([k, v]) => ({ label: `${v.label} walls`, sub: biz.home.wall === k ? 'now' : `$${REDECORATE}`, id: `wall:${k}`, disabled: biz.home.wall === k || state.money < REDECORATE, onClick: pickIt('wall', k) })),
+      ...Object.entries(RUGS).map(([k, v]) => ({ label: `${v.label} rug`, sub: biz.home.rug === k ? 'now' : `$${REDECORATE}`, id: `rug:${k}`, disabled: biz.home.rug === k || state.money < REDECORATE, onClick: pickIt('rug', k) })),
+    ], 'Close');
+  }
+  /** Spots for the decorations: buy one (it's stuck on), or use it. */
+  function decorSpots(): Spot[] {
+    const spotAt: Record<string, [number, number]> = { posters: [195, 575], bookshelf: [465, 360], tv: [360, 690], beanbag: [205, 845], fishtank: [1075, 745], plant: [1220, 610], cat: [900, 830] };
+    const out: Spot[] = [];
+    for (const u of UNLOCKS.filter(q => q.room === 'home')) {
+      const owned = isUnlocked(biz, u.id);
+      if (!owned && !canUnlock(biz, u.id)) continue;
+      if (u.id === 'tv' && owned && isUnlocked(biz, 'beanbag')) continue;   // (the beanbag spot plays the games)
+      if (u.id === 'beanbag' && !owned && isUnlocked(biz, 'tv')) { /* buy it from its own outline */ }
+      const [x, y] = spotAt[u.id];
+      const use: Record<string, () => void> = {
+        posters: () => toast('🖼️ Your posters: a soccer star and a rocket to the moon.'),
+        bookshelf: () => toast(`📚 You pick a book: "${pick(['The Robot Who Could', 'Treasure Island', 'Big Book of Cars', 'Space for Kids', 'The Mystery of the Old Pier'])}". A good read!`),
+        tv: () => toast('📺 You need somewhere comfy to sit and play: a beanbag!'),
+        beanbag: () => { mode = 'play'; play = { kind: 'games', t: 0, from: [HOME_DECOR.beanbag.x + HOME_DECOR.beanbag.w / 2, HOME_DECOR.beanbag.y + 10], seat: 0 }; sfx.tap(); },
+        fishtank: () => { sfx.splash(); toast('🐠 You sprinkle in some fish food. The fish zoom up to eat it!'); fishFed = 3; },
+        plant: () => toast('🪴 You water the plant. It looks happy.'),
+        cat: () => { sfx.purr(); toast(`🐱 ${pick(['Purrrr...', 'She rubs against your leg.', 'Mrrrow!', 'She rolls over for a tummy rub.'])}`); },
+      };
+      out.push({ id: u.id, x, y, r: 110, label: owned ? ({ posters: '🖼️ Look at your posters', bookshelf: '📚 Read a book', tv: '📺 Your TV', beanbag: isUnlocked(biz, 'tv') ? '🎮 Play video games' : '🫘 Flop on the beanbag', fishtank: '🐠 Feed the fish', plant: '🪴 Water the plant', cat: '🐱 Pet the cat' }[u.id] ?? u.label) : `✨ ${u.label} · $${u.price}`,
+        run: () => {
+          if (owned) { use[u.id]?.(); return; }
+          unlockCard(u.id, () => {
+            if (room?.kind !== 'home') return;
+            room.outlines?.[u.id]?.destroy({ children: true });
+            const a = homeDecor(u.id); room.layer.addChild(a);
+            const [bx, by, bw, bh] = decorBox(u.id); slapIn(a, bx + bw / 2, by + bh, { x: bx, y: by, w: bw, h: bh });
+            room.solids = [{ x: 0, y: 0, w: HOME_ROOM.w, d: HOME_ROOM.wall + 14 }, ...Object.values(HOME_FURNITURE).map(q => ({ x: q.x, y: q.y, w: q.w, d: q.d })), ...decorSolids()];
+            for (const [id, o] of Object.entries(room.outlines ?? {})) if (!o.destroyed) o.visible = canUnlock(biz, id);
+          });
+        } });
+    }
+    out.push({ id: 'redecorate', x: 470, y: 840, r: 100, label: '🎨 Redecorate', run: showRedecorate });
+    return out;
+  }
+  let fishFed = 0;
   function homeSpots(): Spot[] {
     const c = HOME_FURNITURE.couch, k = HOME_FURNITURE.kitchen, night = darkness(clock) > 0.3;
     return [
@@ -533,6 +605,7 @@ async function main() {
         if (snackIn > 0) { toast('🥤 You just had one! Save some for later.'); return; }
         snackIn = 120; boost = Math.min(BOOST.max, boost + 15); sfx.coin(); toast('🍎 An apple from the fridge. Crunch! You feel speedy! ⚡');
       } },
+      ...decorSpots(),
       { id: 'leave', x: HOME_EXIT[0], y: HOME_EXIT[1], r: 120, label: '🚪 Go outside', run: leaveRoom },
     ];
   }
@@ -1210,6 +1283,12 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'games') {
+        // on the beanbag, back to us, facing the TV (if there is one): the screen flickers, levels get beaten
+        b = { x: play.from[0], y: play.from[1] + 6, view: 'back', face: 1, amp: 0, crouch: 1, hold: tvGlow ? 0.5 + 0.2 * Math.sin(play.t * 9) : 0, sit: 0, z: play.from[1] + 30, sy: 1 };
+        if (tvGlow) { tvGlow.tint = [0x7FD1E8, 0xF9C846, 0xF06A8A, 0x3BB273][Math.floor(play.t * 3) % 4]; tvGlow.alpha = 0.9; }
+        if (tvGlow && Math.floor(play.t / 5) > Math.floor((play.t - lastDt) / 5)) { sfx.goal(); toast(`🎮 ${pick(['You beat level', 'High score on level', 'You found a secret in level'])} ${Math.floor(play.t / 5) + 1}!`); }
+        if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
       } else if (play.kind === 'sleep') {
         b = sleepStep(play.t, play.seat === 1);
       } else if (play.kind === 'eat') {
@@ -1346,6 +1425,11 @@ async function main() {
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
+    if (room?.kind === 'home') {   // the fish swim round their tank (faster when they've just been fed)
+      fishFed = Math.max(0, fishFed - dt); const T = HOME_DECOR.fishtank, sp = fishFed > 0 ? 2.5 : 1, tt = performance.now() / 1000;
+      fish.forEach((g, i) => { if (g.destroyed) return; const u = tt * 0.5 * sp + i * 2.1, x = T.x + T.w / 2 + Math.sin(u) * (T.w / 2 - 26); g.position.set(x, T.y + T.d - T.h + 24 + i * 18 + Math.sin(u * 1.7) * 4); g.scale.x = Math.cos(u) >= 0 ? 1 : -1; });
+      if (petCat && !petCat.destroyed) petCat.scale.y = 1 + 0.02 * Math.sin(tt * 2.2);   // (breathing)
+    }
     if (room?.kind === 'home' && room.windows) { const dk = darkness(clock); if ((windowsIn -= dt) <= 0) { windowsIn = 2; paintWindows(room.windows, dk); } if (room.lamp) room.lamp.alpha = 0.25 + 0.6 * dk; }
     if ((aroundIn -= dt) <= 0) {   // what's round Nico, for the birds, the wind in the trees and the waves (twice a second)
       aroundIn = 0.5; const [ax, ay] = here(), near = (p: [number, number]) => Math.abs(p[0] - ax) < 600 && Math.abs(p[1] - ay) < 500;

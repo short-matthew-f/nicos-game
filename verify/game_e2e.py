@@ -606,6 +606,20 @@ with sync_playwright() as p:
     check(g['play'] is None and g['dark'] == 0 and g['clock'] < 0.1 and g['boost'] > 20, f"woke up in the morning, rested ({g['clock']:.2f}, boost {g['boost']:.0f})")
     room_at('fridge'); pg.click('#action'); pg.wait_for_timeout(200)
     check('apple' in pg.locator('#toast').inner_text(), 'a snack from the fridge')
+    # decorating: buy a beanbag and a TV (outlines with prices, stuck on), play games, new wallpaper
+    pg.evaluate('()=>window.__game.setMoney(60)')
+    for sid, price in [('beanbag', 5), ('tv', 20)]:
+        room_at(sid); lab = pg.locator('#action').inner_text()
+        if f'${price}' not in lab: check(False, f"the {sid} outline shows its price ({lab})"); continue
+        m0 = G()['money']; pg.click('#action'); pg.wait_for_timeout(150); pg.click('#place-menu button[data-item=unlock]'); pg.wait_for_timeout(1300)
+        check(sid in G()['unlocked'] and G()['money'] == m0 - price, f"bought the {sid} (${price})")
+    room_at('beanbag'); check('video games' in pg.locator('#action').inner_text(), 'the beanbag: play video games')
+    pg.click('#action'); pg.wait_for_timeout(5400)
+    check(G()['play'] == 'games' and 'level' in pg.locator('#toast').inner_text(), f"playing: a level beaten ({pg.locator('#toast').inner_text()})")
+    drag(0, -80, 400)
+    check(G()['play'] is None, 'up off the beanbag')
+    room_at('redecorate'); pg.click('#action'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="wall:space"]'); pg.wait_for_timeout(300)
+    check(G()['biz']['home']['wall'] == 'space' and G()['room'] == 'home', 'new space wallpaper (the room redraws)')
     room_at('leave'); pg.click('#action'); pg.wait_for_timeout(300)
     check(G()['room'] is None, 'back outside')
     pg.evaluate('()=>window.__game.setClock(0.2)')
