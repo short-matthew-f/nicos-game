@@ -580,3 +580,4 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - **🚪 Leave** at the door puts him back outside. Leaving with uneaten food eats it on the way out, so it's never lost. The camera keeps to the room's walls, and the minimap is hidden inside.
 - **Ice cream next**, the same room with a different menu, once Nico has seen this one.
 - **e2e:** go in, order fries (money, then a tray, no boost yet), sit and eat (then the boost), leave back to the door, the $2 case, tap-outside closes the card (166 checks).
+- **Stools** (user feedback): they were drawn straight down from above while the table is at an angle. Now they match it: an oval seat on a post, with a foot on the floor.

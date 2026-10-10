@@ -78,7 +78,14 @@ export function drawRoom(r: Room, menu: { label: string; price: number }[]): { v
   for (const [x, y] of r.tables) {
     const g = new Graphics(), stools = new Graphics();
     g.ellipse(x + 8, y + 12, 70, 18).fill({ color: NAVY, alpha: 0.16 });
-    for (const sx of [-STOOL, STOOL]) stools.circle(x + sx, y + 8, 22 + BAND).fill('#FFFFFF').circle(x + sx, y + 8, 22).fill('#F9A826');
+    // stools at the same three-quarter angle as the table: an oval seat on a post, a little foot on the floor
+    for (const sx of [-STOOL, STOOL]) {
+      const cx = x + sx, fy = y + 14;
+      stools.ellipse(cx + 6, fy + 4, 20, 6).fill({ color: NAVY, alpha: 0.16 });
+      stools.roundRect(cx - 5 - BAND, fy - 40, 10 + 2 * BAND, 40 + BAND, 4).fill('#FFFFFF').ellipse(cx, fy, 16 + BAND, 6 + BAND).fill('#FFFFFF');
+      stools.roundRect(cx - 5, fy - 40, 10, 40, 3).fill('#9AA6B2').ellipse(cx, fy, 16, 6).fill('#7D8A98');
+      stools.ellipse(cx, fy - 42, 26 + BAND, 11 + BAND).fill('#FFFFFF').ellipse(cx, fy - 40, 26, 10).fill('#D9822B').ellipse(cx, fy - 43, 26, 10).fill('#F9A826');
+    }
     stools.zIndex = y; layer.addChild(stools);   // (behind whoever's sitting on them)
     g.rect(x - 8, y - 20, 16, 30).fill('#7A5236');
     g.ellipse(x, y - 24, 66 + BAND, 30 + BAND).fill('#FFFFFF').ellipse(x, y - 24, 66, 30).fill('#F4F6F8').ellipse(x, y - 26, 56, 22).fill('#E9EEF3');
