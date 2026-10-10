@@ -224,3 +224,19 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Slide:** he climbs, turns and sits at the top of the chute, rides down its surface (seated, legs forward, hands out), then stands up off the end. He used to crouch-stand on the slide.
 - **Swing ("the bar was on his lap"):** the plank now draws behind him and is wider than he is, so its ends show at his hips. Only the chains draw in front, at his hands. Full crouch in the front view gives short, dangling legs.
 - **Tests:** the slide unit test now checks he's sitting (`sit > 0.9`) while he slides. Vitest 100, e2e 50.
+
+## 2026-10-09: James and Primo walk around town
+- **People besides Nico:** `src/people.py` defines a `Look` for each person: skin, hair style and colour, top (hoodie or tee/jersey), sleeves, trousers (plain or camo pattern), shoes and height. `wearing(look)` swaps a look into the rig module while that person is exported, then restores Nico's, so `rig.py` and Nico's art are unchanged. The exported Nico PNGs are byte-identical, checked by md5, and `nico.json` only gained `height`. This is also the base for "customise his clothes" later.
+  - **James:** short brown hair brushed to the side, navy hoodie (hood, drawstrings, pocket), khakis.
+  - **Primo:** 0.86× Nico's height, loose wavy light-brown hair with highlights, a blue jersey with white stripes and a crest, camo cargo trousers. His front-view hair was shortened to jaw length at Matthew's request; it still reaches his shoulders from behind and the side.
+  - Photos were reference only and are not in the repo (public).
+- **Game:** `PersonView(who)` replaces `NicoView` (`rig/person.ts`), with art in `art/<who>/`. A smaller person keeps the same sticker band width.
+- **Routines are data** (`townsfolk.ts`): stops with optional waits and an optional swing, plus a few lines each.
+  - **James** walks the sidewalks round the middle block and stops in at Burger Barn.
+  - **Primo** swings for 9 s, runs past the slide, looks in at the school, and comes back.
+  - Walk up to either of them and you get "Say hi to …", which shows their next line.
+  - **Swings are shared:** Nico takes the free seat, and if both are taken a toast says so.
+- **Tests:**
+  - Vitest 104: each route avoids anything solid and never runs along a road; each route completes and loops.
+  - e2e 56: both in town with art loaded, James moves, Say hi and his line, Primo gets on a swing, Nico takes the other seat.
+  - Mutation: ignoring seat occupancy went red.

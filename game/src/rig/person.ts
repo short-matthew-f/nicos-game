@@ -1,4 +1,4 @@
-// Nico on screen: one Sprite per exported rig part, posed every frame from pose.ts, with
+// A person on screen (Nico, or anyone drawn on his rig: art/<who>/): one Sprite per exported rig part, posed every frame from pose.ts, with
 // the sticker outline + shadow applied live to the whole body (so part seams don't show).
 import { Assets, Container, Matrix, Sprite, Texture } from 'pixi.js';
 import { DropShadowFilter, OutlineFilter } from 'pixi-filters';
@@ -7,28 +7,35 @@ import { NAVY } from '../world/draw';
 import { BUILD_ID } from '../update';
 
 interface PartMeta { part: string; img: string; x: number; y: number; w: number; h: number }
-interface ArtMeta { res: number; views: Record<View, PartMeta[]> }
+interface ArtMeta { res: number; height?: number; views: Record<View, PartMeta[]> }
+export type Who = 'nico' | 'james' | 'primo';
 
 export const RIG_SCALE = 0.75;   // world px per rig unit (Nico ~ 132 px tall)
 export const OUTLINE = 6;        // rig units, matches the SVG sticker band
 export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 
-let art: ArtMeta | null = null;
+const arts = new Map<Who, ArtMeta>();
 // ?v= so a new deploy never mixes with cached art (Pages lets browsers cache files for 10 minutes)
 const BUST = `?v=${encodeURIComponent(BUILD_ID)}`;
-export async function loadNicoArt(base = './'): Promise<void> {
-  art = await (await fetch(`${base}art/nico/nico.json${BUST}`)).json() as ArtMeta;
-  const urls = Object.values(art.views).flat().map(p => base + p.img + BUST);
-  await Assets.load(urls);
+export async function loadArt(who: Who[] = ['nico'], base = './'): Promise<void> {
+  await Promise.all(who.map(async w => {
+    const art = await (await fetch(`${base}art/${w}/${w}.json${BUST}`)).json() as ArtMeta;
+    await Assets.load(Object.values(art.views).flat().map(p => base + p.img + BUST));
+    arts.set(w, art);
+  }));
 }
 
-export class NicoView {
+export class PersonView {
   readonly root = new Container();
   private views = {} as Record<View, { c: Container; parts: { meta: PartMeta; sprite: Sprite }[] }>;
   private outline: OutlineFilter; private shadow: DropShadowFilter;
+  private art: ArtMeta;
+  readonly height: number;   // relative to Nico (Primo is smaller)
 
-  constructor(base = './') {
-    if (!art) throw new Error('loadNicoArt() first');
+  constructor(readonly who: Who = 'nico', base = './') {
+    const art = arts.get(who);
+    if (!art) throw new Error(`loadArt(['${who}']) first`);
+    this.art = art; this.height = art.height ?? 1;
     for (const v of ['side', 'front', 'back'] as View[]) {
       const c = new Container();
       const parts = art.views[v].map(meta => {
@@ -48,7 +55,7 @@ export class NicoView {
 
   /** Outline and shadow are in screen pixels, so they follow the camera zoom. */
   setZoom(zoom: number, resolution: number) {
-    const px = RIG_SCALE * zoom;
+    const px = RIG_SCALE * zoom;   // (the band is the same width on everyone, whatever their height)
     this.outline.thickness = OUTLINE * px * resolution;
     this.shadow.offset = { x: SHADOW.x * px, y: SHADOW.y * px };
   }
@@ -59,7 +66,7 @@ export class NicoView {
   }
 
   pose(x: number, y: number, st: PoseState) {
-    const res = art!.res;
+    const res = this.art.res;
     for (const v of ['side', 'front', 'back'] as View[]) this.views[v].c.visible = v === st.view;
     const ops = partOps(st);
     for (const { meta, sprite } of this.views[st.view].parts) {
@@ -69,7 +76,7 @@ export class NicoView {
     }
     const sx = st.view === 'side' ? st.face : 1;
     this.root.position.set(x, y);
-    this.root.scale.set(RIG_SCALE * sx, RIG_SCALE);
+    this.root.scale.set(RIG_SCALE * this.height * sx, RIG_SCALE * this.height);
     this.root.zIndex = y;
   }
 }

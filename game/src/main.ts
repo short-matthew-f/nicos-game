@@ -4,7 +4,7 @@ import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { Siren } from './sound';
-import { loadNicoArt, NicoView } from './rig/nico';
+import { loadArt, PersonView } from './rig/person';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, freeAt, WALK_SPEED } from './player';
@@ -14,6 +14,7 @@ import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
+import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -23,7 +24,7 @@ const MY_CAR = { color: '#E0453A', stripe: '#FFFFFF' };   // Nico's car: red wit
 const HOME_DOOR = doorOf(BUILDINGS.find(b => b.id === 'home')!);
 const NICO_START = { x: HOME_DOOR[0] + 60, y: HOME_DOOR[1] + 40 };   // just outside his front door
 
-interface Walker { x: number; y: number; st: PoseState; view: NicoView; vx: number; vy: number; t: number }
+interface Walker { x: number; y: number; st: PoseState; view: PersonView; vx: number; vy: number; t: number }
 
 async function main() {
   // stop iOS page gestures (pinch zoom, double-tap zoom, rubber-banding)
@@ -36,7 +37,7 @@ async function main() {
   const resolution = Math.min(window.devicePixelRatio || 1, 2);
   await app.init({ resizeTo: host, background: '#B9DA9C', antialias: true, resolution, autoDensity: true, preference: 'webgl' });
   host.appendChild(app.canvas);
-  await loadNicoArt();
+  await loadArt(['nico', 'james', 'primo']);
 
   const world = new Container();
   const layer = new Container(); layer.sortableChildren = true;
@@ -55,7 +56,7 @@ async function main() {
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
   const state = { money: saved.money };
-  const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new NicoView() };
+  const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new PersonView() };
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
 
@@ -97,13 +98,17 @@ async function main() {
   // ---- playground: the game takes over Nico's pose for a moment
   let play: { kind: 'slide' | 'swing'; t: number; from: [number, number]; seat: number } | null = null;
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
+  const seatTaken: (string | null)[] = [null, null];   // who's on each swing
   function startSwing() {
-    const seat = Math.abs(nico.x - seatX(0)) < Math.abs(nico.x - seatX(1)) ? 0 : 1;
+    const near = Math.abs(nico.x - seatX(0)) < Math.abs(nico.x - seatX(1)) ? 0 : 1;
+    const seat = seatTaken[near] ? 1 - near : near;
+    if (seatTaken[seat]) { toast('Both swings are taken!'); return; }
+    seatTaken[seat] = 'nico';
     mode = 'play'; play = { kind: 'swing', t: 0, from: [nico.x, nico.y], seat };
   }
   function stopPlay() {
     if (!play) return;
-    if (play.kind === 'swing') { seats[play.seat].set(1); nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
+    if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
     Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
@@ -145,6 +150,41 @@ async function main() {
       return { id: p.building, x, y, r: 70, label: p.action ?? 'Go in', run: () => showPlace(p) };
     }),
   ];
+  // ---- people Nico knows, on their routines; walk up to one to say hi
+  interface Local { t: Townie; w: Walk; st: PoseState; view: PersonView; swingT: number; seat: number; said: number }
+  const locals: Local[] = TOWNSFOLK.map(t => {
+    const view = new PersonView(t.who);
+    layer.addChild(view.root);
+    const r = t.route[0];
+    return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0 };
+  });
+  for (const l of locals) spots.push({
+    id: l.t.who, x: 0, y: 0, r: 90, label: `Say hi to ${l.t.name}`,
+    run: () => { toast(`${l.t.name}: “${l.t.lines[l.said++ % l.t.lines.length]}”`); },
+  });
+  function stepLocal(l: Local, dt: number) {
+    const reached = stepRoute(l.t, l.w, dt);
+    if (reached?.swing !== undefined && !seatTaken[reached.swing]) { l.seat = reached.swing; seatTaken[l.seat] = l.t.who; l.swingT = 0; }
+    if (l.swingT >= 0) {
+      if (l.w.wait > 0) {
+        l.swingT += dt;
+        const sw = swingAt(l.swingT, l.seat);
+        seats[l.seat].set(sw.chain);
+        Object.assign(l.st, { view: sw.body.view, face: 1, crouch: sw.body.crouch, hold: 0, sit: 0, stride_y: 0 });
+        stepGait(l.st, 0, 0, dt);
+        l.view.pose(sw.body.x, sw.body.y, l.st);
+        l.view.root.zIndex = sw.body.z;
+        l.view.root.scale.y *= sw.body.sy;
+        return;
+      }
+      seats[l.seat].set(1); seatTaken[l.seat] = null; l.swingT = -1; l.seat = -1;
+      Object.assign(l.st, { crouch: 0 });
+    }
+    Object.assign(l.st, chooseView(l.w.vx, l.w.vy, l.st));
+    stepGait(l.st, Math.hypot(l.w.vx, l.w.vy) / WALK_SPEED, l.w.vy, dt);
+    l.view.pose(l.w.x, l.w.y, l.st);
+  }
+
   const outSpot: Spot = { id: 'out', x: 0, y: 0, r: Infinity, label: 'Get out', run: getOut };
   const action = new ActionButton();
 
@@ -176,7 +216,7 @@ async function main() {
   const applyZoom = () => {
     zoom = app.screen.height / viewH;
     world.scale.set(zoom);
-    for (const n of [nico, ...walkers]) n.view.setZoom(zoom, resolution);
+    for (const n of [nico, ...walkers, ...locals]) n.view.setZoom(zoom, resolution);
   };
   applyZoom();
   app.renderer.on('resize', applyZoom);
@@ -193,7 +233,7 @@ async function main() {
 
   function addWalkers(n: number) {
     for (let i = 0; i < n; i++) {
-      const view = new NicoView();
+      const view = new PersonView();
       const w: Walker = { x: 0, y: 0, st: neutral('side'), view, vx: 0, vy: 0, t: 0 };
       // start on a sidewalk
       const horiz = Math.random() < 0.5;
@@ -278,10 +318,16 @@ async function main() {
       w.view.pose(w.x, w.y, w.st);
     }
 
+    for (const l of locals) {
+      stepLocal(l, dt);
+      const sp = spots.find(p => p.id === l.t.who)!; sp.x = l.w.x; sp.y = l.w.y;
+    }
+
     // traffic brakes for Nico on foot, and for every part of his car
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
     const mine: [number, number][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y]);
     if (mode !== 'drive') mine.push([nico.x, nico.y]);
+    for (const l of locals) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
     const truckOut = truck.update(dt, [...mine, ...cars.filter(c => c.blockedBy !== 'truck').flatMap(c => {
@@ -315,6 +361,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
+      townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, art: l.view.artLoaded() })),
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? null, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

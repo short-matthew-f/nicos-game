@@ -13,10 +13,12 @@ import json, os, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rig
 from rig import Nico, plaid_defs
+import people
+from contextlib import nullcontext
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-ART = os.path.join(ROOT, 'game', 'public', 'art', 'nico')
+ART_ROOT = os.path.join(ROOT, 'game', 'public', 'art')
 FIX = os.path.join(ROOT, 'game', 'test', 'fixtures')
 RES = 2          # px per rig unit in the PNGs
 PAD = 3          # rig units around getBBox (strokes are outside it)
@@ -46,10 +48,13 @@ def short(name, view):
     tag = {'front': 'fv', 'back': 'bv'}.get(view, '')
     return name[len(tag):] if tag and name.startswith(tag) else name
 
-def rasterize():
+def rasterize(who='nico', look=None):
+    """Nico, or another person drawn on the same rig with their look (people.py)."""
+    ART = os.path.join(ART_ROOT, who)
     os.makedirs(ART, exist_ok=True)
-    meta = {'res': RES, 'views': {}}
-    with sync_playwright() as p:
+    meta = {'res': RES, 'height': look.height if look else 1.0, 'views': {}}
+    extra = look.defs(PFX) if look else ''
+    with sync_playwright() as p, (people.wearing(look, PFX) if look else nullcontext()):
         pg = p.chromium.launch().new_page()
         for view in ('side', 'front', 'back'):
             rows = []
@@ -57,7 +62,7 @@ def rasterize():
                 nm = short(name, view)
                 if nm == 'bx': continue
                 pg.set_content(f'<body style="margin:0;background:transparent"><svg xmlns="http://www.w3.org/2000/svg" id="s" '
-                               f'width="10" height="10" overflow="visible"><defs>{plaid_defs(PFX)}</defs><g id="g">{inner}</g></svg></body>')
+                               f'width="10" height="10" overflow="visible"><defs>{plaid_defs(PFX)}{extra}</defs><g id="g">{inner}</g></svg></body>')
                 b = pg.evaluate("()=>{const b=document.getElementById('g').getBBox();return [b.x,b.y,b.width,b.height]}")
                 x0, y0 = math.floor(b[0] - PAD), math.floor(b[1] - PAD)
                 w, h = math.ceil(b[0] + b[2] + PAD) - x0, math.ceil(b[1] + b[3] + PAD) - y0
@@ -65,10 +70,10 @@ def rasterize():
                             "s.setAttribute('width',w*r);s.setAttribute('height',h*r)}", [x0, y0, w, h, RES])
                 fn = f'{view}_{nm}.png'
                 pg.locator('#s').screenshot(path=os.path.join(ART, fn), omit_background=True)
-                rows.append({'part': nm, 'img': f'art/nico/{fn}', 'x': x0, 'y': y0, 'w': w, 'h': h})
+                rows.append({'part': nm, 'img': f'art/{who}/{fn}', 'x': x0, 'y': y0, 'w': w, 'h': h})
             meta['views'][view] = rows
-    json.dump(meta, open(os.path.join(ART, 'nico.json'), 'w'), indent=1)
-    print('art:', sum(len(v) for v in meta['views'].values()), 'parts ->', ART)
+    json.dump(meta, open(os.path.join(ART, f'{who}.json'), 'w'), indent=1)
+    print(f'art ({who}):', sum(len(v) for v in meta['views'].values()), 'parts ->', ART)
 
 def poses():
     os.makedirs(FIX, exist_ok=True)
@@ -90,4 +95,5 @@ def poses():
 
 if __name__ == '__main__':
     rasterize()
+    for who, look in people.LOOKS.items(): rasterize(who, look)
     poses()

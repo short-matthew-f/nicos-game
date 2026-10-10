@@ -1,0 +1,180 @@
+{
+ "res": 2,
+ "height": 1.02,
+ "views": {
+  "side": [
+   {
+    "part": "ba",
+    "img": "art/james/side_ba.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "bl",
+    "img": "art/james/side_bl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "bs",
+    "img": "art/james/side_bs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "fl",
+    "img": "art/james/side_fl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "fs",
+    "img": "art/james/side_fs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/james/side_up.png",
+    "x": -36,
+    "y": -121,
+    "w": 75,
+    "h": 126
+   },
+   {
+    "part": "fa",
+    "img": "art/james/side_fa.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "front": [
+   {
+    "part": "legl",
+    "img": "art/james/front_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/james/front_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/james/front_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/james/front_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/james/front_up.png",
+    "x": -35,
+    "y": -122,
+    "w": 70,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/james/front_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/james/front_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "back": [
+   {
+    "part": "legl",
+    "img": "art/james/back_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/james/back_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/james/back_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/james/back_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/james/back_up.png",
+    "x": -35,
+    "y": -122,
+    "w": 70,
+    "h": 133
+   },
+   {
+    "part": "arml",
+    "img": "art/james/back_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/james/back_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ]
+ }
+}

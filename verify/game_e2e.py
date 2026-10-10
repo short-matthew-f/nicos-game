@@ -155,6 +155,30 @@ with sync_playwright() as p:
         pg.wait_for_function('!window.__game.truck.out', timeout=60000); back = True
     except Exception: back = False
     check(back, f"it finishes its lap and goes home within a minute ({G()['truck']})")
+    # James and Primo walk their routines; walk up to say hi; Primo's swing is taken
+    t0 = {t['who']: t for t in G()['townsfolk']}
+    check(set(t0) == {'james', 'primo'} and all(t['art'] for t in t0.values()), f"James and Primo are in town with their own art ({list(t0)})")
+    moved = 0   # (he may be stopped in at Burger Barn for a few seconds)
+    for _ in range(16):
+        pg.wait_for_timeout(500); t1 = {t['who']: t for t in G()['townsfolk']}
+        moved = max(moved, math.hypot(t1['james']['x'] - t0['james']['x'], t1['james']['y'] - t0['james']['y']))
+        if moved > 50: break
+    check(moved > 50, f'James is walking his route ({moved:.0f} px)')
+    jx, jy = t1['james']['x'], t1['james']['y']
+    pg.evaluate(f'()=>window.__game.place({jx + 40}, {jy + 10})'); pg.wait_for_timeout(150)
+    check(G()['action'] == 'james' and 'James' in pg.locator('#action').inner_text(), 'next to James: Say hi')
+    pg.click('#action'); pg.wait_for_timeout(150)
+    check(pg.locator('#toast').inner_text().startswith('James:'), f"James says something ({pg.locator('#toast').inner_text()})")
+    try:
+        pg.wait_for_function("window.__game.townsfolk.find(t => t.who === 'primo').swinging", timeout=60000); sw = True
+    except Exception: sw = False
+    check(sw, 'Primo gets on a swing')
+    if sw:
+        at('swing'); pg.wait_for_timeout(200)
+        pg.evaluate('()=>window.__game.act()'); pg.wait_for_timeout(1200)
+        g = G(); p = next(t for t in g['townsfolk'] if t['who'] == 'primo')
+        check(g['play'] == 'swing' and abs(g['nico']['x'] - p['x']) > 50, f"Nico takes the other swing, next to Primo ({g['nico']['x']:.0f} vs {p['x']:.0f})")
+        drag(80, 0, 300)
     check(not errs, f'page errors: {errs}')
     pg.screenshot(path='/tmp/game_e2e.png')
 print(f'{ok} checks passed, {bad} failed')
