@@ -1,6 +1,6 @@
 // The save: one small versioned object in localStorage. When the shape changes, bump
 // VERSION and add a step to migrate(), so a change of plan never wipes Nico's progress.
-export const VERSION = 1;
+export const VERSION = 2;
 export const START_MONEY = 20;
 const KEY = 'nico-city-save';
 
@@ -19,7 +19,9 @@ export function migrate(raw: unknown): Save {
   if (!raw || typeof raw !== 'object') return fresh();
   const o = raw as Partial<Save>;
   if (typeof o.v !== 'number' || o.v > VERSION) return fresh();
-  // (v1 is the first version: future steps go here, e.g. if (o.v === 1) { ...; o.v = 2 })
+  // v1 -> v2: the town was rebuilt 1.6x bigger, so old positions point at the wrong
+  // places. Keep the money; Nico and his car go back to their starting spots.
+  if (o.v === 1) { o.nico = null; o.car = null; o.driving = false; o.v = 2; }
   const num = (x: unknown, d: number) => (typeof x === 'number' && isFinite(x) ? x : d);
   const pt = (p: unknown) => (p && typeof p === 'object' && isFinite((p as { x: number }).x) && isFinite((p as { y: number }).y) ? p : null);
   return {

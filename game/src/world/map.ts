@@ -3,10 +3,19 @@
 // bump into; its front wall rises h above the footprint's front edge and the roof sits
 // on top, so the drawing extends h above the footprint.
 
-export const WORLD = { w: 3600, h: 2600 };
-export const ROAD_W = 160, SIDEWALK = 36, LANE = 40;
-export const ROADS_X = [900, 2300];   // vertical road centre lines
-export const ROADS_Y = [700, 1700];   // horizontal road centre lines
+//
+// Scale: the layout below is written in "plan units" and multiplied by K, so the town can
+// grow without retyping it. Things sized against Nico himself (doors' stand-spots, the
+// playground equipment) are not scaled; building heights have their own factor, so a
+// house is well taller than he is (Nico, 2026-10-09: "not the same height as buildings").
+export const K = 1.6;                 // world size per plan unit
+export const HK = 2.4;                // building wall height per plan unit
+const k = (v: number) => Math.round(v * K);
+
+export const WORLD = { w: k(3600), h: k(2600) };
+export const ROAD_W = k(160), SIDEWALK = k(36), LANE = k(40);
+export const ROADS_X = [k(900), k(2300)];   // vertical road centre lines
+export const ROADS_Y = [k(700), k(1700)];   // horizontal road centre lines
 
 export interface Building {
   id: string; label?: string;
@@ -19,7 +28,10 @@ export interface Building {
 const house = (id: string, x: number, y: number, wall: string, roof: string): Building =>
   ({ id, x, y, w: 210, d: 130, h: 92, wall, roof, kind: 'house' });
 
-export const BUILDINGS: Building[] = [
+/** Plan units -> world: footprints by K, wall heights by HK. */
+const scaleB = (b: Building): Building => ({ ...b, x: k(b.x), y: k(b.y), w: k(b.w), d: k(b.d), h: Math.round(b.h * HK), bays: b.bays?.map(k) });
+
+export const BUILDINGS: Building[] = ([
   // north-west: houses
   house('h1', 80, 140, '#F2D6A2', '#D77B72'),
   house('h2', 420, 140, '#BFE0DA', '#3E8F8A'),
@@ -45,19 +57,19 @@ export const BUILDINGS: Building[] = [
   { id: 'toys', label: 'TOY SHOP', x: 1560, y: 1900, w: 320, d: 170, h: 120, wall: '#F7C8D0', roof: '#5FAFA5', trim: '#FFFFFF', kind: 'shop' },
   // south-east: storage units
   { id: 'storage', label: 'STORAGE', x: 2520, y: 1960, w: 600, d: 150, h: 100, wall: '#E3A857', roof: '#7A8794', trim: '#34495E', kind: 'shop' },
-];
+] as Building[]).map(scaleB);
 
 /** Grass areas with something in them (drawn on the ground, not solid). */
 export const LOTS = [
   { id: 'playground', x: 1090, y: 420, w: 720, d: 200, fill: '#EBD9A8' },  // sand
   { id: 'park', x: 1040, y: 1200, w: 520, d: 360, fill: '#A9D18E' },
   { id: 'yard', x: 2460, y: 1860, w: 760, d: 520, fill: '#C9CED6' },        // storage-yard tarmac
-];
+].map(l => ({ ...l, x: k(l.x), y: k(l.y), w: k(l.w), d: k(l.d) }));
 
 /** Playground equipment on the sand lot (positions are the front-left foot of each). */
 // Sized against Nico (~132 px tall): the tower is a bit taller than him.
-export const SLIDE = { x: 1140, y: 560, w: 70, h: 175, top: 150, len: 240 };   // tower w x h, platform `top` above ground, chute reaches x + len
-export const SWINGS = { x: 1530, y: 570, w: 210, h: 175, seats: [62, 148] };   // seat centre x offsets
+export const SLIDE = { x: k(1140), y: k(560), w: 70, h: 175, top: 150, len: 240 };   // tower w x h, platform `top` above ground, chute reaches x + len
+export const SWINGS = { x: k(1140) + 400, y: k(560) + 10, w: 210, h: 175, seats: [62, 148] };   // seat centre x offsets
 export const SWING_BAR = SWINGS.y - SWINGS.h + 12, SWING_SEAT = SWINGS.y - 52;   // where the chains hang from, and the seat plank
 
 export const TREES: [number, number][] = [
@@ -65,7 +77,7 @@ export const TREES: [number, number][] = [
   [2440, 520], [3200, 300], [3420, 520], [1100, 1150], [1600, 1300], [1450, 1480], [1960, 1150],
   [2080, 1460], [700, 1290], [540, 1500], [3200, 1200], [3400, 1450], [3050, 1480],
   [700, 2100], [620, 2450], [1000, 2350], [1500, 2400], [2000, 2300], [3350, 2450],
-];
+].map(([x, y]) => [k(x), k(y)] as [number, number]);
 
 /** Car loops: clockwise on the inner lanes and counter-clockwise on the outer lanes of
  * the ring road around the centre blocks (right-hand traffic). */
@@ -77,13 +89,17 @@ export function carLoops(): [number, number][][] {
 }
 
 /** Paved aprons from a building to the road (drawn on the ground, not solid). */
+const bld = (id: string) => BUILDINGS.find(b => b.id === id)!;
+const GARAGE = bld('garage'), FIRE = bld('fire');
 export const DRIVEWAYS = [
-  { id: 'home', x: 420, y: 1064, w: ROADS_X[0] - ROAD_W / 2 - SIDEWALK - 420, d: 130 },
-  { id: 'fire', x: ROADS_X[1] + ROAD_W / 2 + SIDEWALK, y: 1084, w: 2940 - (ROADS_X[1] + ROAD_W / 2 + SIDEWALK), d: 130 },
+  // from the garage door east to the road
+  { id: 'home', x: GARAGE.x, y: GARAGE.y + GARAGE.d + 4, w: ROADS_X[0] - ROAD_W / 2 - SIDEWALK - GARAGE.x, d: k(130) },
+  // the fire station's apron, west to the road
+  { id: 'fire', x: ROADS_X[1] + ROAD_W / 2 + SIDEWALK, y: FIRE.y + FIRE.d + 4, w: FIRE.x + FIRE.w - (ROADS_X[1] + ROAD_W / 2 + SIDEWALK), d: k(130) },
 ];
 
 /** Where Nico's car waits at the start: on the home driveway, nose to the road. */
-export const PARKED_CAR = { x: 560, y: 1130, h: 0 };
+export const PARKED_CAR = { x: GARAGE.x + GARAGE.w / 2, y: DRIVEWAYS[0].y + DRIVEWAYS[0].d / 2, h: 0 };
 
 /** The spot in front of a building's door, where its action button appears. */
 export function doorOf(b: Building): [number, number] {
@@ -95,8 +111,10 @@ export function doorOf(b: Building): [number, number] {
  * inside the station, hidden behind its front wall. */
 export function fireRoute(): [number, number][] {
   const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
-  return [[2620, 900], [2620, 1145], [x1 + LANE, 1145], [x1 + LANE, y0 - LANE], [x0 - LANE, y0 - LANE],
-          [x0 - LANE, y1 + LANE], [x1 + LANE, y1 + LANE], [x1 + LANE, 1190], [2840, 1190], [2840, 900]];
+  const [bayOut, bayIn] = FIRE.bays!, inside = FIRE.y + FIRE.d * 0.15;
+  const apron = DRIVEWAYS[1], outY = apron.y + apron.d * 0.35, inY = apron.y + apron.d * 0.72;
+  return [[bayOut, inside], [bayOut, outY], [x1 + LANE, outY], [x1 + LANE, y0 - LANE], [x0 - LANE, y0 - LANE],
+          [x0 - LANE, y1 + LANE], [x1 + LANE, y1 + LANE], [x1 + LANE, inY], [bayIn, inY], [bayIn, inside]];
 }
 
 export interface Rect { x: number; y: number; w: number; d: number }
@@ -104,7 +122,7 @@ export interface Rect { x: number; y: number; w: number; d: number }
  * playground equipment (the slide tower and chute end, the swing posts). */
 export const SOLIDS: Rect[] = [
   ...BUILDINGS.map(b => ({ x: b.x, y: b.y, w: b.w, d: b.d })),
-  ...TREES.map(([x, y]) => ({ x: x - 15, y: y - 16, w: 30, d: 18 })),
+  ...TREES.map(([x, y]) => ({ x: x - 20, y: y - 18, w: 40, d: 20 })),
   { x: SLIDE.x, y: SLIDE.y - 26, w: SLIDE.w, d: 26 },
   { x: SLIDE.x + SLIDE.len - 34, y: SLIDE.y - 22, w: 34, d: 22 },
   { x: SWINGS.x, y: SWINGS.y - 20, w: 22, d: 20 },

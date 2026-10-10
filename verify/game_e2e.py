@@ -24,6 +24,7 @@ with sync_playwright() as p:
         pg.evaluate(f'()=>window.__game.place({x}, {y})'); return x, y
     away = lambda: at('home')   # somewhere well off the roads
     CARLEN = 112
+    at('home', 700, 230); pg.wait_for_timeout(300)   # open ground, away from the world's edge
     g0 = G()
     check(not errs, f'page errors: {errs}')
     check(g0['fps'] > 0, 'fps counter running')

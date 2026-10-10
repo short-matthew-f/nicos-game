@@ -2,7 +2,7 @@
 import type { View } from './rig/pose';
 import type { Rect } from './world/map';
 
-export const WALK_SPEED = 240;   // world px/s at full stick
+export const WALK_SPEED = 270;   // world px/s at full stick
 export const RADIUS = 16;        // feet collision circle
 
 /** Facing from velocity, with hysteresis so diagonals don't flicker between views.

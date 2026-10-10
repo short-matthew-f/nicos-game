@@ -2,25 +2,26 @@ import { Application, Container } from 'pixi.js';
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
-import { FireTruck } from './world/firetruck';
+import { FireTruck, TRUCK } from './world/firetruck';
 import { Siren } from './sound';
 import { loadNicoArt, NicoView } from './rig/nico';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, freeAt, WALK_SPEED } from './player';
 import { startUpdates, BUILD_ID } from './update';
-import { load, save as writeSave, type Save } from './state';
-import { steer, moveCar, carFits, circles, type CarState } from './drive';
+import { load, save as writeSave, VERSION, type Save } from './state';
+import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
 
-const VIEW_H = 800;          // world px visible top to bottom while walking (Nico ~ 1/6 of the screen)
-const VIEW_H_DRIVE = 1050;   // ...and while driving: see further ahead
+const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
+const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
 const AMP_RATE = 5;          // gait amplitude ramp (1/s)
 const CADENCE = 1.5;         // gait phase per second at full speed (rig walk = 1)
 const MY_CAR = { color: '#E0453A', stripe: '#FFFFFF' };   // Nico's car: red with a white stripe
-const NICO_START = { x: ROADS_X[0] - 220, y: ROADS_Y[0] + 200 };
+const HOME_DOOR = doorOf(BUILDINGS.find(b => b.id === 'home')!);
+const NICO_START = { x: HOME_DOOR[0] + 60, y: HOME_DOOR[1] + 40 };   // just outside his front door
 
 interface Walker { x: number; y: number; st: PoseState; view: NicoView; vx: number; vy: number; t: number }
 
@@ -65,7 +66,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: 1, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive' });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive' });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -82,7 +83,7 @@ async function main() {
     const fx = Math.cos(car.h), fy = Math.sin(car.h);
     const others = carCirclesOf(cars);
     for (const [ax, ay] of [[fy, -fx], [-fy, fx], [-fx, -fy], [fx, fy]]) {
-      const d = ax * fx + ay * fy !== 0 ? 95 : 62;
+      const d = ax * fx + ay * fy !== 0 ? CAR.len * 0.85 : CAR.wid * 1.1;
       const x = car.x + ax * d, y = car.y + ay * d;
       if (freeAt(x, y, SOLIDS, WORLD) && others.every(([ox, oy, r]) => Math.hypot(x - ox, y - oy) > r + 16)) {
         nico.x = x; nico.y = y; car.speed = 0; mode = 'walk'; nico.view.root.visible = true;
@@ -253,12 +254,12 @@ async function main() {
     } else if (mode === 'drive') {
       const prevH = car.h;
       if (frozen) steer(car, 0, 0, dt); else steer(car, input.vx, input.vy, dt);
-      const truckCircles: [number, number, number][] = truck.out ? truck.points().map(([x, y]) => [x, y, 30]) : [];
+      const truckCircles: [number, number, number][] = truck.out ? truck.points().map(([x, y]) => [x, y, TRUCK.wid * 0.45]) : [];
       moveCar(car, prevH, dt, SOLIDS, WORLD, [...carCirclesOf(cars), ...truckCircles]);
     }
     carView.position.set(car.x, car.y);
     turnCar(car.h);
-    carView.zIndex = car.y + 22;
+    carView.zIndex = car.y + CAR.wid * 0.4;
 
     // test walkers: wander along sidewalks, pick a new direction now and then
     for (const w of walkers) {
@@ -285,7 +286,7 @@ async function main() {
     for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
     const truckOut = truck.update(dt, [...mine, ...cars.filter(c => c.blockedBy !== 'truck').flatMap(c => {
       const [x, y] = c.pos, h = c.loop.heading(c.s);
-      return [[x - Math.cos(h) * 40, y - Math.sin(h) * 40], [x, y], [x + Math.cos(h) * 40, y + Math.sin(h) * 40]] as [number, number][];
+      return circles(x, y, h).map(([cx, cy]) => [cx, cy]) as [number, number][];
     })]);
     if (truckOut && !wasOut) {
       const [tx, ty] = truck.pos;

@@ -57,26 +57,31 @@ export function drawBuilding(b: Building): Container {
   g.roundRect(b.x, top, b.w, b.d, 10).fill(b.roof);                 // roof
   g.rect(b.x, front - 10, b.w, 10).fill(shade(b.roof, 0.78));       // eave
   if (b.kind === 'house') g.rect(b.x + 12, top + b.d / 2 - 3, b.w - 24, 6).fill(shade(b.roof, 0.85));  // ridge
-  // windows and door on the front wall
+  // door and windows on the front wall, sized against Nico (~132 px): a door a bit
+  // taller than him, a row of windows per storey
   const winC = '#CFE6F7', frame = b.trim ?? '#FFFFFF';
-  const doorW = 34, doorH = Math.min(58, b.h - 22);
+  const doorW = 66, doorH = Math.min(165, b.h - 40);
   const doorX = b.x + b.w / 2 - doorW / 2;
-  const n = Math.max(1, Math.floor((b.w - 60) / 90));
-  for (let i = 0; i < n; i++) {
-    const cx = b.x + (b.w / (n + 1)) * (i + 1);
-    if (Math.abs(cx - (doorX + doorW / 2)) < 50 || b.bays?.some(x => Math.abs(cx - x) < 80)) continue;
-    g.roundRect(cx - 22, front + 18, 44, 30, 5).fill(frame).roundRect(cx - 18, front + 22, 36, 22, 3).fill(winC);
+  const n = Math.max(1, Math.floor((b.w - 80) / 130));
+  const rows = b.h > 200 ? 2 : 1, rowH = (b.h - 20) / rows;
+  for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) {
+    const cx = b.x + (b.w / (n + 1)) * (i + 1), wy = front + 26 + r * rowH;
+    const byDoor = Math.abs(cx - (doorX + doorW / 2)) < 80 && r === rows - 1;
+    if (byDoor || b.bays?.some(x => Math.abs(cx - x) < 120) && r === rows - 1) continue;
+    g.roundRect(cx - 34, wy, 68, 52, 6).fill(frame).roundRect(cx - 28, wy + 6, 56, 40, 4).fill(winC)
+     .rect(cx - 1.5, wy + 6, 3, 40).fill(frame);
   }
-  g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 6).fill(shade(b.wall, 0.62));
+  g.roundRect(doorX, b.y + b.d - doorH, doorW, doorH, 8).fill(shade(b.wall, 0.62))
+   .circle(doorX + doorW - 14, b.y + b.d - doorH / 2, 4).fill(shade(b.wall, 0.4));
   for (const x of b.bays ?? []) {   // open vehicle bays, dark inside
-    g.roundRect(x - 48, front + 14, 96, b.h - 14, 6).fill(frame).roundRect(x - 42, front + 20, 84, b.h - 20, 4).fill('#2C3440');
+    g.roundRect(x - 78, front + 30, 156, b.h - 30, 6).fill(frame).roundRect(x - 70, front + 38, 140, b.h - 38, 4).fill('#2C3440');
   }
   c.addChild(g);
   if (b.label) {
-    const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 20, fill: '#2B3F55', letterSpacing: 1 } });
+    const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 30, fill: '#2B3F55', letterSpacing: 1.5 } });
     t.anchor.set(0.5);
-    const sign = new Graphics().roundRect(-t.width / 2 - 12, -15, t.width + 24, 30, 8).fill(b.trim ?? '#FFFFFF');
-    sign.position.set(b.x + b.w / 2, front - 4);
+    const sign = new Graphics().roundRect(-t.width / 2 - 16, -22, t.width + 32, 44, 10).fill(b.trim ?? '#FFFFFF');
+    sign.position.set(b.x + b.w / 2, front - 6);
     t.position.copyFrom(sign.position);
     c.addChild(sign, t);
   }
@@ -84,13 +89,14 @@ export function drawBuilding(b: Building): Container {
   return c;
 }
 
+/** A tree about twice Nico's height. (x, y) is the foot of the trunk. */
 export function drawTree(x: number, y: number): Container {
   const g = new Graphics();
-  const R = 34;
-  g.circle(x + SH.x, y - 54 + SH.y, R + 4).fill({ color: NAVY, alpha: SH.a });
-  g.circle(x, y - 58, R + BAND).fill('#FFFFFF').roundRect(x - 9 - BAND, y - 40, 18 + 2 * BAND, 40 + BAND, 9).fill('#FFFFFF');
-  g.roundRect(x - 9, y - 40, 18, 40, 7).fill('#8A5A3B');
-  g.circle(x, y - 58, R).fill('#5FAF6A').circle(x - 10, y - 68, R * 0.55).fill('#7CC383');
+  const R = 62, TW = 30, TH = 90, CY = y - TH - R * 0.55;   // canopy radius, trunk, canopy centre
+  g.circle(x + SH.x, CY + 4 + SH.y, R + 4).fill({ color: NAVY, alpha: SH.a });
+  g.circle(x, CY, R + BAND).fill('#FFFFFF').roundRect(x - TW / 2 - BAND, y - TH, TW + 2 * BAND, TH + BAND, 12).fill('#FFFFFF');
+  g.roundRect(x - TW / 2, y - TH, TW, TH, 10).fill('#8A5A3B');
+  g.circle(x, CY, R).fill('#5FAF6A').circle(x - 18, CY - 18, R * 0.55).fill('#7CC383').circle(x + 22, CY + 14, R * 0.35).fill('#55A260');
   const c = new Container(); c.addChild(g); c.zIndex = y;
   return c;
 }

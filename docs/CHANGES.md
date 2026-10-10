@@ -201,3 +201,20 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - Fixed a Pixi v8 deprecation: the truck's lights were children of a Graphics.
 - The e2e now places Nico by named spots (`__game.spots`) instead of coordinates, ahead of the scale pass. The boost check walks left now, because a solid tree stands to the right.
 - **Tests:** Vitest 99 (a car can't drive through a tree), e2e 50.
+
+## 2026-10-09: Nico's feedback, part 2 (the scale pass: "not the same height as the buildings")
+- **Decision:** Nico stays the same size. The world grows around him.
+  - The layout in `map.ts` is now in plan units, multiplied by `K = 1.6` (the town is 5760 × 4160).
+  - Wall heights have their own factor, `HK = 2.4`: a house is about 220 px against Nico's 132, and the school and hospital get two rows of windows.
+  - Doors are 66 × 165 (a bit taller than him), windows are bigger, and signs use 30 px type.
+  - Trees are about twice his height.
+  - Cars are drawn at 1.5× and the fire truck at 1.4×. The white bands stay 7 px, so they match everything else.
+  - Collision circles, braking zones and gaps are all derived from `CAR.len`/`TRUCK.len` rather than written as numbers.
+  - The driveways, the parked car and the fire route are derived from the garage and station records.
+  - The playground equipment keeps its size (it was already sized against Nico); only its positions scale.
+  - **Feel:** 4 cars per loop instead of 3. Top speeds: walking 270, traffic 250, Nico's car 560, truck 330.
+  - **Cameras:** the walking view shows 920 px of height (Nico is about 1/7 of the screen), and the driving view 1400 px.
+  - Nico now starts just outside his front door.
+- **Correction:** the braking zone started a set distance ahead of a vehicle's centre. Scaled up, that start fell inside the truck's own front end, so the truck braked, rolled past and drove through someone standing at its bumper. The zone now starts at 0.1 × length. Caught by the "stops for someone" unit test.
+- **Save v2:** v1 positions are from the smaller town, so `migrate` keeps the money but drops Nico's and the car's positions (tested).
+- **Tests:** Vitest 100, e2e 50. The e2e now starts from open ground (`at('home', 700, 230)`), because the new start by his door is near the world edge, where the camera is clamped.

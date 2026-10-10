@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { FireTruck, TRUCK } from '../src/world/firetruck';
 import { makeTraffic, leaders } from '../src/world/cars';
-import { BUILDINGS, DRIVEWAYS, ROADS_X, ROADS_Y, ROAD_W } from '../src/world/map';
+import { BUILDINGS, DRIVEWAYS, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK } from '../src/world/map';
 
 const fire = BUILDINGS.find(b => b.id === 'fire')!;
 const onRoad = ([x, y]: [number, number]) => ROADS_X.some(r => Math.abs(x - r) < ROAD_W / 2) || ROADS_Y.some(r => Math.abs(y - r) < ROAD_W / 2);
-const onApron = ([x, y]: [number, number]) => DRIVEWAYS.some(d => d.id === 'fire' && x >= d.x - 40 && x <= d.x + d.w && y >= d.y - 4 && y <= d.y + d.d);
+const onApron = ([x, y]: [number, number]) => DRIVEWAYS.some(d => d.id === 'fire' && x >= d.x - SIDEWALK - 10 && x <= d.x + d.w && y >= d.y - 4 && y <= d.y + d.d);
 const inStation = ([x, y]: [number, number]) => x > fire.x && x < fire.x + fire.w && y > fire.y && y < fire.y + fire.d + 10;
 
 /** Run traffic + truck together the way main.ts does (no Nico). */
@@ -48,7 +48,7 @@ describe('fire truck', () => {
     const t = new FireTruck(); t.alarm();
     for (let i = 0; i < 60; i++) t.update(1 / 30, []);
     const [x, y] = t.pos, h = t.heading;
-    const nico: [number, number] = [x + Math.cos(h) * 120, y + Math.sin(h) * 120];
+    const ahead = TRUCK.len * 0.9, nico: [number, number] = [x + Math.cos(h) * ahead, y + Math.sin(h) * ahead];
     for (let i = 0; i < 90; i++) t.update(1 / 30, [nico]);
     expect(t.speed).toBe(0);
   });

@@ -3,15 +3,17 @@
 // Kept free of rendering so it can be unit tested.
 import type { Rect } from './world/map';
 
+export const CAR_SCALE = 1.5;    // cars are drawn at 1.5x their base art (112 x 56) so they're bigger than Nico
 export const CAR = {
-  max: 430,        // px/s at full stick
-  acc: 320,        // px/s²
-  brake: 900,      // px/s² when slowing toward a lower target
-  coast: 260,      // px/s² with the stick released
+  max: 560,        // px/s at full stick
+  acc: 400,        // px/s²
+  brake: 1100,     // px/s² when slowing toward a lower target
+  coast: 320,      // px/s² with the stick released
   turn: 3.0,       // rad/s of turning at speed
-  len: 112, wid: 56,
+  len: 112 * CAR_SCALE, wid: 56 * CAR_SCALE,
 };
-const CIRCLES = [-34, 0, 34], CR = 27;   // the body as three circles along its length
+// the body as three circles along its length
+const CIRCLES = [-0.3, 0, 0.3].map(f => f * CAR.len), CR = CAR.wid * 0.48;
 
 export interface CarState { x: number; y: number; h: number; speed: number }
 
@@ -29,7 +31,7 @@ export function steer(c: CarState, sx: number, sy: number, dt: number): void {
   if (m === 0) { c.speed = Math.max(0, c.speed - CAR.coast * dt); return; }
   const d = angleTo(c.h, Math.atan2(sy, sx));
   // a stopped car still turns (slowly), so it can always find its way out
-  const rate = CAR.turn * (0.35 + 0.65 * Math.min(1, c.speed / 200));
+  const rate = CAR.turn * (0.35 + 0.65 * Math.min(1, c.speed / 260));
   c.h += Math.max(-rate * dt, Math.min(rate * dt, d));
   // slow down for a sharp turn, crawl when turning round
   const target = CAR.max * m * (Math.abs(d) > Math.PI / 2 ? 0.3 : 1 - 0.45 * Math.abs(d) / (Math.PI / 2));

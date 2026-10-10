@@ -5,12 +5,13 @@ import { Loop, roundCorners } from './path';
 import { fireRoute } from './map';
 import { NAVY } from './draw';
 
-export const TRUCK = { max: 260, acc: 200, brake: 600, len: 160, wid: 64, firstRun: 25, every: [70, 130] as [number, number] };
+const S = 1.4;   // drawn at 1.4x its base art (160 x 64)
+export const TRUCK = { max: 330, acc: 240, brake: 760, len: 160 * S, wid: 64 * S, firstRun: 25, every: [70, 130] as [number, number] };
 
 function truckArt(): { body: Container; lights: [Graphics, Graphics] } {
+  const L = 160, W = 64, B = 7;
+  const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 14 * S + B).fill('#FFFFFF');
   const g = new Graphics();
-  const L = TRUCK.len, W = TRUCK.wid, B = 7;
-  g.roundRect(-L / 2 - B, -W / 2 - B, L + 2 * B, W + 2 * B, 14 + B).fill('#FFFFFF');
   for (const x of [-52, -14, 44]) for (const y of [-W / 2 - 3, W / 2 - 7]) g.roundRect(x - 11, y, 22, 10, 4).fill('#2C3E52');
   g.roundRect(-L / 2, -W / 2, L, W, 14).fill('#D9342B');
   g.roundRect(L / 2 - 44, -W / 2 + 6, 22, W - 12, 6).fill('#2B3F55');      // windscreen
@@ -21,7 +22,8 @@ function truckArt(): { body: Container; lights: [Graphics, Graphics] } {
   g.rect(-L / 2 + 2, -W / 2 + 2, L - 4, 5).fill('#FFFFFF');                 // stripe
   const red = new Graphics().roundRect(L / 2 - 58, -W / 2 + 6, 10, W / 2 - 8, 3).fill('#FF4D4D');
   const blue = new Graphics().roundRect(L / 2 - 58, 2, 10, W / 2 - 8, 3).fill('#4DA3FF');
-  const body = new Container(); body.addChild(g, red, blue);
+  const art = new Container(); art.addChild(g, red, blue); art.scale.set(S);
+  const body = new Container(); body.addChild(band, art);
   return { body, lights: [red, blue] };
 }
 
@@ -29,7 +31,7 @@ export type Blocker = [number, number, string?];   // a point to brake for, tagg
 
 export class FireTruck {
   readonly view = new Container();
-  readonly loop = new Loop(roundCorners(fireRoute(), 60));
+  readonly loop = new Loop(roundCorners(fireRoute(), 80));
   s = 0; speed = 0;
   out = false;
   wait = TRUCK.firstRun;      // s until the next alarm
@@ -38,7 +40,7 @@ export class FireTruck {
 
   constructor() {
     ({ body: this.body, lights: this.lights } = truckArt());
-    this.shadow = new Graphics().roundRect(-TRUCK.len / 2, -TRUCK.wid / 2, TRUCK.len, TRUCK.wid, 14).fill({ color: NAVY, alpha: 0.18 });
+    this.shadow = new Graphics().roundRect(-TRUCK.len / 2, -TRUCK.wid / 2, TRUCK.len, TRUCK.wid, 14 * S).fill({ color: NAVY, alpha: 0.18 });
     this.shadow.position.set(6, 10);
     this.view.addChild(this.shadow, this.body);
     this.place();
@@ -49,7 +51,7 @@ export class FireTruck {
   /** Points along the truck, for traffic to brake for. */
   points(): [number, number][] {
     const [x, y] = this.pos, h = this.heading;
-    return [-60, -20, 20, 60].map(a => [x + Math.cos(h) * a, y + Math.sin(h) * a]);
+    return [-0.38, -0.13, 0.13, 0.38].map(f => f * TRUCK.len).map(a => [x + Math.cos(h) * a, y + Math.sin(h) * a]);
   }
 
   /** Ring the alarm now (also used by tests). */
@@ -69,7 +71,7 @@ export class FireTruck {
     for (const [bx, by] of yieldTo) {
       const rx = bx - x, ry = by - y;
       const along = rx * fx + ry * fy, side = Math.abs(-rx * fy + ry * fx);
-      if (along > 40 && along < 190 && side < 56) { blocked = true; break; }
+      if (along > TRUCK.len * 0.1 && along < TRUCK.len * 1.2 && side < TRUCK.wid * 0.85) { blocked = true; break; }
     }
     this.speed = blocked ? Math.max(0, this.speed - TRUCK.brake * dt) : Math.min(TRUCK.max, this.speed + TRUCK.acc * dt);
     this.s += this.speed * dt;
@@ -85,7 +87,7 @@ export class FireTruck {
     const [x, y] = this.pos;
     this.view.position.set(x, y);
     this.body.rotation = this.shadow.rotation = this.heading;
-    this.view.zIndex = y + 26;
+    this.view.zIndex = y + TRUCK.wid * 0.4;
     // inside the station, the front wall hides it; lights flash while it's out
     const on = this.out && Math.floor(this.t * 4) % 2 === 0;
     this.lights[0].alpha = this.out ? (on ? 1 : 0.25) : 0.25;
