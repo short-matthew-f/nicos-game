@@ -307,6 +307,11 @@ with sync_playwright() as p:
     pg.evaluate('()=>window.__game.place(1700, 1700)'); pg.wait_for_timeout(100)
     pg.evaluate('()=>window.__game.place(1700, 1820)'); pg.wait_for_timeout(300)   # walk right up to the flock at (1700, 1830)
     check(G()['sounds'].get('flap', 0) > f0, 'a flock Nico scares flaps out loud')
+    # footsteps: real recordings, by what he's walking on
+    for (x, y), surf in [((1700, 2195), 'concrete'), ((2300, 5040), 'sand'), ((2150, 2050), 'grass')]:
+        pg.evaluate(f'()=>window.__game.place({x}, {y})'); pg.wait_for_timeout(150)
+        n0 = G()['sounds'].get(f'step_{surf}', 0); drag(-80, 0, 1200)
+        check(G()['sounds'].get(f'step_{surf}', 0) >= n0 + 3, f"walking on {surf} sounds like {surf} ({G()['sounds'].get(f'step_{surf}', 0) - n0} steps)")
     # the big map: tap the minimap to open it (it doesn't move Nico), tap again to close
     mm = G()['minimapAt']; x0 = G()['nico']['x']
     pg.mouse.click(mm['x'], mm['y']); pg.wait_for_timeout(300)

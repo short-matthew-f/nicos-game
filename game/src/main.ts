@@ -2,15 +2,18 @@ import { Application, Container, CullerPlugin, Graphics, Text, extensions } from
 
 // skip drawing (and filtering) anything off screen: most of the town, most of the time
 extensions.add(CullerPlugin);
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, doorOf } from './world/map';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, TREES, PINES, doorOf } from './world/map';
+import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers } from './world/stickers';
-import { Night, DAY } from './world/night';
+import { Night, DAY, inForest } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { FireScene } from './world/fire';
-import { Siren, sfx, audio, played } from './sound';
+import { Siren, sfx, audio, played, footstep, Ambience } from './sound';
+import { surfaceAt, roomSurface } from './surface';
+import { CYCLE } from './rig/pose';
 import { Minimap } from './minimap';
 import { BallView, kick, nudge, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
@@ -133,6 +136,8 @@ async function main() {
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
   let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
+  const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false };
+  let aroundIn = 0, lastFoot = 0;
   // ---- the work shed in the garden: an outline with a price until it's bought, then a building
   // (solid from the start if it's already his, before a saved position is checked)
   const shedRect = { x: SHED.x, y: SHED.y, w: SHED.w, d: SHED.d };
@@ -1127,6 +1132,10 @@ async function main() {
       if (room && carrying) nico.st.hold = 1;   // carrying the tray in both hands
       stepGait(nico.st, sp * WALK_SPEED * fast, vy, dt);
       nico.view.pose(nico.x, nico.y, nico.st);
+      // a footstep each time a foot comes down: what it sounds like depends on what he's walking on
+      const foot = Math.floor(nico.st.phase / (CYCLE / 2));
+      if (foot !== lastFoot && nico.st.amp > 0.4 && sp > 0.2) footstep(room ? roomSurface(room.kind) : surfaceAt(nico.x, nico.y));
+      lastFoot = foot;
       if (room) { trayView.position.set(nico.x, nico.y - 66); trayView.zIndex = nico.y + 1; }
     } else if (mode === 'drive') {
       const prevH = car.h;
@@ -1180,6 +1189,11 @@ async function main() {
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     clock = (clock + dt / DAY.length) % 1;
+    if ((aroundIn -= dt) <= 0) {   // what's round Nico, for the birds, the wind in the trees and the waves (twice a second)
+      aroundIn = 0.5; const [ax, ay] = here(), near = (p: [number, number]) => Math.abs(p[0] - ax) < 600 && Math.abs(p[1] - ay) < 500;
+      around.trees = TREES.filter(near).length + PINES.filter(near).length; around.shore = Math.max(0, shoreY(ax) - ay); around.forest = inForest(ax, ay);
+    }
+    around.dark = night.dark; around.inside = !!room; ambience.update(dt, around);
     night.update(clock, dt, here(), { w: app.screen.width, h: app.screen.height });
     night.headlights([[car.x, car.y, car.h], ...cars.map(c => [c.pos[0], c.pos[1], c.loop.heading(c.s)] as [number, number, number])], CAR.len, CAR.wid);
     if (room) night.moon.visible = false;

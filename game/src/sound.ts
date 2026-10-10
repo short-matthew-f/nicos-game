@@ -1,4 +1,4 @@
-// Sound: all synthesised (no files to load). Safari only allows audio after a tap, so the
+// Sound: mostly synthesised; footsteps are real recordings (public/sfx, CC0). Safari only allows audio after a tap, so the
 // context starts on the first touch. One master volume with a mute switch (remembered on
 // this device); the fire truck's siren gets louder the closer it is.
 
@@ -39,6 +39,41 @@ class Audio {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
     o.connect(g); g.connect(m); o.start(t); o.stop(t + len + 0.02);
   }
+  // ---- recorded samples (loaded once the context exists)
+  private buffers = new Map<string, AudioBuffer>();
+  load(names: string[], base = './sfx/') {
+    this.onReady(() => { for (const n of names) if (!this.buffers.has(n))
+      fetch(`${base}${n}.m4a`).then(r => r.arrayBuffer()).then(b => this.ctx!.decodeAudioData(b)).then(buf => { this.buffers.set(n, buf); }).catch(() => { /* play on without it */ }); });
+  }
+  /** Play a loaded sample (quietly skipped if it isn't loaded yet). rate: pitch/speed. pan: -1..1. */
+  sample(name: string, vol: number, rate = 1, pan = 0) {
+    const c = this.ctx, m = this.master, buf = this.buffers.get(name); if (!c || !m || !buf || this.muted) return;
+    const s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; s.playbackRate.value = rate; g.gain.value = vol;
+    s.connect(g);
+    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(m); } else g.connect(m);
+    s.start();
+  }
+  /** A loop of soft noise through a filter, for wind in the leaves and waves (gain starts at 0). */
+  bed(type: BiquadFilterType, freq: number, q = 0.7): { gain: GainNode; filter: BiquadFilterNode } | null {
+    const c = this.ctx, m = this.master; if (!c || !m) return null;
+    const n = c.sampleRate * 4, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    let b = 0; for (let i = 0; i < n; i++) { b = 0.97 * b + 0.03 * (Math.random() * 2 - 1); d[i] = b * 6; }   // (soft brown-ish noise)
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; s.loop = true; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = 0;
+    s.connect(f); f.connect(g); g.connect(m); s.start();
+    return { gain: g, filter: f };
+  }
+  /** A bird's note: a quick sweep with a little warble, at `delay` s. */
+  chirp(f0: number, f1: number, len: number, vol: number, delay = 0, pan = 0) {
+    const c = this.ctx, m = this.master; if (!c || !m || this.muted) return;
+    const t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + len);
+    lfo.frequency.value = 38 + Math.random() * 20; lg.gain.value = f0 * 0.04; lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + len * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g);
+    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(m); } else g.connect(m);
+    o.start(t); lfo.start(t); o.stop(t + len + 0.02); lfo.stop(t + len + 0.02);
+  }
   /** A short burst of filtered noise (thumps, splashes). */
   noise(len: number, vol: number, freq: number) {
     const c = this.ctx, m = this.master; if (!c || !m || this.muted) return;
@@ -54,13 +89,23 @@ class Audio {
 
 export const audio = new Audio();
 
+/** A gentle car horn: two notes a third apart, square waves through a soft filter. */
+function horn(delay: number) {
+  const c = audio.ctx, m = audio.master; if (!c || !m || audio.muted) return;
+  const t = c.currentTime + delay, f = c.createBiquadFilter(), g = c.createGain();
+  f.type = 'lowpass'; f.frequency.value = 1300; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.045, t + 0.02);
+  g.gain.setValueAtTime(0.045, t + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.21);
+  for (const hz of [415, 523]) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = hz; o.connect(f); o.start(t); o.stop(t + 0.23); }
+  f.connect(g); g.connect(m);
+}
+
 /** The little sound effects, by name. */
 const effects = {
   kick: () => { audio.noise(0.09, 0.5, 900); audio.tone('sine', 160, 70, 0.1, 0.25); },
   coin: () => { audio.tone('square', 988, 988, 0.08, 0.06); audio.tone('square', 1319, 1319, 0.22, 0.06, 0.08); },
   goal: () => { [523, 659, 784, 1047].forEach((f, i) => audio.tone('triangle', f, f, 0.18, 0.12, i * 0.09)); },
   quack: () => { audio.tone('sawtooth', 520, 260, 0.13, 0.05); audio.tone('sawtooth', 480, 240, 0.12, 0.04, 0.16); },
-  honk: () => { audio.tone('square', 392, 392, 0.22, 0.05); audio.tone('square', 330, 330, 0.22, 0.05); },
+  honk: () => { for (const d of [0, 0.26]) horn(d); },   // a polite double toot
   tap: () => audio.tone('sine', 660, 880, 0.06, 0.06),
   splash: () => audio.noise(0.3, 0.25, 2400),
   flap: () => { audio.noise(0.18, 0.18, 3200); audio.noise(0.14, 0.12, 2600); },
@@ -108,5 +153,62 @@ export class Siren {
     this.gain.gain.setTargetAtTime(vol, now, 0.1);
     // nee-naw: two tones, half a second each
     this.osc.frequency.setTargetAtTime(Math.floor(this.t * 2) % 2 ? 660 : 880, now, 0.02);
+  }
+}
+
+// ---- footsteps: real recordings, one set per surface (step_<set>_<0-4>.m4a)
+const STEP_SET: Record<string, string> = { concrete: 'concrete', grass: 'grass', sand: 'snow', wood: 'wood' };   // (snow crunch sounds like sand)
+audio.load(Object.values(STEP_SET).flatMap(s => [0, 1, 2, 3, 4].map(i => `step_${s}_${i}`)));
+let lastStep = -1;
+export function footstep(surface: string, vol = 0.35) {
+  let i = Math.floor(Math.random() * 5); if (i === lastStep) i = (i + 1) % 5; lastStep = i;
+  played.step = (played.step ?? 0) + 1; played[`step_${surface}`] = (played[`step_${surface}`] ?? 0) + 1;
+  audio.sample(`step_${STEP_SET[surface] ?? 'concrete'}_${i}`, vol * (surface === 'grass' ? 1.3 : 1), 0.92 + Math.random() * 0.16);
+}
+
+// ---- the world's own sounds: birds by day (owls and crickets at night), the wind in the trees,
+// waves on the beach. Ambience.update is told where Nico is and what's round him.
+export interface Around { trees: number; shore: number; forest: boolean; dark: number; inside: boolean }
+const SONGS: ((pan: number) => void)[] = [
+  pan => { for (let i = 0; i < 2; i++) audio.chirp(3800, 2600, 0.11, 0.035, i * 0.16, pan); },                       // tweet-tweet
+  pan => { for (let i = 0; i < 6; i++) audio.chirp(4200 + (i % 2) * 300, 3900, 0.05, 0.025, i * 0.06, pan); },       // a trill
+  pan => { audio.chirp(2400, 3600, 0.18, 0.03, 0, pan); audio.chirp(3600, 2200, 0.22, 0.03, 0.22, pan); },           // a whistle up and down
+  pan => { [3000, 3400, 2800, 3600].forEach((f, i) => audio.chirp(f, f * 1.15, 0.08, 0.028, i * 0.11, pan)); },     // a little warble
+];
+export class Ambience {
+  private wind: { gain: GainNode; filter: BiquadFilterNode } | null = null;
+  private waves: { gain: GainNode; filter: BiquadFilterNode } | null = null;
+  private birdIn = 2; private owlIn = 6; private cricketIn = 1; private t = 0;
+  constructor() { audio.onReady(() => { this.wind = audio.bed('bandpass', 1400, 0.6); this.waves = audio.bed('lowpass', 420); }); }
+  update(dt: number, a: Around) {
+    const c = audio.ctx; if (!c) return;
+    this.t += dt;
+    const now = c.currentTime, out = a.inside ? 0 : 1;
+    // leaves rustling: louder among trees, in gusts
+    const gust = 0.55 + 0.45 * Math.sin(this.t * 0.37) * Math.sin(this.t * 0.11 + 1);
+    this.wind?.gain.gain.setTargetAtTime(out * Math.min(1, a.trees / 6) * 0.05 * gust, now, 0.4);
+    this.wind?.filter.frequency.setTargetAtTime(1100 + 700 * gust, now, 0.4);
+    // waves: a slow swell near the shore
+    const swell = 0.5 + 0.5 * Math.sin(this.t * 0.8);
+    this.waves?.gain.gain.setTargetAtTime(out * Math.max(0, 1 - a.shore / 700) * (0.03 + 0.07 * swell), now, 0.3);
+    if (!out) return;
+    // birds sing by day (more of them among trees), owls hoot and crickets chirp at night
+    if (a.dark < 0.5) {
+      if ((this.birdIn -= dt * (0.6 + Math.min(1, a.trees / 4))) <= 0) {
+        this.birdIn = 2.5 + Math.random() * 5;
+        played.bird = (played.bird ?? 0) + 1;
+        SONGS[Math.floor(Math.random() * SONGS.length)](Math.random() * 1.4 - 0.7);
+      }
+    } else {
+      if (a.forest && (this.owlIn -= dt) <= 0) {
+        this.owlIn = 7 + Math.random() * 8; played.owl = (played.owl ?? 0) + 1;
+        const pan = Math.random() * 1.2 - 0.6;
+        audio.chirp(400, 370, 0.35, 0.05, 0, pan); audio.chirp(390, 360, 0.55, 0.05, 0.5, pan);   // hoo... hoooo
+      }
+      if ((this.cricketIn -= dt) <= 0) {
+        this.cricketIn = 0.6 + Math.random() * 0.8;
+        for (let i = 0; i < 3; i++) audio.tone('sine', 4600, 4500, 0.03, 0.008, i * 0.05);
+      }
+    }
   }
 }

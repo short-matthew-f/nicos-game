@@ -1,0 +1,2 @@
+Footstep sounds (step_*.m4a): from "Impact Sounds" by Kenney (www.kenney.nl), CC0 1.0 (public domain).
+http://creativecommons.org/publicdomain/zero/1.0/  Converted from .ogg to .m4a (mono AAC) for Safari.

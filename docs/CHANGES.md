@@ -717,3 +717,16 @@ The user: "a day and night cycle might be nice. The city could have some street 
 - From the user: "he often climbs on buildings. It would be funny to see him up on top of buildings sometimes."
 - Once a lap of his playground route (about once a minute), Primo stops beside Burger Barn and climbs up its front wall hand over hand, back to us. He steps up onto the roof and waves from up there for a few seconds, then climbs back down and runs off to the slide.
 - Say hi while he's up there: "Look at me! I'm on the roof!" A route stop with `climb: '<building id>'` does it for anyone, on any building.
+
+### Real sounds (2026-10-10)
+The user: "genuine sound effects might make things feel better. The sound of walking on sand vs walking on sidewalk or the forest. Actual bird noises. Trees rustling. Etc. gentle car horns."
+- **Footsteps are real recordings:** "Impact Sounds" by Kenney, CC0, converted to mono AAC `.m4a` for Safari, 116 KB in `public/sfx`.
+  - There are five takes per surface, never the same take twice in a row, with a little pitch wobble.
+  - One plays each time a foot comes down (from the walk cycle's phase).
+  - `surface.ts` decides what he's on: sidewalk, road and paved lots sound like concrete; the park, fields and forest floor like grass; the beach and the sandpit like sand (the snow-crunch takes); the pier and indoor floors like wood.
+- **Birds** (synthesised, since no CC0 birdsong recordings were at hand): four little songs (a tweet-tweet, a trill, a whistle up and down, a warble), panned left or right at random. They sing more often among trees and only by day.
+- **At night:** owls hoot in the forest and crickets chirp.
+- **Wind in the leaves:** a soft noise loop that swells in gusts, louder the more trees are round Nico.
+- **Waves:** a slow swell near the shore.
+- **Car horns:** a polite double toot, two notes through a soft filter, instead of the harsh square-wave honk.
+- Tests: a surface map unit test; e2e walks on concrete, sand and grass and hears the right footsteps (208 checks).
