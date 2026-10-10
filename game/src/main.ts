@@ -23,11 +23,11 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, type Body } from './play';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
-import { jobFor, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
+import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { Workshop } from './workshop';
 import { ToyWindow } from './world/display';
-import { WORKBENCH, PARTS_FOR_SALE, CAR_RECIPE, item, add, has, missing, shelfValue, sellOne, carPrice, nextGoal, goalPlace } from './business';
+import { WORKBENCH, PARTS_FOR_SALE, CAR_RECIPE, item, add, has, missing, shelfValue, sellOne, carPrice, nextGoal, goalPlace, soldAll, take, owns } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -116,6 +116,12 @@ async function main() {
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
+  // the odd job in progress (saved; an item request's id says who and what)
+  let job: Active | null = null;
+  if (saved.job) {
+    const j = jobById(saved.job.id);
+    if (j && saved.job.step < j.steps.length) job = { job: j, step: saved.job.step, at: saved.job.at.length === j.steps.length ? saved.job.at : startJob(j).at };
+  }
   const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new PersonView() };
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
@@ -127,7 +133,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -233,9 +239,10 @@ async function main() {
     save: () => persist(),
     toast: m => toast(m),
     opened: on => { cardOpen = on ? 'work' : null; },
+    wanted: () => wanted(),
     skill: sk => { sfx.cheer(); showCard(`skill:${sk.id}`, `🎓 New skill: ${sk.name}!`, sk.text, [], 'Nice!'); },
   });
-  const toyWindow = new ToyWindow(); layer.addChild(toyWindow.view); toyWindow.set(state.biz.sold);
+  const toyWindow = new ToyWindow(); layer.addChild(toyWindow.view); toyWindow.set(soldAll(state.biz));
   const biz = state.biz;
   const partsLine = () => Object.entries(biz.items).map(([id, n]) => `${item(id).label.split(' ')[0]}×${n}`).join('  ') || 'none';
   const needLine = () => missing(biz, CAR_RECIPE).map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ');
@@ -255,7 +262,7 @@ async function main() {
     parts: p => showParts(p),
     garage: p => {
       const shelf = biz.finds.map(f => item(f.id).label.split(' ')[0]).join(' ');
-      const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(biz.cars ? [`Toy cars ready to sell: ${biz.cars}`] : [])];
+      const lines = [`Parts: ${partsLine()}.`, ...(shelf ? [`On the shelf: ${shelf}`] : []), ...(biz.stock.car ? [`Toy cars ready to sell: ${biz.stock.car}`] : [])];
       if (!biz.workbench) { showCard('garage', p.title, `Your garage. There's room in here for a workbench: Parts & Tools sells them. ${lines.join(' ')}`, []); return; }
       const ready = has(biz, CAR_RECIPE), proven = biz.designs.includes('car');
       showCard('garage', '🛠️ Your workbench', lines.join(' '), [
@@ -265,13 +272,13 @@ async function main() {
       ]);
     },
     toys: p => {
-      if (!biz.cars) { showCard('toys', p.title, biz.sold ? `Your toy cars are selling well! Bring more when you've built them.` : p.text, []); return; }
+      if (!biz.stock.car) { showCard('toys', p.title, biz.sold.car ? `Your toy cars are selling well! Bring more when you've built them.` : p.text, []); return; }
       const price = carPrice(biz);
-      showCard('toys', p.title, biz.sold ? 'Another toy car? The kids love them!' : '"A toy car you built yourself? Let me see... It rolls beautifully! I\'ll buy it."', [
+      showCard('toys', p.title, biz.sold.car ? 'Another toy car? The kids love them!' : '"A toy car you built yourself? Let me see... It rolls beautifully! I\'ll buy it."', [
         { label: '🚗 Sell a toy car', sub: `$${price}`, id: 'sellcar', onClick: () => {
-          if (!biz.cars) return;
-          biz.cars--; biz.sold++; state.money += price; showMoney(); persist(); sfx.cash(5); toyWindow.set(biz.sold);
-          toast(biz.sold === 1 ? `🎉 Your first sale! +$${price}. Look: it's in the shop window!` : `Sold! +$${price}`);
+          if (!biz.stock.car) return;
+          biz.stock.car--; biz.sold.car = (biz.sold.car ?? 0) + 1; state.money += price; showMoney(); persist(); sfx.cash(5); toyWindow.set(soldAll(biz));
+          toast(biz.sold.car === 1 ? `🎉 Your first sale! +$${price}. Look: it's in the shop window!` : `Sold! +$${price}`);
         } },
       ]);
     },
@@ -309,12 +316,24 @@ async function main() {
     return { t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0, trip: [], met: null };
   });
   // ---- odd jobs: people with a job show a "!"; talk to them to take it on
-  let job: Active | null = null;
   const jobWait: Record<string, number> = {};   // seconds until a job is offered again
-  const offers = (who: string) => { const j = jobFor(who); return !job && j && !(jobWait[j.id] > 0) ? j : null; };
-  const finishing = (who: string) => !!job && job.job.giver === who && jobStep(job).kind === 'return';
+  // item requests ("can you find me a radio?"): one at a time, now and then, once Nico has bought a unit
+  let wantOffer: { giver: string; item: string; left: number } | null = null, wantIn = WANT.first;
+  const offers = (who: string) => {
+    if (job) return null;
+    if (wantOffer?.giver === who) return jobById(`want:${who}:${wantOffer.item}`);
+    const j = jobFor(who); return j && !(jobWait[j.id] > 0) ? j : null;
+  };
+  const wanted = () => { const st = job && jobStep(job); return st && st.kind === 'bring' ? st.item : null; };
+  const finishing = (who: string) => {
+    if (!job || job.job.giver !== who) return false;
+    const st = jobStep(job);
+    return st.kind === 'return' || (st.kind === 'bring' && owns(state.biz, st.item));
+  };
   function payJob() {
     if (!job) return;
+    const st = jobStep(job);
+    if (st.kind === 'bring' && !take(state.biz, st.item)) return;   // (hand it over)
     const j = job.job, name = locals.find(l => l.t.who === j.giver)?.t.name ?? '';
     state.money += j.reward; showMoney(); persist(); sfx.coin();
     toast(`${name}: “${j.thanks}” +$${j.reward}`);
@@ -322,9 +341,11 @@ async function main() {
   }
   function talkTo(l: Local) {
     if (finishing(l.t.who)) { payJob(); return; }
+    const w = wanted();
+    if (w && job!.job.giver === l.t.who) { toast(`${l.t.name}: “Any luck finding ${item(w).label}? The storage units might have one.”`); return; }
     const j = offers(l.t.who);
     if (j) {
-      showCard(`job:${j.id}`, l.t.name, j.ask, [{ label: 'Sure!', sub: `+$${j.reward}`, id: 'accept', onClick: () => { job = startJob(j); toast(`📋 ${j.title}`); } }], 'Not now');
+      showCard(`job:${j.id}`, l.t.name, j.ask, [{ label: 'Sure!', sub: `+$${j.reward}`, id: 'accept', onClick: () => { job = startJob(j); if (wantOffer?.giver === j.giver) wantOffer = null; persist(); toast(`📋 ${j.title}`); } }], 'Not now');
       return;
     }
     toast(`${l.t.name}: “${l.t.lines[l.said++ % l.t.lines.length]}”`);
@@ -648,12 +669,23 @@ async function main() {
       jobAt = jobTarget(job, [giver.w.x, giver.w.y]);
       const st = jobStep(job);
       if (st.kind === 'go') { jobSpot.x = jobAt[0]; jobSpot.y = jobAt[1]; }
+      if (st.kind === 'bring' && !owns(biz, st.item)) jobAt = doorOf(BUILDINGS.find(b => b.id === 'storage')!);   // go find one
       if (st.kind === 'ball' && Math.hypot(ball.x - giver.w.x, ball.y - giver.w.y) < 170) payJob();
       cat.visible = !!job && job.job.id === 'cat' && job.step === 0;
       if (cat.visible) { cat.position.set(jobAt[0], jobAt[1] - 6); cat.zIndex = jobAt[1]; }
     } else cat.visible = false;
     jobEl.hidden = !job;
-    if (job) { const t = `📋 ${jobStep(job).note}`; if (jobEl.textContent !== t) jobEl.textContent = t; }
+    if (job) {
+      const st = jobStep(job), who = locals.find(l => l.t.who === job!.job.giver)?.t.name;
+      const t = `📋 ${st.kind === 'bring' && owns(biz, st.item) ? `bring ${item(st.item).label} to ${who}` : st.note}`;
+      if (jobEl.textContent !== t) jobEl.textContent = t;
+    }
+    if (wantOffer) { wantOffer.left -= dt; if (wantOffer.left <= 0 || job) wantOffer = null; }
+    else if (!job && biz.flips > 0 && (wantIn -= dt) <= 0) {
+      wantIn = WANT.every[0] + Math.random() * (WANT.every[1] - WANT.every[0]);
+      const w = pickWant(Math.random, () => false);   // (a request takes the place of their usual job for a while)
+      if (w) wantOffer = { ...w, left: WANT.offerFor };
+    }
     const goal = nextGoal(biz, state.money), gp = goalPlace(biz, state.money);
     goalEl.hidden = !goal || !!job;   // one thing at a time: an odd job's chip takes the place of the goal
     if (goal && goalEl.textContent !== goal) goalEl.textContent = goal;
@@ -685,8 +717,9 @@ async function main() {
       bigMap: bigMap.visible, minimapAt: (() => { const b = minimap.view.getBounds(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })(),
       low, goLow: () => goLow(),
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,
-      setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(biz.sold); persist(); },
-      sounds: { ...played }, scatters,
+      setBiz: (o: Partial<typeof biz>) => { Object.assign(biz, o); toyWindow.set(soldAll(biz)); persist(); },
+      sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
+      offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,

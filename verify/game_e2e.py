@@ -279,7 +279,7 @@ with sync_playwright() as p:
     pg.mouse.click(W * 0.6, H * 0.5); pg.wait_for_timeout(200)
     check(not G()['bigMap'], 'a tap closes it')
     # ---- v2: the business loop, start to finish
-    pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], cars:0, sold:0, flips:0, skills:[], seed:1}); window.__game.setMoney(20)}")
+    pg.evaluate("()=>{window.__game.setBiz({items:{}, finds:[], workbench:false, designs:[], stock:{}, sold:{}, flips:0, skills:[], seed:1}); window.__game.setMoney(20)}")
     pg.wait_for_timeout(200)
     check(pg.locator('#goal').is_visible() and 'storage' in pg.locator('#goal').inner_text(), f"the goal chip points to the storage units ({pg.locator('#goal').inner_text()})")
     def door(spot):
@@ -323,21 +323,21 @@ with sync_playwright() as p:
     check(len(G()['work']['filled']) == 7 and pg.locator('#work .actions button.primary').is_enabled(), f"every part on: the ramp test unlocks ({G()['work']['filled']})")
     pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
     pg.click('[data-height="1"]'); pg.click('[data-go]'); pg.wait_for_timeout(2300)
-    check(G()['work']['lastRun'] == {'height': 1, 'passed': False} and G()['biz']['cars'] == 0 and pg.locator('[data-go]').is_enabled(), 'the low ramp falls short: nothing lost, try again')
+    check(G()['work']['lastRun'] == {'height': 1, 'passed': False} and not G()['biz']['stock'].get('car') and pg.locator('[data-go]').is_enabled(), 'the low ramp falls short: nothing lost, try again')
     pg.click('[data-height="2"]'); pg.click('[data-go]'); pg.wait_for_timeout(2300)
     check(G()['work']['lastRun'] == {'height': 2, 'passed': True}, 'a higher ramp: it rolls past the flag')
     pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
     gb = G()['biz']
-    check(gb['designs'] == ['car'] and gb['cars'] == 1 and gb['items'] == {}, f"the design is done, one toy car made, parts used ({gb})")
+    check(gb['designs'] == ['car'] and gb['stock'] == {'car': 1} and gb['items'] == {}, f"the design is done, one toy car made, parts used ({gb})")
     door('toys'); m0 = G()['money']; pg.click('[data-item=sellcar]'); pg.wait_for_timeout(300)
     gb = G()
-    check(gb['money'] == m0 + 40 and gb['biz']['sold'] == 1 and gb['biz']['cars'] == 0, f"the Toy Shop buys the first car for $40 ({m0} -> {gb['money']})")
+    check(gb['money'] == m0 + 40 and gb['biz']['sold'] == {'car': 1} and gb['biz']['stock'] == {'car': 0}, f"the Toy Shop buys the first car for $40 ({m0} -> {gb['money']})")
     check(not pg.locator('#goal').is_visible(), 'loop done: the goal chip steps aside')
     pg.evaluate("()=>window.__game.setBiz({items:{wheel:4, axle:2, body:1}})")
     door('garage'); pg.click('[data-item=quick]'); pg.wait_for_timeout(300)
     for _ in range(3): pg.click('#work [data-step]'); pg.wait_for_timeout(250)
     gb = G()['biz']
-    check(gb['cars'] == 1 and gb['items'] == {}, f"repeat builds are three taps ({gb})")
+    check(gb['stock'] == {'car': 1} and gb['items'] == {}, f"repeat builds are three taps ({gb})")
     pg.click('#work [data-step]'); pg.wait_for_timeout(200)
     check(G()['work']['screen'] is None, 'Done closes it')
     # the Appraiser skill: earned on the third unit
@@ -348,11 +348,40 @@ with sync_playwright() as p:
     pg.click('#work .actions button'); pg.wait_for_timeout(2600); pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
     check('appraiser' in G()['biz']['skills'] and 'Appraiser' in pg.locator('#place-title').inner_text(), 'the third unit earns the Appraiser skill (with a card saying so)')
     pg.keyboard.press('Escape')
-    # it's all saved
+    # item requests: someone asks for a thing; the storage units are sure to have one; keep it, hand it over
+    pg.evaluate("()=>{window.__game.setBiz({finds: []}); window.__game.offerWant('maya', 'radio')}"); pg.wait_for_timeout(200)
+    near('maya')
+    check('❗' in pg.locator('#action').inner_text(), f"Maya has a request (❗) ({pg.locator('#action').inner_text()})")
+    pg.click('#action'); pg.wait_for_timeout(150)
+    check('radio' in pg.locator('#place-text').inner_text(), f"she asks for a radio ({pg.locator('#place-text').inner_text()})")
+    pg.click('#place-menu button[data-item="accept"]'); pg.wait_for_timeout(200)
+    check(G()['job']['id'] == 'want:maya:radio' and 'Radio' in pg.locator('#job').inner_text(), f"the job chip says what to find ({pg.locator('#job').inner_text()})")
+    sd = G()['spots']['storage']
+    check(math.dist(G()['job']['at'], (sd['x'], sd['y'])) < 5, 'the minimap star points at the storage units')
+    m0 = G()['money']; near('maya'); pg.click('#action'); pg.wait_for_timeout(150)
+    check(G()['money'] == m0 and G()['job'] is not None, 'no radio yet: she asks how it is going, no pay')
+    door('storage'); pg.click('[data-item=auction]'); pg.wait_for_timeout(300)
+    lot = pg.locator('#work .lot[data-wanted="1"]')
+    check(lot.count() >= 1 and '📻' in lot.first.inner_text(), 'a unit with a radio shows it through the door, tagged')
+    pg.locator('#work .lot[data-wanted="1"] button').first.click(); pg.locator('#work .lot[data-wanted="1"] button').first.click(); pg.wait_for_timeout(900)
+    pg.click('#work .actions button'); pg.wait_for_timeout(2800)
+    tile = pg.locator('#work .find[data-id=radio]')
+    found = tile.count() > 0
+    check(found and 'wanted' in tile.first.inner_text() and 'keep' in tile.first.get_attribute('class'), f"the wanted radio is set to Keep, marked wanted ({tile.first.inner_text() if found else '-'})")
+    pg.click('#work .actions button.primary'); pg.wait_for_timeout(300)
+    check(found and any(f['id'] == 'radio' for f in G()['biz']['finds']), 'a radio turned up and is on the shelf')
+    check('bring' in pg.locator('#job').inner_text(), f"the chip now says to bring it ({pg.locator('#job').inner_text()})")
+    # it's all saved, including the job in progress
     pg.evaluate("()=>window.dispatchEvent(new Event('pagehide'))")
     pg.reload(); pg.wait_for_function('window.__game && window.__game.biz', timeout=15000); pg.wait_for_timeout(500)
     gb = G()['biz']
-    check(gb['sold'] == 1 and gb['designs'] == ['car'] and gb['cars'] == 1 and 'appraiser' in gb['skills'], f"the business survives a reload ({gb})")
+    check(gb['sold'] == {'car': 1} and gb['designs'] == ['car'] and gb['stock'] == {'car': 1} and 'appraiser' in gb['skills'], f"the business survives a reload ({gb})")
+    check(G()['job'] and G()['job']['id'] == 'want:maya:radio', f"and so does the job in progress ({G()['job']})")
+    m0 = G()['money']; near('maya')
+    check(pg.locator('#action').inner_text().startswith('Finish job'), 'back to Maya with the radio: Finish job')
+    pg.click('#action'); pg.wait_for_timeout(200)
+    gb = G()
+    check(gb['money'] > m0 + 9 and gb['job'] is None and not any(f['id'] == 'radio' for f in gb['biz']['finds']), f"handed over: the radio's gone, paid more than it sells for ({m0} -> {gb['money']})")
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')

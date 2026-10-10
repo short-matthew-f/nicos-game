@@ -459,3 +459,22 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - Every noise burst now fades in over 6 ms, because a burst that starts at full volume clicks.
 - **Debugging aid:** `sfx` now counts plays per effect (`played`, shown as `__game.sounds`) for tests and for hunting the next noisy sound.
 - **e2e:** far-off scatters stay silent, and a flock Nico walks into flaps. Mutation-checked.
+
+## 2026-10-10: item requests (Nico's idea) and save v6
+- **Nico:** "once I can start collecting items, people should occasionally have quests where I need to get them."
+- **How it works:**
+  - Once Nico has bought a storage unit, someone in town asks for a thing every 60–120 s (the first after 40 s). The request is a "!" bubble that stays for 150 s, one at a time. Example: "My old radio finally broke... could you find me a radio? I'll give you $15."
+  - The job chip says what to find, and the minimap star points at the storage units.
+  - In the auction, a unit holding the wanted thing shows it through the door, tagged "⭐ There's a 📻 Radio inside!".
+  - In that unit, the thing defaults to **Keep**, marked "wanted!".
+  - Once it's on the shelf, the chip changes to "bring it to …". Handing it over takes the cheapest one kept.
+- **Data** (`src/jobs.ts`):
+  - `WANT_REASONS` gives each find a line of why.
+  - `WANTERS` lists who asks: Mrs. Kim, Mr. Brooks, Maya, Leo, Sam, Ava and James.
+  - The reward is `ceil(top value × 1.5) + 2`. It always beats selling the thing, even with Appraiser (tested).
+- **Never stalls:** while a request is on, every auction lineup has one unit with the thing (`lineup(seed, first, want)`). Tested over 60 seeds for every item.
+- **Save v6:**
+  - Toy cars are counted per product (`stock`, `sold`), ready for more products.
+  - **The job in progress is saved**, which was a caveat before. A request's id (`want:<giver>:<item>`) is enough to rebuild it, and an id that no longer exists is dropped.
+  - A v5 save moves `cars` and `sold` across.
+- **e2e:** the request offered, accepted, "no radio yet", the right unit shown and bought, the radio set to Keep, a reload mid-request, then the hand-over and pay (123 checks). The stall-proofing and the job saving are mutation-checked.

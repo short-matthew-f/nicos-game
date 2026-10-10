@@ -16,6 +16,7 @@ export interface WorkHost {
   toast(msg: string): void;
   opened(on: boolean): void;           // pause the world while a screen is up
   skill(s: Skill): void;               // a new skill was earned
+  wanted(): string | null;             // an item someone asked Nico to find
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -106,7 +107,7 @@ export class Workshop {
   // ------------------------------------------------------------ the auction
   auction() {
     const b = this.host.biz, ap = b.skills.includes('appraiser');
-    const units = lineup(b.seed, b.flips === 0);
+    const units = lineup(b.seed, b.flips === 0, this.host.wanted());
     this.show('auction', 'Storage unit auction', ap ? '🔍 Appraiser: your guesses are spot on.'
       : units.length === 1 ? 'Just one unit up today: a good one to start with. More next time! The guess is what the stuff inside might sell for.'
       : 'Peek through the doors. The price is on the tag; the guess is what the stuff inside might sell for.');
@@ -116,6 +117,8 @@ export class Workshop {
       const [lo, hi] = guess(u, ap || !!u.starter);   // the starter's guess is a close one: no scary low end on the first buy
       card.append(door, h('div', 'uname', `Unit ${u.name} · ${u.size}`), h('div', 'guess', `Worth about $${lo}–$${hi}`));
       if (u.starter) card.append(h('div', 'tag', '⭐ Good first buy'));
+      const want = this.host.wanted();
+      if (want && u.contents.some(c => c.id === want)) { card.append(h('div', 'tag', `⭐ There's ${item(want).label} inside!`)); card.dataset.wanted = '1'; }
       const buy = h('button', 'primary', `Buy $${u.price}`); buy.type = 'button'; buy.dataset.buy = u.name;
       const short = u.price - this.host.money();
       if (short > 0) { buy.disabled = true; buy.textContent = `$${u.price} (need $${short} more)`; }
@@ -142,7 +145,8 @@ export class Workshop {
     const grid = h('div', 'finds'); this.stage.append(grid);
     sfx.door();
     requestAnimationFrame(() => door.classList.add('up'));
-    const sell: boolean[] = u.contents.map(c => item(c.id).kind === 'find');   // finds sell, parts are kept (can change)
+    const want = this.host.wanted();
+    const sell: boolean[] = u.contents.map(c => item(c.id).kind === 'find' && c.id !== want);   // finds sell; parts and wanted things are kept (can change)
     const open: boolean[] = u.contents.map(() => false);
     const tiles: HTMLElement[] = [];
     const total = () => u.contents.reduce((t, c, i) => t + (sell[i] && open[i] ? sellPrice(c.value, ap) : 0), 0);
@@ -168,7 +172,7 @@ export class Workshop {
     };
     const choice = (i: number) => {
       const t = tiles[i], el = t.querySelector('.choice')!;
-      el.textContent = sell[i] ? '💰 Sell' : (item(u.contents[i].id).kind === 'part' ? '🔧 Keep (part)' : '🏠 Keep');
+      el.textContent = sell[i] ? '💰 Sell' : u.contents[i].id === want ? '⭐ Keep: wanted!' : (item(u.contents[i].id).kind === 'part' ? '🔧 Keep (part)' : '🏠 Keep');
       t.classList.toggle('keep', !sell[i]);
     };
     u.contents.forEach((c, i) => {
@@ -353,7 +357,7 @@ export class Workshop {
   /** The first car passed: use up the parts, remember the design, one car to sell. */
   private prototypeDone() {
     const b = this.host.biz;
-    if (!b.designs.includes('car') && use(b, CAR_RECIPE)) { b.designs.push('car'); b.cars++; }
+    if (!b.designs.includes('car') && use(b, CAR_RECIPE)) { b.designs.push('car'); b.stock.car = (b.stock.car ?? 0) + 1; }
     this.host.save();
     this.host.toast('🚗 Toy car made! Take it to the Toy Shop to sell it.');
     this.close();
@@ -378,8 +382,8 @@ export class Workshop {
       }
       sfx.snap(); i++;
       if (i < steps.length) { btn.textContent = steps[i][0]; return; }
-      use(b, CAR_RECIPE); b.cars++; this.host.save(); sfx.cheer();
-      this.sub.textContent = `Another toy car! You have ${b.cars} ready to sell.`;
+      use(b, CAR_RECIPE); b.stock.car = (b.stock.car ?? 0) + 1; this.host.save(); sfx.cheer();
+      this.sub.textContent = `Another toy car! You have ${b.stock.car} ready to sell.`;
       btn.textContent = 'Done'; btn.onclick = () => this.close();
     }, 'primary');
     btn.dataset.step = '1';

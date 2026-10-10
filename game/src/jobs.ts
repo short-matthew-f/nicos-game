@@ -1,11 +1,13 @@
 // Odd jobs from people around town: a way to earn a little money. Data first; the game
 // loop only asks "where's the next target?" and calls advance() when Nico does the step.
 import { BUILDINGS, FIELD, ROADS_X, ROAD_W, SIDEWALK, doorOf } from './world/map';
+import { ITEMS, item } from './business';
 
 export type Step =
   | { kind: 'go'; label: string; note: string; at: [number, number] | [number, number][] }   // several: one is picked when the job starts
   | { kind: 'ball'; note: string }      // kick the soccer ball to the person who asked
-  | { kind: 'return'; note: string };   // go back and tell them
+  | { kind: 'return'; note: string }    // go back and tell them
+  | { kind: 'bring'; item: string; note: string };   // find one of these (storage units) and hand it over
 
 export interface Job {
   id: string; giver: string; title: string; ask: string; thanks: string; reward: number; steps: Step[]; cooldown: number;
@@ -77,3 +79,48 @@ export function target(a: Active, giverAt: [number, number]): [number, number] {
 }
 
 export const jobFor = (who: string) => JOBS.find(j => j.giver === who) ?? null;
+
+// ---- item requests: once Nico has bought a storage unit, now and then someone asks him to
+// find them something. They pay more than it would sell for, so keeping it is worth it.
+export const WANT = { first: 40, every: [60, 120] as [number, number], offerFor: 150 };   // s
+export const WANTERS = ['mrskim', 'mrbrooks', 'maya', 'leo', 'sam', 'ava', 'james'];
+/** Why someone wants each thing (any find not listed isn't asked for). */
+export const WANT_REASONS: Record<string, string> = {
+  teddy: "My little brother lost his teddy and he can't sleep.",
+  radio: 'My old radio finally broke, and I miss listening to the ball game.',
+  books: "I've read every book in my house twice!",
+  lamp: "It's so dark in my reading corner.",
+  chair: 'We have friends coming for dinner and not enough chairs.',
+  suitcase: "I'm going on a trip and my suitcase has a hole in it.",
+  skateboard: "Everyone at the park has a skateboard except me.",
+  guitar: "I want to start a band. I just need a guitar!",
+  painting: 'My living room wall looks so empty.',
+  console: "I'd love to play the old games I had as a kid.",
+  clock: 'I keep being late. I need a clock!',
+  trophy: 'I want a trophy for my bowling team, just for fun.',
+};
+export const wantReward = (id: string) => Math.ceil(item(id).value[1] * 1.5) + 2;
+const wantName = (id: string) => item(id).label.split(' ').slice(1).join(' ').toLowerCase();
+
+/** The job for "find me a ..." (its id says who and what, so it can be saved and rebuilt). */
+export function wantJob(giver: string, id: string): Job {
+  const reward = wantReward(id), it = item(id);
+  return {
+    id: `want:${giver}:${id}`, giver, title: `Find a ${wantName(id)}`, reward, cooldown: 0,
+    ask: `${WANT_REASONS[id] ?? ''} Could you find me ${/^[aeiou]/.test(wantName(id)) ? 'an' : 'a'} ${wantName(id)}? I'll give you $${reward}.`,
+    thanks: `${it.label.split(' ')[0]} Perfect, just what I needed. Thank you!`,
+    steps: [{ kind: 'bring', item: id, note: `find ${it.label} (storage units)` }],
+  };
+}
+/** A job by id, including item requests; null if it no longer exists (an old save). */
+export function jobById(id: string): Job | null {
+  const m = /^want:([a-z]+):([a-z]+)$/.exec(id);
+  if (m) return WANTERS.includes(m[1]) && WANT_REASONS[m[2]] && ITEMS.some(i => i.id === m[2]) ? wantJob(m[1], m[2]) : null;
+  return JOBS.find(j => j.id === id) ?? null;
+}
+/** A request to offer: a random person (not `busy`) and a random thing. */
+export function pickWant(rnd: () => number, busy: (who: string) => boolean): { giver: string; item: string } | null {
+  const who = WANTERS.filter(w => !busy(w)), things = Object.keys(WANT_REASONS);
+  if (!who.length) return null;
+  return { giver: who[Math.floor(rnd() * who.length)], item: things[Math.floor(rnd() * things.length)] };
+}

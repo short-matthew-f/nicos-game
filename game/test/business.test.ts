@@ -31,7 +31,7 @@ describe('the economy closes from the starting money', () => {
   it('a toy car sells for more than its parts cost, first one most of all', () => {
     expect(CAR_SALE.repeat).toBeGreaterThan(recipeCost());
     expect(CAR_SALE.first).toBeGreaterThan(CAR_SALE.repeat);
-    const b = freshBiz(); expect(carPrice(b)).toBe(CAR_SALE.first); b.sold = 1; expect(carPrice(b)).toBe(CAR_SALE.repeat);
+    const b = freshBiz(); expect(carPrice(b)).toBe(CAR_SALE.first); b.sold.car = 1; expect(carPrice(b)).toBe(CAR_SALE.repeat);
   });
   it('every car part can be bought at Parts & Tools', () => {
     for (const id of Object.keys(CAR_RECIPE)) expect(PARTS_FOR_SALE.some(p => p.id === id), id).toBe(true);
@@ -114,8 +114,8 @@ describe('what Nico owns', () => {
     expect(step(WORKBENCH.price)).toMatch(/Buy a workbench/);
     b.workbench = true; expect(step(0)).toMatch(/parts/);
     add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body'); expect(step(0)).toMatch(/Build/);
-    b.designs.push('car'); b.cars = 1; use(b, CAR_RECIPE); expect(step(0)).toMatch(/Sell/);
-    b.cars = 0; b.sold = 1; expect(step(0)).toBeNull();
+    b.designs.push('car'); b.stock.car = 1; use(b, CAR_RECIPE); expect(step(0)).toMatch(/Sell/);
+    b.stock.car = 0; b.sold.car = 1; expect(step(0)).toBeNull();
   });
   it('buying a unit hands over everything at once; selling takes it back off', () => {
     const b = freshBiz();
@@ -135,8 +135,8 @@ describe('what Nico owns', () => {
     expect(goalPlace(b, 0)).toBe('storage'); b.flips = 1;
     expect(goalPlace(b, 0)).toBeNull(); expect(goalPlace(b, WORKBENCH.price)).toBe('parts'); b.workbench = true;
     expect(goalPlace(b, 0)).toBe('parts'); add(b, 'wheel', 4); add(b, 'axle', 2); add(b, 'body');
-    expect(goalPlace(b, 0)).toBe('garage'); b.designs.push('car'); b.cars = 1;
-    expect(goalPlace(b, 0)).toBe('toys'); b.sold = 1; b.cars = 0;
+    expect(goalPlace(b, 0)).toBe('garage'); b.designs.push('car'); b.stock.car = 1;
+    expect(goalPlace(b, 0)).toBe('toys'); b.sold.car = 1; b.stock.car = 0;
     expect(goalPlace(b, 0)).toBeNull();
   });
 });

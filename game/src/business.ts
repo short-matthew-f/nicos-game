@@ -78,13 +78,12 @@ const SIZES: { size: Unit['size']; n: [number, number] }[] = [
 ];
 
 /** A random unit. Its price is set around what it's worth: usually a profit, sometimes not. */
-export function makeUnit(seed: number, name: string): Unit {
+export function makeUnit(seed: number, name: string, must?: string): Unit {
   const r = rng(seed), pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
   const sz = pick(SIZES), n = sz.n[0] + Math.floor(r() * (sz.n[1] - sz.n[0] + 1));
-  const contents = Array.from({ length: n }, () => {
-    const it = r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find'));
-    return { id: it.id, value: it.value[0] + Math.floor(r() * (it.value[1] - it.value[0] + 1)) };
-  });
+  const roll = (it: Item) => ({ id: it.id, value: it.value[0] + Math.floor(r() * (it.value[1] - it.value[0] + 1)) });
+  const contents = Array.from({ length: n }, () => roll(r() < 0.3 ? pick(ITEMS.filter(i => i.kind === 'part')) : pick(ITEMS.filter(i => i.kind === 'find'))));
+  if (must && !contents.some(c => c.id === must)) contents[contents.length - 1] = roll(item(must));   // (someone asked for one)
   const [lo, hi] = guess({ contents } as Unit, true);
   const price = Math.max(5, Math.round((lo + (hi - lo) * (0.25 + r() * 0.5)) * (0.7 + r() * 0.3)));
   const peek = [...new Set(contents.map(c => c.id))].slice(0, 2);
@@ -93,10 +92,26 @@ export function makeUnit(seed: number, name: string): Unit {
 
 /** Units up for auction: three of them, except the very first visit, which has only the
  * starter (so the first buy can't be a loss). */
-export function lineup(seed: number, firstTime: boolean): Unit[] {
+export function lineup(seed: number, firstTime: boolean, want?: string | null): Unit[] {
   if (firstTime) return [STARTER];
-  return ['A', 'B', 'C'].map((nm, i) => makeUnit(seed * 3 + i + 1, nm));
+  const units = ['A', 'B', 'C'].map((nm, i) => makeUnit(seed * 3 + i + 1, nm));
+  // someone wants a thing: make sure one unit has it, so a request never stalls on bad luck
+  if (want && !units.some(u => u.contents.some(c => c.id === want))) {
+    const i = seed % 3; units[i] = makeUnit(seed * 3 + i + 1, units[i].name, want);
+  }
+  // ...and it shows through the door, so it's clear which one to buy
+  if (want) for (const u of units) if (u.contents.some(c => c.id === want)) u.peek = [want, ...u.peek.filter(p => p !== want)].slice(0, 2);
+  return units;
 }
+/** Hand over one of these (the cheapest one, if there are several kept): false if Nico has none. */
+export function take(b: Biz, id: string): boolean {
+  if (item(id).kind === 'part') { if (!(b.items[id] > 0)) return false; add(b, id, -1); return true; }
+  let best = -1;
+  b.finds.forEach((f, i) => { if (f.id === id && (best < 0 || f.value < b.finds[best].value)) best = i; });
+  if (best < 0) return false;
+  b.finds.splice(best, 1); return true;
+}
+export const owns = (b: Biz, id: string) => (item(id).kind === 'part' ? (b.items[id] ?? 0) > 0 : b.finds.some(f => f.id === id));
 
 /** The estimate shown before buying: the real total is always inside it. Appraisers guess
  * closer (the exact lo..hi of what's in there); otherwise it's a wider guess. */
@@ -116,13 +131,13 @@ export interface Biz {
   finds: { id: string; value: number }[];   // things kept from storage units (the garage shelf), with what each is worth
   workbench: boolean;
   designs: string[];               // proven designs: 'car' once it passes the ramp test
-  cars: number;                    // toy cars built and not sold yet
-  sold: number;                    // toy cars sold, ever
+  stock: Record<string, number>;   // things Nico has built and not sold yet, by product ('car')
+  sold: Record<string, number>;    // sold, ever, by product
   flips: number;                   // storage units bought, ever
   skills: string[];
   seed: number;                    // which auction lineup is up
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], cars: 0, sold: 0, flips: 0, skills: [], seed: 1 });
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1 });
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>
@@ -158,14 +173,16 @@ export function sellOne(b: Biz, id: string, value: number): number {
 }
 export const shelfValue = (b: Biz) => b.finds.reduce((s, f) => s + sellPrice(f.value, b.skills.includes('appraiser')), 0);
 
-export const carPrice = (b: Biz) => (b.sold === 0 ? CAR_SALE.first : CAR_SALE.repeat);
+export const carPrice = (b: Biz) => (!b.sold.car ? CAR_SALE.first : CAR_SALE.repeat);
+/** Everything sold, all products. */
+export const soldAll = (b: Biz) => Object.values(b.sold).reduce((t, n) => t + n, 0);
 
 /** Where the next goal is (a building id), for the minimap star; null when it's not a place. */
 export function goalPlace(b: Biz, money: number): string | null {
   if (b.flips === 0) return 'storage';
   if (!b.workbench) return money >= WORKBENCH.price ? 'parts' : null;
   if (!b.designs.includes('car')) return missing(b, CAR_RECIPE).length ? 'parts' : 'garage';
-  if (b.sold === 0) return b.cars > 0 ? 'toys' : 'garage';
+  if (!b.sold.car) return b.stock.car ? 'toys' : 'garage';
   return null;
 }
 
@@ -178,6 +195,6 @@ export function nextGoal(b: Biz, money: number): string | null {
     if (need.length) return `🔩 Get car parts: ${need.map(([id, n]) => `${n} ${item(id).label.split(' ')[0]}`).join(' ')} (Parts & Tools)`;
     return '🚗 Build the toy car at your workbench (your garage)';
   }
-  if (b.sold === 0) return b.cars > 0 ? '🧸 Sell your toy car at the Toy Shop' : '🚗 Build a toy car at your workbench';
+  if (!b.sold.car) return b.stock.car ? '🧸 Sell your toy car at the Toy Shop' : '🚗 Build a toy car at your workbench';
   return null;
 }
