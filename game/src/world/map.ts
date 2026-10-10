@@ -94,8 +94,11 @@ export const TREES: [number, number][] = [
   [900, 2600], [700, 3330], [960, 3150], [80, 3440],                       // south-west
 ];
 
+/** Where the school bus pulls in (x along the park's south road; it drives west there). */
+export const BUS_STOPS: [number, number][] = [[1800, ROADS_Y[1] - LANE], [2600, ROADS_Y[1] - LANE]];
+
 /** Street furniture and bits of life, as data. Solid ones are added to SOLIDS. */
-export type PropKind = 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone';
+export type PropKind = 'busstop' | 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone';
 export interface Prop { kind: PropKind; x: number; y: number; color?: string; h?: number; stripe?: string }
 export const PROPS: Prop[] = [
   // park: fountain, benches round the pond, flower beds, the ice cream cart
@@ -119,6 +122,8 @@ export const PROPS: Prop[] = [
   { kind: 'cone', x: 3500, y: 3330 }, { kind: 'cone', x: 3560, y: 3330 }, { kind: 'cone', x: 3620, y: 3330 },
   // ice cream shop: a cart out front
   { kind: 'cart', x: 4500, y: 1720 },
+  // bus stops along the south edge of the park (the school bus runs the inner loop)
+  ...BUS_STOPS.map(([x]) => ({ kind: 'busstop' as const, x, y: ROADS_Y[1] - ROAD_W / 2 - SIDEWALK - 8 })),
 ];
 
 /** Street lamps and hydrants along the sidewalks: every so often on the grass side, skipping
@@ -184,6 +189,7 @@ export function propSolid(p: Prop): Rect | null {
     case 'table': return { x: p.x - 30, y: p.y - 14, w: 60, d: 16 };
     case 'fountain': return { x: p.x - 70, y: p.y - 34, w: 140, d: 46 };
     case 'cart': return { x: p.x - 50, y: p.y - 20, w: 100, d: 22 };
+    case 'busstop': return { x: p.x - 60, y: p.y - 18, w: 120, d: 20 };
     case 'parked': return Math.abs(Math.sin(p.h ?? 0)) > 0.7 ? { x: p.x - 42, y: p.y - 84, w: 84, d: 168 } : { x: p.x - 84, y: p.y - 42, w: 168, d: 84 };
     default: return null;
   }
@@ -196,7 +202,8 @@ const roadBand = ROAD_W / 2 + SIDEWALK;
 const busy: Rect[] = [...BUILDINGS.map(drawnRect), ...LOTS, ...DRIVEWAYS, ...TREES.map(([x, y]) => ({ x: x - 50, y: y - 40, w: 100, d: 60 })),
   ...ROADS_X.map(x => ({ x: x - roadBand, y: 0, w: roadBand * 2, d: WORLD.h })), ...ROADS_Y.map(y => ({ x: 0, y: y - roadBand, w: WORLD.w, d: roadBand * 2 })),
   // keep a clear lane from each door down toward the street
-  ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; })];
+  ...BUILDINGS.map(b => { const [dx, dy] = doorOf(b); return { x: dx - 50, y: dy - 10, w: 100, d: 600 }; }),
+  ...PROPS.map(p => { const r = propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 }; return { x: r.x - 40, y: r.y - 20, w: r.w + 80, d: r.d + 40 }; })];
 for (const p of streetProps()) {
   const r = propSolid(p) ?? { x: p.x - 10, y: p.y - 10, w: 20, d: 20 };
   if (PROPS.some(q => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < 160)) continue;   // no doubled-up lamps at corners

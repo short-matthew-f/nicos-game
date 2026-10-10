@@ -317,6 +317,16 @@ export function drawProp(p: Prop): Container {
       g.poly([x - 16, y, x, y - 40, x + 16, y]).fill('#FFFFFF').poly([x - 11, y - 3, x, y - 35, x + 11, y - 3]).fill('#F28C38')
        .rect(x - 7, y - 20, 14, 5).fill('#FFFFFF');
       break;
+    case 'busstop':
+      // a shelter: glass back, a roof, a bench, and the bus sign on a pole
+      sh(64, 9);
+      g.roundRect(x - 66, y - 118, 132, 122, 10).fill('#FFFFFF');
+      g.roundRect(x - 60, y - 112, 120, 104, 6).fill({ color: '#CFE6F7', alpha: 0.85 }).rect(x - 60, y - 112, 120, 12).fill('#34495E');
+      g.rect(x - 58, y - 100, 4, 100).fill('#34495E').rect(x + 54, y - 100, 4, 100).fill('#34495E');
+      g.roundRect(x - 44, y - 34, 88, 12, 4).fill('#C48A55').rect(x - 40, y - 22, 5, 22).fill('#34495E').rect(x + 35, y - 22, 5, 22).fill('#34495E');
+      g.rect(x + 70, y - 130, 5, 132).fill('#34495E').circle(x + 72, y - 136, 16).fill('#FFFFFF').circle(x + 72, y - 136, 12).fill('#F7C21B')
+       .roundRect(x + 64, y - 140, 16, 9, 2).fill('#2B3F55');
+      break;
     case 'parked': break;   // drawn as a car sprite by the caller
   }
   c.addChild(g); c.zIndex = y;

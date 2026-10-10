@@ -92,3 +92,17 @@ describe('traffic and a parked Nico car', () => {
     expect(c.s - s0).toBeGreaterThan(CAR.len);
   });
 });
+
+describe('school bus', () => {
+  it('pulls in at each stop, waits, and drives on', () => {
+    const bus = makeTraffic().find(c => c.isBus)!;
+    expect(bus.stops.length).toBe(2);
+    const waits: number[] = []; let still = 0;
+    for (let t = 0; t < 120; t += 1 / 30) {
+      bus.update(1 / 30, null, []);
+      if (bus.speed === 0) still += 1 / 30; else if (still > 0) { waits.push(still); still = 0; }
+    }
+    expect(waits.length).toBeGreaterThanOrEqual(2);
+    for (const w of waits) expect(w).toBeGreaterThan(3);
+  });
+});

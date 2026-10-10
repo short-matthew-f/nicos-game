@@ -364,3 +364,9 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 ## 2026-10-09 (overnight): the big map
 - **Tap the minimap** for a big map of the whole town: every building named, the playground, park and soccer field labelled, live dots (you in orange, your job in gold, friends, the fire truck, a fire). Tap anywhere to close. A touch on the minimap goes to the map instead of starting the thumbstick (`Input.reserved`/`onTap`). More minimap emoji: 🍦 🔧 📦.
 - e2e 79: the map opens without moving Nico, and a tap closes it.
+
+## 2026-10-09 (overnight): the school bus
+- One of the inner loop's cars is now a yellow school bus: long, with windows down both sides and black stripes. It pulls in for 3.5 s at two bus-stop shelters (glass back, bench, a bus sign) along the park's south edge, and traffic behind it waits.
+- **Correction (same bug as the fire truck):** the braking margin (10 px) was wider than the stop window (8 px), so the bus parked just short of its first stop forever. The window is now 12 px and the margin 6; the comment says why. A unit test runs the bus for 2 minutes and checks it waits more than 3 s at least twice.
+- Generated streetlamps now also keep clear of the hand-placed props.
+- Vitest 178, e2e 79.
