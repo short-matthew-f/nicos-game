@@ -71,7 +71,7 @@ export const POND = { x: 2040, y: 1720, w: 420, d: 250 };
 /** Playground equipment on the sand (positions are the front-left foot of each). Sized
  * against Nico (~132 px tall): the tower is a bit taller than him. */
 export const SLIDE = { x: 2010, y: 1500, w: 70, h: 175, top: 150, len: 240 };   // tower w x h, platform `top` above ground, chute reaches x + len
-export const SWINGS = { x: 2440, y: 1510, w: 210, h: 175, seats: [62, 148] };   // seat centre x offsets
+export const SWINGS = { x: 2440, y: 1510, w: 300, h: 175, seats: [75, 225] };   // seat centre x offsets
 export const SWING_BAR = SWINGS.y - SWINGS.h + 12, SWING_SEAT = SWINGS.y - 52;   // where the chains hang from, and the seat plank
 
 /** The soccer field: goals at each end (mouth facing the middle), and the ball's spot. */

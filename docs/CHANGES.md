@@ -447,3 +447,6 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
   - the sale and the quick build;
   - Appraiser;
   - a reload keeping everything.
+
+## 2026-10-10: wider swing set
+- Nico: the two swings were very close together. The frame is now 300 px wide (was 210) and the seats are 150 px apart (was 86), so Nico and Primo have a gap between them.
