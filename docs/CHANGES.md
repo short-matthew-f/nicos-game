@@ -276,3 +276,16 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Facing:** `chooseView` picks the nearest of 8 directions. Side and 3/4 views flip for the left. There's an 8° sticky band past each sector edge so diagonals don't flicker.
 - **Tests:** Vitest 148 (8 facings, sticky edges, parity). e2e 61: dragging in each diagonal gives qfront/qback with the right flip. Mutation: removing the diagonal facings went red in 4 e2e checks.
 - `mock_diag.py` now draws the rig's real diagonal art, and its output is identical.
+
+## 2026-10-09 (overnight): a livelier town, laid out properly
+- **Problem found while planning:** buildings draw their tall front walls upward from the footprint, and with walls 2.4× taller the roofs of Burger Barn, the fire station and the shops were sitting on the road above them. Auto-nudging them down just pushed them into other things (the school onto the playground, a house over Nico's door).
+- **New layout** (`map.ts`): roads are still laid out in plan units × K. Everything else is placed block by block in world px, with each building's drawn height in mind.
+  - Top row: three houses, the school, the hospital (with a car park and an ambulance).
+  - Middle row: Nico's house, garage and driveway, with a back garden; Burger Barn with patio umbrella tables; the playground; the park (pond with lily pads, a fountain, benches, flower beds); the fire station; and a new ice cream shop with a cart out front.
+  - Bottom row: the parts and toy shops with a soccer field behind them, the storage yard (cones, parked cars), and houses.
+  - Mailboxes and flowers in front gardens.
+  - Generated streetlamps along the sidewalks and a hydrant at each crossing. They're filtered so none lands on a road, building, lot, driveway or tree.
+  - Grass tufts so the lawns aren't flat.
+- **Places:** the ice cream shop sells a cone ($2), a root beer float ($3) and a sundae ($4), each with a speed boost.
+- **Routes:** James walks the middle block and stops in at Burger Barn. Primo plays at the swings, past the slide and round the fountain.
+- **Layout tests** (`test/layout.test.ts`): no building as drawn covers a road or sidewalk or leaves the world; buildings don't overlap; every door opens onto walkable ground; trees and props stay off roads, out of buildings and off the field; equipment is on the sand, the pond in the park, the goals at the field ends. These caught a bush inside the garage and lamps on a road. Vitest 153, e2e 61.

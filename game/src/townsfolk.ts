@@ -16,25 +16,22 @@ export const TOWNSFOLK: Townie[] = [
     // James walks the sidewalks round the middle block and stops in at Burger Barn
     who: 'james', name: 'James', speed: 150,
     route: [
-      { x: x0 + SW, y: y1 - SW }, { x: x0 + SW, y: y0 + SW, wait: 1 }, { x: x1 - SW, y: y0 + SW },
-      { x: x1 - SW, y: y1 - SW }, { x: burger[0], y: y1 - SW }, { x: burger[0], y: burger[1] + 30, wait: 6 },
-      { x: burger[0], y: y1 - SW },
+      { x: x0 + SW, y: y1 - SW }, { x: x0 + SW, y: burger[1] }, { x: burger[0], y: burger[1], wait: 6 }, { x: x0 + SW, y: burger[1] },
+      { x: x0 + SW, y: y0 + SW, wait: 1 }, { x: x1 - SW, y: y0 + SW }, { x: x1 - SW, y: y1 - SW },
     ],
-    lines: ['Hey Nico! Burger Barn fries are the best.', 'Did you see the fire truck go by?', 'Race you round the block!', "What are you building next?"],
+    lines: ['Hey Nico! Burger Barn fries are the best.', 'Did you see the fire truck go by?', 'Race you round the block!', 'What are you building next?', 'Want to play soccer later?'],
   },
   {
-    // Primo plays at the playground: the swings, a run round the slide, a look at the school
+    // Primo plays at the playground and round the pond: swings, past the slide, the fountain
     who: 'primo', name: 'Primo', speed: 165,
     route: [
       { x: SWINGS.x + SWINGS.seats[1], y: SWINGS.y + 34, swing: 1, wait: 9 },
-      { x: SLIDE.x + SLIDE.len + 40, y: SLIDE.y + 30, wait: 1.5 },
-      { x: SLIDE.x - 40, y: SLIDE.y + 34 },
-      { x: SLIDE.x - 40, y: door('school')[1] + 20 },
-      { x: door('school')[0], y: door('school')[1] + 20, wait: 3 },
-      { x: SWINGS.x + SWINGS.w + 40, y: door('school')[1] + 20 },
-      { x: SWINGS.x + SWINGS.w + 40, y: SWINGS.y + 34 },
+      { x: SLIDE.x + SLIDE.len + 50, y: SLIDE.y + 30, wait: 1.5 },
+      { x: SLIDE.x + SLIDE.len + 50, y: 1610 },
+      { x: 2640, y: 1610 }, { x: 2640, y: 1770, wait: 3 },        // watch the fountain
+      { x: 2880, y: 1770 }, { x: 2880, y: 1610 }, { x: SWINGS.x + SWINGS.w + 40, y: 1610 },
     ],
-    lines: ['Nico! Come swing with me!', 'I can go SO high.', 'Bet you can\'t catch me!', 'Can we get a milkshake?'],
+    lines: ['Nico! Come swing with me!', 'I can go SO high.', "Bet you can't catch me!", 'Can we get ice cream?', 'There are ducks in the pond!'],
   },
 ];
 

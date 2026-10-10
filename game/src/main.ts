@@ -1,5 +1,5 @@
 import { Application, Container } from 'pixi.js';
-import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, doorOf } from './world/map';
+import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, doorOf } from './world/map';
 import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
@@ -48,6 +48,12 @@ async function main() {
   app.stage.addChild(minimap.view);
   const { seats } = drawWorld(layer);
 
+  // parked cars (the ambulance and friends): static car sprites
+  for (const p of PROPS) if (p.kind === 'parked') {
+    const { view, turn } = carSprite(p.color ?? '#9FB7C9', false, p.stripe);
+    turn(p.h ?? 0); view.position.set(p.x, p.y); view.zIndex = p.y + CAR.wid * 0.4;
+    layer.addChild(view);
+  }
   const cars = makeTraffic(3);
   for (const c of cars) layer.addChild(c.view);
   const lead = leaders(cars);
@@ -211,6 +217,8 @@ async function main() {
     // stand Nico d px ahead of car i, in its lane (for the car-stops check)
     inFrontOf: (i: number, d: number) => { const c = cars[i], [x, y] = c.pos, h = c.loop.heading(c.s); nico.x = x + Math.cos(h) * d; nico.y = y + Math.sin(h) * d; },
     act: () => { action.spot?.run(); },
+    // test/inspection: show the whole town (zoom out to fit) until called again with false
+    overview: (on: boolean) => { overview = on; },
     alarm: () => truck.alarm(),
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };
@@ -220,6 +228,7 @@ async function main() {
   Object.assign(game, { build: BUILD_ID, checkUpdate: () => updater.check(true) });
   const input = new Input(host);
 
+  let overview = false;
   let zoom = 1, viewH = mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
   const applyZoom = () => {
     zoom = app.screen.height / viewH;
@@ -356,7 +365,7 @@ async function main() {
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
     // camera follows Nico (or his car, looking ahead), clamped to the world; eases the zoom
-    const wantH = mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
+    const wantH = overview ? Math.max(WORLD.h, WORLD.w * app.screen.height / app.screen.width) : mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
     if (Math.abs(viewH - wantH) > 0.5) { viewH += (wantH - viewH) * Math.min(1, dt * 3); applyZoom(); }
     const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : nico.x;
     const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : nico.y - 40;

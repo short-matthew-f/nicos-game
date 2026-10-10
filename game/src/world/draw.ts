@@ -2,7 +2,7 @@
 // navy shadow offset down-right. Static things draw the band as geometry (cheap);
 // only characters use the live outline filter.
 import { Container, Graphics, Text } from 'pixi.js';
-import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
+import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, type Building } from './map';
 
 export const NAVY = 0x2B3F55;
 const BAND = 7, SH = { x: 6, y: 10, a: 0.18 };
@@ -17,7 +17,25 @@ function stickerRect(g: Graphics, x: number, y: number, w: number, h: number, r:
 export function drawGround(): Graphics {
   const g = new Graphics();
   g.rect(0, 0, WORLD.w, WORLD.h).fill(GRASS);
+  // a scatter of lighter and darker grass tufts so the lawns aren't flat
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 900; i++) {
+    const x = rnd() * WORLD.w, y = rnd() * WORLD.h, c = rnd() < 0.5 ? '#AFD392' : '#C6E3AA';
+    g.ellipse(x, y, 10 + rnd() * 14, 4 + rnd() * 4).fill(c);
+  }
   for (const l of LOTS) g.roundRect(l.x, l.y, l.w, l.d, 18).fill(l.fill);
+  // soccer field markings
+  const F = FIELD, lw = 5;
+  g.roundRect(F.x + 14, F.y + 14, F.w - 28, F.d - 28, 6).stroke({ width: lw, color: '#F4F6F8' });
+  g.rect(F.x + F.w / 2 - lw / 2, F.y + 14, lw, F.d - 28).fill('#F4F6F8');
+  g.circle(F.x + F.w / 2, F.y + F.d / 2, 62).stroke({ width: lw, color: '#F4F6F8' });
+  for (const gl of GOALS) g.rect(gl.side < 0 ? F.x + 14 : F.x + F.w - 14 - 150, F.y + F.d / 2 - 110, 150, 220).stroke({ width: lw, color: '#F4F6F8' });
+  for (let i = 0; i < 7; i++) g.rect(F.x + 14 + i * (F.w - 28) / 7, F.y + 14, (F.w - 28) / 14, F.d - 28).fill({ color: '#FFFFFF', alpha: 0.06 });   // mown stripes
+  // the pond: a sandy edge, water, a lighter shimmer
+  g.ellipse(POND.x + POND.w / 2, POND.y + POND.d / 2, POND.w / 2 + 12, POND.d / 2 + 12).fill('#E3D3A6');
+  g.ellipse(POND.x + POND.w / 2, POND.y + POND.d / 2, POND.w / 2, POND.d / 2).fill('#6FB7D8');
+  g.ellipse(POND.x + POND.w / 2 - 40, POND.y + POND.d / 2 - 30, POND.w / 4, POND.d / 6).fill({ color: '#FFFFFF', alpha: 0.25 });
+  for (const [dx, dy] of [[-150, 60], [140, -70], [100, 70]]) g.ellipse(POND.x + POND.w / 2 + dx, POND.y + POND.d / 2 + dy, 22, 12).fill('#5FAF6A');   // lily pads
   for (const r of DRIVEWAYS) g.rect(r.x, r.y, r.w, r.d).fill(KERB);
   const half = ROAD_W / 2;
   // sidewalks, then roads on top
@@ -147,8 +165,101 @@ export function drawPlayground(): { items: Container[]; seats: Seat[] } {
   return { items: [a, b, ...seatParts.flatMap(p => [p.plank, p.chains])], seats };
 }
 
+/** Street furniture and bits of life (data in map.ts PROPS). (x, y) is where it meets the ground. */
+export function drawProp(p: Prop): Container {
+  const c = new Container(), g = new Graphics();
+  const { x, y } = p;
+  const sh = (w: number, h: number, oy = 0) => g.ellipse(x + SH.x, y + oy + 3, w, h).fill({ color: NAVY, alpha: SH.a });
+  switch (p.kind) {
+    case 'lamp':
+      sh(14, 5);
+      g.roundRect(x - 5 - BAND / 2, y - 150, 10 + BAND, 152, 5).fill('#FFFFFF').roundRect(x - 5, y - 148, 10, 148, 4).fill('#34495E');
+      g.roundRect(x - 18, y - 168, 36, 24, 10).fill('#FFFFFF').roundRect(x - 14, y - 164, 28, 18, 8).fill('#34495E')
+       .roundRect(x - 10, y - 152, 20, 8, 3).fill('#FFE9A8');
+      break;
+    case 'hydrant':
+      sh(14, 5);
+      g.roundRect(x - 13, y - 44, 26, 46, 10).fill('#FFFFFF').roundRect(x - 9, y - 40, 18, 40, 7).fill('#E5484D')
+       .roundRect(x - 13, y - 30, 26, 8, 4).fill('#C2353A').circle(x, y - 42, 6).fill('#C2353A');
+      break;
+    case 'mailbox':
+      sh(12, 4);
+      g.rect(x - 3, y - 50, 6, 50).fill('#8A5A3B');
+      g.roundRect(x - 18, y - 76, 36, 30, 12).fill('#FFFFFF').roundRect(x - 14, y - 72, 28, 22, 10).fill('#5B8FD6').rect(x + 10, y - 82, 4, 14).fill('#E5484D');
+      break;
+    case 'bench':
+      sh(48, 8);
+      g.roundRect(x - 50, y - 52, 100, 46, 8).fill('#FFFFFF');
+      g.roundRect(x - 44, y - 48, 88, 12, 4).fill('#B07A4A').roundRect(x - 44, y - 30, 88, 12, 4).fill('#C48A55')
+       .rect(x - 40, y - 18, 6, 18).fill('#34495E').rect(x + 34, y - 18, 6, 18).fill('#34495E');
+      break;
+    case 'bush':
+      sh(30, 8);
+      g.circle(x - 16, y - 22, 24).fill('#FFFFFF').circle(x + 14, y - 24, 26).fill('#FFFFFF');
+      g.circle(x - 16, y - 22, 18).fill('#4E9A5B').circle(x + 14, y - 24, 20).fill('#5FAF6A').circle(x + 4, y - 34, 10).fill('#7CC383');
+      break;
+    case 'flowers':
+      for (let i = 0; i < 9; i++) {
+        const fx = x - 50 + (i % 5) * 25 + (i > 4 ? 12 : 0), fy = y - 8 - (i > 4 ? 16 : 0);
+        g.rect(fx - 1, fy, 2, 10).fill('#4E9A5B').circle(fx, fy, 7).fill(p.color ?? '#F06A8A').circle(fx, fy, 2.5).fill('#FFE29A');
+      }
+      break;
+    case 'table':
+      sh(32, 7);
+      g.rect(x - 2, y - 74, 4, 70).fill('#34495E');
+      g.roundRect(x - 34, y - 34, 68, 14, 5).fill('#FFFFFF').roundRect(x - 30, y - 32, 60, 10, 4).fill('#C48A55');
+      g.poly([x - 46, y - 74, x, y - 104, x + 46, y - 74]).fill('#FFFFFF').poly([x - 40, y - 76, x, y - 100, x + 40, y - 76]).fill(p.color ?? '#D9534F');
+      g.poly([x - 13, y - 76, x, y - 100, x + 13, y - 76]).fill('#FFFFFF');
+      break;
+    case 'fountain':
+      sh(74, 14);
+      g.ellipse(x, y - 14, 76, 26).fill('#FFFFFF').ellipse(x, y - 14, 68, 20).fill('#B8C3CF').ellipse(x, y - 18, 58, 14).fill('#7CC6E6');
+      g.roundRect(x - 10, y - 70, 20, 56, 6).fill('#FFFFFF').roundRect(x - 6, y - 66, 12, 52, 5).fill('#B8C3CF');
+      g.ellipse(x, y - 70, 30, 9).fill('#FFFFFF').ellipse(x, y - 70, 24, 6).fill('#7CC6E6');
+      g.circle(x, y - 84, 8).fill({ color: '#CFEFFF', alpha: 0.9 }).circle(x - 14, y - 76, 5).fill({ color: '#CFEFFF', alpha: 0.8 }).circle(x + 14, y - 76, 5).fill({ color: '#CFEFFF', alpha: 0.8 });
+      break;
+    case 'cart':
+      sh(52, 9);
+      g.roundRect(x - 56, y - 74, 112, 64, 12).fill('#FFFFFF').roundRect(x - 50, y - 68, 100, 52, 9).fill('#FFD6E0')
+       .rect(x - 50, y - 46, 100, 8).fill('#7FD1C1');
+      g.circle(x - 30, y - 8, 12).fill('#FFFFFF').circle(x - 30, y - 8, 8).fill('#34495E').circle(x + 30, y - 8, 12).fill('#FFFFFF').circle(x + 30, y - 8, 8).fill('#34495E');
+      g.rect(x - 2, y - 130, 4, 60).fill('#34495E');
+      g.poly([x - 60, y - 120, x, y - 150, x + 60, y - 120]).fill('#FFFFFF').poly([x - 54, y - 122, x, y - 146, x + 54, y - 122]).fill('#F06A8A');
+      g.poly([x - 18, y - 122, x, y - 146, x + 18, y - 122]).fill('#FFFFFF');
+      g.poly([x + 22, y - 82, x + 30, y - 60, x + 38, y - 82]).fill('#E3A857').circle(x + 30, y - 86, 9).fill('#B8F0D8');   // a cone on top
+      break;
+    case 'cone':
+      sh(14, 4);
+      g.poly([x - 16, y, x, y - 40, x + 16, y]).fill('#FFFFFF').poly([x - 11, y - 3, x, y - 35, x + 11, y - 3]).fill('#F28C38')
+       .rect(x - 7, y - 20, 14, 5).fill('#FFFFFF');
+      break;
+    case 'parked': break;   // drawn as a car sprite by the caller
+  }
+  c.addChild(g); c.zIndex = y;
+  return c;
+}
+
+/** A goal: two posts, a crossbar and a net, mouth facing the middle of the field. */
+export function drawGoal(gx: number, gy: number, side: number): Container {
+  const g = new Graphics(), half = GOAL_MOUTH / 2, depth = 46 * side;
+  // net (behind), then the frame
+  const net = [gx, gy - half - 78, gx + depth, gy - half - 40, gx + depth, gy + half, gx, gy + half];
+  g.poly(net).fill({ color: '#FFFFFF', alpha: 0.45 });
+  for (let i = 1; i < 8; i++) g.rect(gx + (depth < 0 ? depth : 0), gy - half - 70 + i * ((GOAL_MOUTH + 70) / 8), Math.abs(depth), 2).fill({ color: '#FFFFFF', alpha: 0.8 });
+  for (let i = 1; i < 4; i++) g.rect(gx + depth * i / 4 - 1, gy - half - 70 + 10 * i, 2, GOAL_MOUTH + 60 - 10 * i).fill({ color: '#FFFFFF', alpha: 0.8 });
+  g.poly(net).stroke({ width: 3, color: '#FFFFFF' });
+  g.roundRect(gx - 7, gy - half - 78, 14, 84, 6).fill('#FFFFFF').roundRect(gx - 7, gy + half - 78, 14, 84, 6).fill('#FFFFFF')
+   .roundRect(gx - 7, gy - half - 78, 14, GOAL_MOUTH + 10, 6).fill('#FFFFFF');
+  g.roundRect(gx - 4, gy - half - 75, 8, 78, 4).fill('#E9EEF3').roundRect(gx - 4, gy + half - 75, 8, 78, 4).fill('#E9EEF3')
+   .roundRect(gx - 4, gy - half - 75, 8, GOAL_MOUTH + 4, 4).fill('#E9EEF3');
+  const c = new Container(); c.addChild(g); c.zIndex = gy + half;
+  return c;
+}
+
 export function drawWorld(layer: Container): { seats: Seat[] } {
   for (const b of BUILDINGS) layer.addChild(drawBuilding(b));
+  for (const p of PROPS) if (p.kind !== 'parked') layer.addChild(drawProp(p));
+  for (const gl of GOALS) layer.addChild(drawGoal(gl.x, gl.y, gl.side));
   for (const [x, y] of TREES) layer.addChild(drawTree(x, y));
   const pg = drawPlayground();
   for (const p of pg.items) layer.addChild(p);
