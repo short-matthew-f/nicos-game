@@ -219,6 +219,10 @@ LOOKS = {
     'mrbrooks': Look('mrbrooks', skin='#7A4A2E', skin2='#673D25', hair='#1A1411', style='short', top='hoodie',
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
+    # works the counter at Burger Barn: red-and-white uniform
+    'cook': Look('cook', skin='#E8B48E', skin2='#D69C76', hair='#3A2A20', style='short', top='tee',
+                 shirt='#E5484D', shirt2='#C93B40', sleeve='#FFFFFF', trim='#FFFFFF',
+                 pants='#2F343C', pants2='#272B32', shoe='#2F343C', shoe2='#272B32', height=1.12),
 }
 
 @contextmanager

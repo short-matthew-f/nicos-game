@@ -5,7 +5,7 @@ export interface Place { building: string; title: string; text: string; menu?: M
 export const BOOST = { speed: 1.35, max: 180 };   // walk-speed multiplier while full of lunch; cap in s
 
 export const PLACES: Place[] = [
-  { building: 'burger', title: 'Burger Barn', action: 'Order lunch', text: 'What can I get you?', menu: [
+  { building: 'burger', title: 'Burger Barn', action: 'Go in', text: 'What can I get you?', menu: [   // (you go inside to order: world/rooms.ts)
     { id: 'burger', label: '🍔 Burger', price: 5, boost: 90 },
     { id: 'fries', label: '🍟 Fries', price: 3, boost: 40 },
     { id: 'shake', label: '🥤 Milkshake', price: 4, boost: 60 },

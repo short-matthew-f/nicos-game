@@ -567,3 +567,16 @@ After that, more cars are a three-tap quick build. The **Appraiser** skill unloc
 - **🛟 Float on a ring:** the action button toggles a red-and-white ring. He floats higher and bobs slower.
 - **🪜 Climb out:** offered within 46 px of an edge. He steps straight out onto the deck, or a step along the edge if a lounger's in the way (found by a test).
 - **Tests:** climbing out anywhere round the edge lands on free deck; the slide ends in the water, away from the edge. e2e: the slide, splash, swim, ring, climb out, jump in from the deck, climb out again (158 checks).
+
+## 2026-10-10: building insides: Burger Barn (Nico's idea)
+- **"Buildings should have insides."** Tapping **Go in** at Burger Barn now takes Nico inside. The town is hidden but keeps running (traffic, people, animals, fires); anything in the town that cares where Nico is uses his spot outside the door (`here()`).
+- **The room** (`world/rooms.ts`) is data (`ROOMS`): its size, the back wall with the **menu board** (drawn from the same `PLACES` menu), a counter with the **cook** behind it, tables with stools, and the door.
+  - The cook is a new look in `people.py`: a red-and-white uniform. Nico's art is unchanged (md5).
+  - The counter and tables were moved down after a screenshot showed the cook's head covering the menu.
+- **Ordering:** at the counter, **🍔 Order** opens the cook's menu ("Hi there! What can I get you?"). Buying puts the food on a **tray**, and Nico carries it in both hands.
+- **Eating:** at a table, **🍽️ Sit and eat**. Nico sits side-on on the left stool, with his tray on the table, and eats for 3 seconds. Then comes the speed boost, which now arrives when you eat, not when you pay.
+  - The stools draw behind him; at first they hid him.
+  - Without food it's **🪑 Sit down**.
+- **🚪 Leave** at the door puts him back outside. Leaving with uneaten food eats it on the way out, so it's never lost. The camera keeps to the room's walls, and the minimap is hidden inside.
+- **Ice cream next**, the same room with a different menu, once Nico has seen this one.
+- **e2e:** go in, order fries (money, then a tray, no boost yet), sit and eat (then the boost), leave back to the door, the $2 case, tap-outside closes the card (166 checks).

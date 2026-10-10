@@ -23,6 +23,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, type Room } from './world/rooms';
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
@@ -51,7 +52,7 @@ async function main() {
   const resolution = Math.min(window.devicePixelRatio || 1, 2);
   await app.init({ resizeTo: host, background: '#B9DA9C', antialias: true, resolution, autoDensity: true, preference: 'webgl' });
   host.appendChild(app.canvas);
-  await loadArt(['nico', ...TOWNSFOLK.map(t => t.who)]);
+  await loadArt(['nico', 'cook', ...TOWNSFOLK.map(t => t.who)]);
 
   const world = new Container();
   const layer = new Container(); layer.sortableChildren = true;
@@ -91,7 +92,7 @@ async function main() {
   const pigeons = new Pigeons(); for (const v of pigeons.views) layer.addChild(v);
   // only flocks Nico can see make a sound: cars and people scatter them all over town
   let scatters = 0;   // every flock take-off in town (for tests)
-  pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]; if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
+  pigeons.onScatter = (x, y) => { scatters++; const [mx, my] = mode === 'drive' ? [car.x, car.y] : here(); if (Math.hypot(x - mx, y - my) < 600) sfx.flap(); };
   const coins = new Coins(); for (const v of coins.views) layer.addChild(v);
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   const animals = new Animals(); for (const a of animals.list) { a.view.cullable = true; layer.addChild(a.view); }
@@ -125,6 +126,9 @@ async function main() {
   // ---- the save: money, and where Nico and his car were (if that's still a valid spot)
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
+  // inside a building: the room, and where Nico is outside (the town only ever sees that)
+  let room: { r: Room; view: Container; layer: Container; solids: { x: number; y: number; w: number; d: number }[]; worker: PersonView; outside: [number, number] } | null = null;
+  let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
   if (saved.job) {
@@ -134,6 +138,8 @@ async function main() {
   const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new PersonView() };
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
+  /** Where Nico is in the town (outside the door, while he's in a building). */
+  const here = (): [number, number] => (room ? room.outside : [nico.x, nico.y]);
 
   const car: CarState = { ...PARKED_CAR, speed: 0 };
   if (saved.car && carFits(saved.car.x, saved.car.y, saved.car.h, SOLIDS, WORLD)) Object.assign(car, saved.car, { speed: 0 });
@@ -142,7 +148,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: nico.x, y: nico.y }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -171,7 +177,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat'; t: number; from: [number, number]; seat: number } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -187,6 +193,7 @@ async function main() {
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
     if (play.kind === 'camera') viewfinder.hidden = true;
+    if (play.kind === 'eat') { nico.x = play.from[0] + STOOL; nico.y = play.from[1] + SEAT; tableTray?.view.destroy(); tableTray = null; }
     if (play.kind === 'swim') { waterSkin.visible = ring.visible = false; nico.view.root.mask = null; swimMask.clear(); floating = false; const [ox, oy] = climbOut(nico.x, nico.y); nico.x = ox; nico.y = oy; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
@@ -219,7 +226,7 @@ async function main() {
   document.getElementById('vf-close')!.addEventListener('click', () => stopPlay());
   const snapSpot: Spot = { id: 'snap', x: 0, y: 0, r: Infinity, label: '📸 Snap!', run: snap };
   const cameraSpot: Spot = { id: 'camera', x: 0, y: 0, r: Infinity, priority: -0.5, label: '📷 Camera', run: startCamera,
-    when: () => mode === 'walk' && biz.tools.includes('camera') && animals.list.some(a => Math.hypot(a.x - nico.x, a.y - nico.y) < CAM.reach) };
+    when: () => mode === 'walk' && !room && biz.tools.includes('camera') && animals.list.some(a => Math.hypot(a.x - nico.x, a.y - nico.y) < CAM.reach) };
   // the pool: the water slide, swimming (the water hides his legs), floating on a ring
   // (a mask cuts him off at the waterline, so the pool, its ropes and shimmer show below; a ripple rings him)
   const waterSkin = new Graphics().ellipse(0, -36, 50, 11).stroke({ width: 5, color: '#FFFFFF', alpha: 0.7 }).ellipse(0, -36, 40, 7).fill({ color: '#7CD3EF', alpha: 0.6 });
@@ -324,6 +331,7 @@ async function main() {
       ]);
     },
     parts: p => showParts(p),
+    burger: () => enterRoom('burger'),
     cabin: p => {
       const pics = Object.keys(biz.photos), fresh = pics.filter(k => !biz.shown.includes(k)), all = Object.keys(ANIMAL_KINDS).length;
       showCard('cabin', p.title, pics.length
@@ -382,6 +390,61 @@ async function main() {
     ]);
   }
   const goalEl = document.getElementById('goal')!;
+  /** What Nico can do inside the room he's in. */
+  function roomSpots(): Spot[] {
+    if (!room) return [];
+    const r = room.r;
+    return [
+      { id: 'order', x: r.order[0], y: r.order[1], r: 110, label: carrying ? '🍔 Find a table' : '🍔 Order', run: () => orderAt(r.id) },
+      ...r.tables.map(([x, y], i) => ({ id: `table${i}`, x, y: y + SEAT, r: 90, label: carrying ? '🍽️ Sit and eat' : '🪑 Sit down', run: () => sitAt(i) })),
+      { id: 'leave', x: r.door[0], y: r.door[1], r: 110, label: '🚪 Leave', run: leaveRoom },
+    ];
+  }
+  // ---- inside buildings (Burger Barn): order at the counter, carry the tray to a table, eat
+  const trayView = trayArt('🍔'); trayView.visible = false;
+  let tableTray: { view: { destroy(): void } } | null = null;
+  function enterRoom(id: string) {
+    const r = ROOMS[id], place = PLACES.find(p => p.building === id)!;
+    const { view, layer: rl } = drawRoom(r, (place.menu ?? []).map(m => ({ label: m.label, price: m.price })));
+    const worker = new PersonView(r.worker.who); worker.setZoom(zoom, resolution); rl.addChild(worker.root);
+    worker.pose(r.worker.x, r.worker.y, neutral('front')); worker.root.zIndex = r.worker.y;
+    room = { r, view, layer: rl, solids: roomSolids(r), worker, outside: [nico.x, nico.y] };
+    app.stage.addChildAt(view, app.stage.getChildIndex(world) + 1); view.scale.set(zoom);
+    world.visible = false; minimap.view.visible = false;
+    rl.addChild(nico.view.root, trayView);
+    [nico.x, nico.y] = r.enter; Object.assign(nico.st, { view: 'back' });
+    sfx.door(); persist();
+  }
+  function leaveRoom() {
+    if (!room) return;
+    const [ox, oy] = room.outside;
+    layer.addChild(nico.view.root); trayView.removeFromParent(); trayView.visible = false; tableTray?.view.destroy(); tableTray = null;
+    room.view.destroy({ children: true }); room = null;
+    world.visible = true; minimap.view.visible = true;
+    nico.x = ox; nico.y = oy + 30; Object.assign(nico.st, { view: 'front' });
+    if (carrying) { toast('You ate your lunch on the way out. Yum!'); boost = Math.min(BOOST.max, boost + carrying.boost); carrying = null; }
+    persist();
+  }
+  function orderAt(id: string) {
+    const place = PLACES.find(p => p.building === id)!;
+    if (carrying) { toast(`Cook: "Enjoy your ${carrying.label.split(' ').slice(1).join(' ').toLowerCase()}! Grab a table."`); return; }
+    showCard(`order:${id}`, place.title, `Cook: "Hi there! What can I get you?"`, (place.menu ?? []).map(m => ({
+      label: m.label, sub: `$${m.price}`, id: m.id, disabled: m.price > state.money,
+      onClick: () => {
+        if (m.price > state.money) return;
+        state.money -= m.price; showMoney(); persist(); sfx.tap();
+        carrying = { label: m.label, boost: m.boost };
+        trayView.removeChildren().forEach(c => c.destroy()); trayView.addChild(...trayArt(m.label.split(' ')[0]).removeChildren()); trayView.visible = true;
+        toast(`Cook: "One ${m.label.split(' ').slice(1).join(' ').toLowerCase()}, coming up! Find a table."`);
+      },
+    })), 'Not now');
+  }
+  function sitAt(i: number) {
+    if (!room) return;
+    const [tx, ty] = room.r.tables[i];
+    mode = 'play'; play = { kind: 'eat', t: 0, from: [tx - STOOL, ty + 12], seat: i };   // on the left stool
+    if (carrying) { trayView.visible = false; const t = trayArt(carrying.label.split(' ')[0]); t.position.set(tx, ty - 30); t.zIndex = ty + 15; room.layer.addChild(t); tableTray = { view: t }; }
+  }
   function startDig() {
     const n = treasure.nearest(nico.x, nico.y);
     if (n.d > DETECT.dig) return;
@@ -408,7 +471,7 @@ async function main() {
   const detectorEl = document.getElementById('detector')!;
 
   const digSpot: Spot = { id: 'dig', x: 0, y: 0, r: DETECT.dig, priority: 0.8, label: '⛏️ Dig!', run: startDig,
-    when: () => mode === 'walk' && biz.tools.includes('detector') };
+    when: () => mode === 'walk' && !room && biz.tools.includes('detector') };
   const spots: Spot[] = [
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
     { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
@@ -508,7 +571,7 @@ async function main() {
     // someone Nico's doing a job for (or who has one to offer) waits for him when he's close,
     // instead of walking off; a job with a meeting place sends them there and back
     if (l.swingT < 0) {
-      const [mx, my] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y];
+      const [mx, my] = mode === 'drive' ? [car.x, car.y] : here();
       const near = Math.hypot(mx - l.w.x, my - l.w.y);
       const mine = !!job && job.job.giver === l.t.who, meet = mine ? job!.job.meet : undefined;
       if (meet && !l.met) { l.met = [l.w.x, l.w.y]; l.trip = [[meet[0][0], l.w.y], ...meet]; }   // along her own street first
@@ -590,8 +653,9 @@ async function main() {
   let zoom = 1, viewH = mode === 'drive' ? VIEW_H_DRIVE : VIEW_H;
   const applyZoom = () => {
     zoom = app.screen.height / viewH;
-    world.scale.set(zoom);
+    world.scale.set(zoom); room?.view.scale.set(zoom);
     for (const n of [nico, ...walkers, ...locals]) n.view.setZoom(zoom, resolution);
+    room?.worker.setZoom(zoom, resolution);
   };
   applyZoom();
   app.renderer.on('resize', applyZoom);
@@ -654,6 +718,14 @@ async function main() {
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
+      } else if (play.kind === 'eat') {
+        // sitting at the table (back to us, facing it); with food, a few seconds' eating, then the boost
+        b = { x: play.from[0], y: play.from[1], view: 'side', face: 1, amp: 0, crouch: 1, hold: carrying ? 0.6 + 0.4 * Math.abs(Math.sin(play.t * 5)) : 0, sit: 1, z: play.from[1] + 20, sy: 1 };   // (in front of the table: sitting at it)
+        if (carrying && play.t >= 3) {
+          boost = Math.min(BOOST.max, boost + carrying.boost); sfx.coin();
+          toast(`Yum! ${carrying.label}. You feel speedy! ⚡`); carrying = null; tableTray?.view.destroy(); tableTray = null;
+        }
+        if (!carrying && Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
       } else if (play.kind === 'waterslide') {
         const w = waterSlideAt(play.t);
         if (w) b = w;
@@ -700,10 +772,13 @@ async function main() {
     if (mode === 'walk' && !frozen) {
       const vx = input.vx * WALK_SPEED * fast, vy = input.vy * WALK_SPEED * fast;
       const sp = Math.hypot(input.vx, input.vy);
-      [nico.x, nico.y] = moveCircle(nico.x, nico.y, vx * dt, vy * dt, SOLIDS, WORLD);
+      [nico.x, nico.y] = room ? moveCircle(nico.x, nico.y, vx * dt, vy * dt, room.solids, { w: room.r.w, h: room.r.h - 20 })
+        : moveCircle(nico.x, nico.y, vx * dt, vy * dt, SOLIDS, WORLD);
       Object.assign(nico.st, chooseView(vx, vy, nico.st));
+      if (room && carrying) nico.st.hold = 1;   // carrying the tray in both hands
       stepGait(nico.st, sp * WALK_SPEED * fast, vy, dt);
       nico.view.pose(nico.x, nico.y, nico.st);
+      if (room) { trayView.position.set(nico.x, nico.y - 66); trayView.zIndex = nico.y + 1; }
     } else if (mode === 'drive') {
       const prevH = car.h;
       if (frozen) steer(car, 0, 0, dt); else steer(car, input.vx, input.vy, dt);
@@ -739,7 +814,7 @@ async function main() {
     // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
     if (goalReset > 0) { goalReset -= dt; if (goalReset <= 0) Object.assign(ball, kickoff()); }
     else {
-      if (mode === 'walk' && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
+      if (mode === 'walk' && !room && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
       if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) { sfx.kick(); break; }
       for (const l of locals) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
       // traffic nudges it off the road to the side, rather than driving over and hiding it
@@ -756,20 +831,20 @@ async function main() {
     ducks.update(dt);
     for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
     splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
-    animals.update(dt, [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y]]);
+    animals.update(dt, [mode === 'drive' ? [car.x, car.y] : here()]);
     clouds.update(dt);
-    const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y], ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
+    const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : here(), ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
     pigeons.update(dt, movers);
-    const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : [[nico.x, nico.y]]);
+    const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : room ? [] : [[nico.x, nico.y]]);
     // the beach: shells underfoot, the detector's beeps, old holes filling in
-    for (const k of shells.update(dt, mode === 'walk' ? [nico.x, nico.y] : null)) {
+    for (const k of shells.update(dt, mode === 'walk' && !room ? [nico.x, nico.y] : null)) {
       const first = !biz.shells[k]; biz.shells[k] = (biz.shells[k] ?? 0) + 1; persist(); sfx.shell();
       const kinds = SHELL_KINDS.filter(q => biz.shells[q.id]).length, sh = SHELL_KINDS.find(q => q.id === k)!;
       toast(`🐚 ${first ? 'A new kind: ' : ''}${sh.label}! (${kinds} of ${SHELL_KINDS.length} kinds)`);
     }
     for (const h of holes) { h.t -= dt; h.view.alpha = Math.min(1, h.t / 4); if (h.t <= 0) h.view.destroy(); }
     holes.splice(0, holes.length, ...holes.filter(h => h.t > 0));
-    const detecting = mode === 'walk' && biz.tools.includes('detector') && onBeach(nico.x, nico.y);
+    const detecting = mode === 'walk' && !room && biz.tools.includes('detector') && onBeach(nico.x, nico.y);
     if (detecting) {
       const n = treasure.nearest(nico.x, nico.y), gap = beepGap(n.d);
       digSpot.x = treasure.spots[n.i][0]; digSpot.y = treasure.spots[n.i][1];
@@ -784,7 +859,7 @@ async function main() {
     }
     if (got) { state.money += got * COIN.value; showMoney(); persist(); sfx.coin(); toast(`🪙 Found a coin! +$${got * COIN.value}`); }
     // quacks when Nico's near the pond; honks from cars he's been holding up
-    const me: [number, number] = mode === 'drive' ? [car.x, car.y] : [nico.x, nico.y];
+    const me: [number, number] = mode === 'drive' ? [car.x, car.y] : here();
     quackIn -= dt;
     if (quackIn <= 0) { quackIn = 3 + Math.random() * 6; if (Math.hypot(me[0] - (POND.x + POND.w / 2), me[1] - (POND.y + POND.d / 2)) < 420) sfx.quack(); }
     for (const c of cars) if (c.waitedOnNico > 1.2 && c.honked > 4 && Math.hypot(c.pos[0] - me[0], c.pos[1] - me[1]) < 700) { sfx.honk(); c.honked = 0; }
@@ -792,7 +867,7 @@ async function main() {
     // traffic brakes for Nico on foot, and for every part of his car
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
-    if (mode !== 'drive') mine.push([nico.x, nico.y, 'nico']);
+    if (mode !== 'drive' && !room) mine.push([nico.x, nico.y, 'nico']);
     for (const l of locals) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
@@ -810,7 +885,7 @@ async function main() {
     spots[0].x = car.x; spots[0].y = car.y;
     cameraSpot.x = nico.x; cameraSpot.y = nico.y;
     action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
-      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : play?.kind === 'swim' ? swimSpot : null) : nearest(spots, nico.x, nico.y));
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : play?.kind === 'swim' ? swimSpot : play?.kind === 'eat' && !carrying ? standUp : null) : room ? nearest(roomSpots(), nico.x, nico.y) : nearest(spots, nico.x, nico.y));
     boostEl.hidden = boost <= 0;
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
@@ -820,9 +895,11 @@ async function main() {
     const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[0] : nico.x;
     const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[1] : nico.y - 40;
     const vw = app.screen.width / zoom, vh = app.screen.height / zoom;
-    const cx = Math.min(WORLD.w - vw / 2, Math.max(vw / 2, fx));
-    const cy = Math.min(WORLD.h - vh / 2, Math.max(vh / 2, fy));
+    const bw = room ? room.r.w : WORLD.w, bh = room ? room.r.h : WORLD.h;   // (inside: the room's walls; a small room just sits in the middle)
+    const cx = vw >= bw ? bw / 2 : Math.min(bw - vw / 2, Math.max(vw / 2, fx));
+    const cy = vh >= bh ? bh / 2 : Math.min(bh - vh / 2, Math.max(vh / 2, fy));
     world.position.set(app.screen.width / 2 - cx * zoom, app.screen.height / 2 - cy * zoom);
+    room?.view.position.copyFrom(world.position);
 
     siren.update(dt, truckOut ? Math.hypot(truck.pos[0] - cx, truck.pos[1] - cy) : null);
 
@@ -887,6 +964,7 @@ async function main() {
       animals: animals.list.map(a => ({ kind: a.kind, x: a.x, y: a.y, scared: a.scared > 0 })),
       shells: shells.spots.filter(q => q.gone <= 0).map(q => ({ x: q.x, y: q.y, kind: q.kind })), buried: treasure.spots.map(([x, y]) => ({ x, y })), signal,
       use: (id: string) => { spots.find(q => q.id === id)?.run(); },   // (tests: use a spot by name, whoever else is standing near it)
+      room: room ? room.r.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
       sounds: { ...played }, scatters, want: wantOffer ? { ...wantOffer } : null,
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
