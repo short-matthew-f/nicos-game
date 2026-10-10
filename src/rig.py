@@ -216,6 +216,53 @@ def upper_back(pfx):
         f'<rect x="-6" y="-66" width="12" height="6" rx="3" fill="{HAIR_TIE}"/>'
     )
 
+# ---- 3/4 views (diagonals), signed off as a mock-up on 2026-10-09 (src/mock_diag.py).
+# Drawn facing right; the game flips them for the left-hand diagonals. Facing down-right we
+# see his front plus a little of the side nearest the viewer's left; facing up-right, his
+# back plus a sliver of cheek on the right.
+def shoe_art_q():
+    # between end-on and side-on: a little longer, toe pointing right
+    return (f'<rect x="-12" y="-13" width="28" height="13" rx="6.5" fill="{SHOE}"/>'
+            f'<rect x="-10" y="-4" width="24" height="4" rx="2" fill="#E9EEF3"/>')
+
+def _torso_q(back, pfx):
+    s = (f'<rect x="-17" y="-6" width="34" height="14" rx="6" fill="{PANT}"/>'
+         f'<rect x="-6" y="-62" width="14" height="16" rx="5" fill="{SK2}"/>'
+         f'<rect x="-20" y="-52" width="40" height="54" rx="15" fill="url(#{pfx}plnear)"/>'
+         f'<rect x="-20" y="-50" width="9" height="50" rx="4.5" fill="url(#{pfx}plfar)"/>')   # the side turned toward us
+    if not back:
+        c = PLAID['near'][4]
+        s += (f'<path d="M-3,-52 L7,-46 L1,-38 Z" fill="{c}"/><path d="M15,-51 L7,-46 L12,-38 Z" fill="{c}"/>'
+              + ''.join(f'<circle cx="7" cy="{y}" r="1.8" fill="{BUTTON}"/>' for y in (-36, -24, -12)))
+    else:
+        s += f'<path d="M-14,-52 Q-3,-47 9,-51 L8,-47 Q-3,-43 -12,-48 Z" fill="{PLAID["near"][4]}"/>'
+    return s
+
+def upper_qfront(pfx, face_cls=''):
+    # the front view's hair (centre part, falling past the ears to the jaw), turned: the part
+    # right of centre, more hair on the near side, a narrow fall beside the face on the far
+    # side; the ponytail hangs behind his neck, just out of sight
+    f = fc(face_cls)
+    return (f'<path d="M-11,-72 C-15,-62 -14,-50 -10,-42 C-6,-50 -4,-60 -3,-68 Z" fill="{HAIR}"/>' +
+        _torso_q(False, pfx) +
+        f'<circle cx="2" cy="-86" r="29" fill="{SK}"/>'
+        f'<path d="M28,-61 C32,-70 34,-80 33,-90 C32,-108 18,{HAIR_TOP} 2,{HAIR_TOP} C-14,{HAIR_TOP} -30,-108 -33,-90 '
+        f'C-34,-80 -31,-70 -24,-62 L-22,-60 L-16,-63 C-17,-80 -12,-96 8,-106 C17,-98 23,-84 24,-62 Z" fill="{HAIR}"/>'
+        f'<circle{f} cx="0" cy="-85" r="3.6" fill="{EYE}"/><ellipse{f} cx="17" cy="-85" rx="3" ry="3.6" fill="{EYE}"/>'
+        f'<path{f} d="M1,-72 Q9,-63 17,-72" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
+        f'<circle{f} cx="-5" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/><circle{f} cx="19" cy="-75" r="4.2" fill="{CHEEK}" opacity=".6"/>')
+
+def upper_qback(pfx):
+    # the back view turned right: hair over the back of the head, hanging to the jaw on the
+    # face side with his cheek showing in front of it; ponytail down the back
+    return (_torso_q(True, pfx) +
+        f'<circle cx="-2" cy="-86" r="29" fill="{SK}"/>'
+        f'<circle cx="21" cy="-76" r="3.5" fill="{CHEEK}" opacity=".5"/>'
+        f'<path d="M-33,-82 C-36,-108 -20,{HAIR_TOP} -2,{HAIR_TOP} C12,{HAIR_TOP} 24,-110 22,-98 '
+        f'C17,-92 14,-80 15,-66 C12,-61 6,-60 0,-61 C-10,-60 -18,-59 -24,-62 C-30,-66 -33,-74 -33,-82 Z" fill="{HAIR}"/>'
+        f'<path d="M-13,-64 C-17,-50 -15,-36 -8,-24 C0,-36 2,-50 -2,-64 Z" fill="{HAIR}"/>'
+        f'<rect x="-13" y="-66" width="12" height="6" rx="3" fill="{HAIR_TIE}"/>')
+
 def small_box():
     return ('<rect x="-20" y="-17" width="40" height="34" rx="5" fill="#E3A857"/>'
             '<rect x="-20" y="-17" width="40" height="10" rx="5" fill="#F0C27C"/>'
@@ -348,6 +395,50 @@ class Nico:
                 S.A(tag + 'shl', f_shoe(-1), shoe_art_front()) + S.A(tag + 'shr', f_shoe(1), shoe_art_front()) +
                 S.A(tag + 'up', f_upper, upper) +
                 S.A(tag + 'arml', f_arm(-1), arm_art(False, S.pfx)) + S.A(tag + 'armr', f_arm(1), arm_art(False, S.pfx)))
+
+    # -- 3/4 (diagonal) view tracks: the front/back gait, seen at an angle --
+    QLX = (-10.0, 9.0)   # near (viewer-left) and far hip x
+    QAX = (-19.0, 15.0)  # near and far shoulder x
+    QNEAR_DY = 2.0       # the near leg is a touch closer to us, so a touch lower
+
+    def q_parts(s, view):
+        """Parts for 'qfront' / 'qback'. Same gait numbers as fb_pose (the stance foot
+        cancels the body's screen-y motion), legs and arms placed for a turned body, drawn
+        far arm, far leg, near leg, body, near arm."""
+        S, V = s.S, view
+        tag = 'qf' if view == 'qfront' else 'qb'
+        # near = i -1 (viewer-left), far = i +1; fb_pose sides line up the same way
+        def side(i): return 0 if i < 0 else 1
+        def f_leg(i):
+            def fn(t):
+                p = s.fb_pose(s.live(V, t)); q = p[i]
+                l = 58 - p['dd'] - q['lift'] + q['off']
+                dy = s.QNEAR_DY if i < 0 else 0.0
+                return [('t', s.QLX[side(i)] + p['sway'], -58 + p['dd'] + dy), ('r', math.degrees(math.asin(p['sway'] / l))), ('s', 1, (l - 8) / 50.0)]
+            return fn
+        def f_shoe(i):
+            def fn(t):
+                p = s.fb_pose(s.live(V, t)); q = p[i]
+                dy = s.QNEAR_DY if i < 0 else 0.0
+                return [('t', s.QLX[side(i)], -q['lift'] + q['off'] + dy)]
+            return fn
+        def f_upper(t):
+            st = s.live(V, t); p = s.fb_pose(st)
+            return [('t', p['sway'], -58 + p['dd'] - st['breath'])]
+        def f_arm(i):
+            def fn(t):
+                st = s.live(V, t); p = s.fb_pose(st); a = p[i]['arm']
+                rest = 8.0 if i < 0 else -6.0
+                return [('t', s.QAX[side(i)] + p['sway'], -100 + p['dd'] - st['breath']),
+                        ('r', rest + (-1 if i < 0 else 1) * 3.0 * abs(a)), ('s', 1, 1 - 0.14 * abs(a))]
+            return fn
+        upper = upper_qfront(S.pfx, s.face_cls) if view == 'qfront' else upper_qback(S.pfx)
+        shoe = shoe_art_q() if view == 'qfront' else shoe_art_front()
+        return (S.A(tag + 'armf', f_arm(1), arm_art(False, S.pfx)) +
+                S.A(tag + 'legf', f_leg(1), leg_art(False)) + S.A(tag + 'shf', f_shoe(1), shoe) +
+                S.A(tag + 'legn', f_leg(-1), leg_art(False)) + S.A(tag + 'shn', f_shoe(-1), shoe) +
+                S.A(tag + 'up', f_upper, upper) +
+                S.A(tag + 'armn', f_arm(-1), arm_art(False, S.pfx)))
 
     # -- assembly --
     def svg(s, filt='f'):

@@ -2,7 +2,8 @@
 // applied like a CSS transform list; test/pose.test.ts checks this against poses dumped
 // from the Python rig (python3 src/export_game.py).
 
-export type View = 'side' | 'front' | 'back';
+export type View = 'side' | 'front' | 'back' | 'qfront' | 'qback';   // q = 3/4, drawn facing right
+export const VIEWS: View[] = ['side', 'front', 'back', 'qfront', 'qback'];
 export type Op = ['t', number, number] | ['r', number] | ['s', number, number];
 
 export interface PoseState {
@@ -85,9 +86,42 @@ function fbOps(st: PoseState): Record<string, Op[]> {
   };
 }
 
+// 3/4 views: the front/back gait, with hips and shoulders placed for a turned body
+const QLX = [-10, 9], QAX = [-19, 15], QNEAR_DY = 2;   // [near (viewer-left), far]
+
+function qOps(st: PoseState): Record<string, Op[]> {
+  const ph = 2 * Math.PI * st.phase / CYCLE;
+  const amp = st.amp, [, dd] = gait(st);
+  const off = st.stride_y * CYCLE / (2 * Math.PI) * amp * Math.sin(ph);
+  const sway = SWAY * amp * Math.cos(ph);
+  const side = (i: number) => {
+    const sg = i < 0 ? 1 : -1;
+    return { lift: LIFT * amp * Math.max(0, sg * Math.cos(ph)), off: sg * off, arm: -sg * amp * Math.sin(ph) };
+  };
+  const k = (i: number) => (i < 0 ? 0 : 1), dy = (i: number) => (i < 0 ? QNEAR_DY : 0);
+  const leg = (i: number): Op[] => {
+    const q = side(i), l = 58 - dd - q.lift + q.off;
+    return [['t', QLX[k(i)] + sway, -58 + dd + dy(i)], ['r', Math.asin(sway / l) / RAD], ['s', 1, (l - 8) / 50.0]];
+  };
+  const shoe = (i: number): Op[] => { const q = side(i); return [['t', QLX[k(i)], -q.lift + q.off + dy(i)]]; };
+  const arm = (i: number): Op[] => {
+    const a = side(i).arm, rest = i < 0 ? 8 : -6;
+    return [['t', QAX[k(i)] + sway, -100 + dd - st.breath], ['r', rest + (i < 0 ? -1 : 1) * 3.0 * Math.abs(a)], ['s', 1, 1 - 0.14 * Math.abs(a)]];
+  };
+  return {
+    armf: arm(1), legf: leg(1), shf: shoe(1), legn: leg(-1), shn: shoe(-1),
+    up: [['t', sway, -58 + dd - st.breath]], armn: arm(-1),
+  };
+}
+
 /** Ops for every part of the active view, keyed by the part names in nico.json. */
 export function partOps(st: PoseState): Record<string, Op[]> {
-  return st.view === 'side' ? sideOps(st) : fbOps(st);
+  switch (st.view) {
+    case 'side': return sideOps(st);
+    case 'front': case 'back': return fbOps(st);
+    case 'qfront': case 'qback': return qOps(st);
+    default: throw new Error(`no pose for view ${String(st.view)}`);
+  }
 }
 
 /** 2x3 affine [a, b, c, d, tx, ty] (x' = a x + c y + tx, y' = b x + d y + ty) of an op

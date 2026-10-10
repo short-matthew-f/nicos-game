@@ -23,6 +23,7 @@ FIX = os.path.join(ROOT, 'game', 'test', 'fixtures')
 RES = 2          # px per rig unit in the PNGs
 PAD = 3          # rig units around getBBox (strokes are outside it)
 PFX = 'e'
+VIEWS = ('side', 'front', 'back', 'qfront', 'qback')
 
 class CaptureScene:
     """Stand-in for Scene: records each leaf part's (name, track fn, inner svg)."""
@@ -41,11 +42,12 @@ def leaf_parts(view, st):
     S = CaptureScene()
     n = Nico(S, FixedTL(st), views=('side', 'front', 'back'), scale_of=lambda y: 1.0)
     if view == 'side': n.side_parts()
+    elif view in ('qfront', 'qback'): n.q_parts(view)
     else: n.fb_parts(view)
     return S.parts
 
 def short(name, view):
-    tag = {'front': 'fv', 'back': 'bv'}.get(view, '')
+    tag = {'front': 'fv', 'back': 'bv', 'qfront': 'qf', 'qback': 'qb'}.get(view, '')
     return name[len(tag):] if tag and name.startswith(tag) else name
 
 def rasterize(who='nico', look=None):
@@ -56,7 +58,7 @@ def rasterize(who='nico', look=None):
     extra = look.defs(PFX) if look else ''
     with sync_playwright() as p, (people.wearing(look, PFX) if look else nullcontext()):
         pg = p.chromium.launch().new_page()
-        for view in ('side', 'front', 'back'):
+        for view in VIEWS:
             rows = []
             for name, _, inner in leaf_parts(view, {'view': view}):
                 nm = short(name, view)
@@ -78,10 +80,10 @@ def rasterize(who='nico', look=None):
 def poses():
     os.makedirs(FIX, exist_ok=True)
     states = []
-    for view in ('side', 'front', 'back'):
+    for view in VIEWS:
         for phase in (0, 0.1, 0.23, 0.35, 0.52, 0.66):
             for amp in (0, 0.4, 1):
-                states.append(dict(view=view, face=1, phase=phase, amp=amp, stride_y=(-40 if view == 'back' else 40 if view == 'front' else 0)))
+                states.append(dict(view=view, face=1, phase=phase, amp=amp, stride_y=(-40 if view in ('back', 'qback') else 40 if view in ('front', 'qfront') else 0)))
         states.append(dict(view=view, breath=0.8))
     states.append(dict(view='side', face=-1, phase=0.3, amp=1))
     states.append(dict(view='side', crouch=0.6, hold=0.5, phase=0.1, amp=0.2))

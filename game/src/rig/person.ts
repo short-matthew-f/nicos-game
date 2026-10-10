@@ -2,7 +2,7 @@
 // the sticker outline + shadow applied live to the whole body (so part seams don't show).
 import { Assets, Container, Matrix, Sprite, Texture } from 'pixi.js';
 import { DropShadowFilter, OutlineFilter } from 'pixi-filters';
-import { partOps, opsMatrix, mul, type PoseState, type View } from './pose';
+import { partOps, opsMatrix, mul, VIEWS, type PoseState, type View } from './pose';
 import { NAVY } from '../world/draw';
 import { BUILD_ID } from '../update';
 
@@ -36,7 +36,7 @@ export class PersonView {
     const art = arts.get(who);
     if (!art) throw new Error(`loadArt(['${who}']) first`);
     this.art = art; this.height = art.height ?? 1;
-    for (const v of ['side', 'front', 'back'] as View[]) {
+    for (const v of VIEWS) {
       const c = new Container();
       const parts = art.views[v].map(meta => {
         const sprite = new Sprite(Texture.from(base + meta.img + BUST));
@@ -67,14 +67,14 @@ export class PersonView {
 
   pose(x: number, y: number, st: PoseState) {
     const res = this.art.res;
-    for (const v of ['side', 'front', 'back'] as View[]) this.views[v].c.visible = v === st.view;
+    for (const v of VIEWS) this.views[v].c.visible = v === st.view;
     const ops = partOps(st);
     for (const { meta, sprite } of this.views[st.view].parts) {
       // part transform, then place the image so its local origin lands on the part origin
       const m = mul(opsMatrix(ops[meta.part]), [1 / res, 0, 0, 1 / res, meta.x, meta.y]);
       sprite.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5]));
     }
-    const sx = st.view === 'side' ? st.face : 1;
+    const sx = st.view === 'front' || st.view === 'back' ? 1 : st.face;   // side and 3/4 views flip to face left
     this.root.position.set(x, y);
     this.root.scale.set(RIG_SCALE * this.height * sx, RIG_SCALE * this.height);
     this.root.zIndex = y;

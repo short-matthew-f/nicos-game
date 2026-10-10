@@ -5,16 +5,28 @@ import type { Rect } from './world/map';
 export const WALK_SPEED = 270;   // world px/s at full stick
 export const RADIUS = 16;        // feet collision circle
 
-/** Facing from velocity, with hysteresis so diagonals don't flicker between views.
- * Mostly horizontal -> side (face = sign of vx); mostly down -> front; up -> back. */
+/** The 8 facings, by direction of travel (screen angle, y down): view + which way it faces.
+ * 3/4 views and the side view are drawn facing right and flipped for the left. */
+const FACINGS: { deg: number; view: View; face: number }[] = [
+  { deg: 0, view: 'side', face: 1 }, { deg: 45, view: 'qfront', face: 1 }, { deg: 90, view: 'front', face: 1 },
+  { deg: 135, view: 'qfront', face: -1 }, { deg: 180, view: 'side', face: -1 }, { deg: -135, view: 'qback', face: -1 },
+  { deg: -90, view: 'back', face: 1 }, { deg: -45, view: 'qback', face: 1 },
+];
+export const FACING_STICKY = 8;   // degrees past a sector edge before switching (no flicker on the boundary)
+
+const angDiff = (a: number, b: number) => Math.abs(((a - b) % 360 + 540) % 360 - 180);
+
+/** Facing from velocity: the nearest of 8 directions, staying with the current one until
+ * the travel direction is clearly into the next sector. (Front/back keep their face value;
+ * it's unused for them.) */
 export function chooseView(vx: number, vy: number, cur: { view: View; face: number }): { view: View; face: number } {
-  const ax = Math.abs(vx), ay = Math.abs(vy);
-  if (ax < 1e-3 && ay < 1e-3) return cur;
-  if (ax > ay * 1.25) return { view: 'side', face: vx > 0 ? 1 : -1 };
-  if (ay > ax * 1.25) return { view: vy > 0 ? 'front' : 'back', face: cur.face };
-  // diagonal band: keep the current view, but update a side facing that went the wrong way
-  if (cur.view === 'side' && Math.sign(vx) !== cur.face) return { view: 'side', face: vx > 0 ? 1 : -1 };
-  return cur;
+  if (Math.abs(vx) < 1e-3 && Math.abs(vy) < 1e-3) return cur;
+  const deg = Math.atan2(vy, vx) * 180 / Math.PI;
+  const curF = FACINGS.find(f => f.view === cur.view && (f.view === 'front' || f.view === 'back' || f.face === cur.face));
+  if (curF && angDiff(deg, curF.deg) <= 22.5 + FACING_STICKY) return cur;
+  let best = FACINGS[0];
+  for (const f of FACINGS) if (angDiff(deg, f.deg) < angDiff(deg, best.deg)) best = f;
+  return { view: best.view, face: best.view === 'front' || best.view === 'back' ? cur.face : best.face };
 }
 
 /** Move a circle by (dx, dy), sliding along rect edges and staying in bounds. */

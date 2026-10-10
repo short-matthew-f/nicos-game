@@ -47,6 +47,29 @@ def shaggy_back(h, hl):
             f'C20,-52 14,-48 8,-52 C2,-48 -4,-52 -10,-48 C-16,-52 -22,-48 -28,-48 C-32,-56 -34,-68 -33,-82 Z" fill="{h}"/>'
             f'<path d="M-16,-106 C-4,-112 10,-110 18,-104" fill="none" stroke="{hl}" stroke-width="3.5" stroke-linecap="round"/>')
 
+# 3/4 (diagonal) versions, facing right: drawn the way Nico's were (see rig.upper_qfront)
+def short_qfront(h):
+    # cap over the crown and round the back to the nape; the near ear shows below it; the
+    # fringe sweeps across the forehead toward the far side
+    return (f'<path d="M30,-92 C30,-110 16,{T} 0,{T} C-16,{T} -31,-106 -33,-88 C-34,-80 -31,-72 -25,-68 '
+            f'L-21,-71 C-22,-78 -20,-86 -16,-92 C-8,-96 4,-94 12,-99 C18,-102 25,-99 30,-92 Z" fill="{h}"/>')
+
+def short_qback(h):
+    return (f'<path d="M-33,-84 C-35,-108 -18,{T} -2,{T} C12,{T} 25,-108 22,-96 '
+            f'C18,-90 16,-82 16,-74 C12,-69 4,-67 -4,-67 C-20,-67 -31,-73 -33,-84 Z" fill="{h}"/>')
+
+def shaggy_qfront(h, hl):
+    # loose hair to the jaw, bangs across the forehead, more hair on the near side
+    return (f'<path d="M28,-61 C32,-70 34,-80 33,-90 C32,-108 18,{T} 2,{T} C-14,{T} -31,-108 -34,-88 '
+            f'C-35,-76 -32,-64 -25,-56 L-21,-58 L-16,-62 C-17,-76 -16,-88 -12,-96 '
+            f'C-4,-94 4,-99 10,-96 C16,-100 22,-96 24,-92 C24,-82 24,-72 24,-62 Z" fill="{h}"/>'
+            f'<path d="M-12,-110 C0,-116 12,-115 20,-108" fill="none" stroke="{hl}" stroke-width="3.5" stroke-linecap="round"/>')
+
+def shaggy_qback(h, hl):
+    return (f'<path d="M-34,-82 C-37,-110 -20,{T} -2,{T} C12,{T} 24,-110 22,-98 '
+            f'C17,-92 14,-80 15,-62 C10,-54 4,-50 -2,-52 C-8,-48 -14,-52 -20,-48 C-26,-52 -31,-58 -33,-66 C-35,-72 -34,-78 -34,-82 Z" fill="{h}"/>'
+            f'<path d="M-18,-106 C-6,-112 6,-110 14,-104" fill="none" stroke="{hl}" stroke-width="3.5" stroke-linecap="round"/>')
+
 # ---------------------------------------------------------------- clothes
 def camo_defs(pfx, c):
     base, a, b, d = c
@@ -111,6 +134,41 @@ class Look:
         hair = short_back(s.hair) if s.style == 'short' else shaggy_back(s.hair, s.hl)
         return s.torso(True, pfx) + f'<circle cx="0" cy="-86" r="29" fill="{rig.SK}"/>' + hair
 
+    def torso_q(s, back, pfx):
+        pants = f'url(#{pfx}camo)' if s.camo else s.pants
+        t = (f'<rect x="-17" y="-6" width="34" height="14" rx="6" fill="{pants}"/>'
+             f'<rect x="-6" y="-62" width="14" height="16" rx="5" fill="{rig.SK2}"/>'
+             f'<rect x="-20" y="-52" width="40" height="54" rx="15" fill="{s.shirt}"/>'
+             f'<rect x="-20" y="-50" width="9" height="50" rx="4.5" fill="{s.shirt2}"/>')    # the side turned toward us
+        if s.top == 'hoodie':
+            if back:
+                t += f'<path d="M-19,-54 C-20,-38 -12,-30 -3,-30 C6,-30 13,-38 12,-54 Z" fill="{s.shirt2}"/>'
+            else:
+                t += (f'<path d="M-9,-55 C-8,-46 0,-42 6,-42 C12,-42 18,-46 19,-55 L14,-57 C12,-50 -2,-50 -4,-57 Z" fill="{s.shirt2}"/>'
+                      f'<rect x="1" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="10" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
+                      f'<path d="M-8,-18 L18,-18 L20,-4 L-11,-4 Z" fill="{s.shirt2}"/>')
+        else:
+            if not back:
+                t += f'<path d="M-2,-52 Q6,-45 14,-52" fill="none" stroke="{s.shirt2}" stroke-width="3"/>'
+                t += f'<path d="M9,-36 L16,-36 L16,-27 Q12.5,-23 9,-27 Z" fill="{s.trim}"/>'
+            t += f'<rect x="17" y="-40" width="3" height="40" fill="{s.trim}"/>'
+        return t
+
+    def upper_qfront(s, pfx, face_cls=''):
+        f = rig.fc(face_cls)
+        hair = short_qfront(s.hair) if s.style == 'short' else shaggy_qfront(s.hair, s.hl)
+        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style == 'short' else ''
+        return (s.torso_q(False, pfx) + f'<circle cx="2" cy="-86" r="29" fill="{rig.SK}"/>' + hair + ear +
+            f'<circle{f} cx="0" cy="-84" r="3.6" fill="{rig.EYE}"/><ellipse{f} cx="17" cy="-84" rx="3" ry="3.6" fill="{rig.EYE}"/>'
+            f'<path{f} d="M2,-72 Q9,-66 16,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
+            f'<circle{f} cx="-5" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="19" cy="-75" r="4.2" fill="{rig.CHEEK}" opacity=".45"/>')
+
+    def upper_qback(s, pfx):
+        hair = short_qback(s.hair) if s.style == 'short' else shaggy_qback(s.hair, s.hl)
+        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style == 'short' else ''
+        return (s.torso_q(True, pfx) + f'<circle cx="-2" cy="-86" r="29" fill="{rig.SK}"/>'
+                f'<circle cx="21" cy="-76" r="3.5" fill="{rig.CHEEK}" opacity=".45"/>' + hair + ear)
+
     def arm_art(s, far, pfx):
         hand = rig.SK2 if far else rig.SK
         sl = s.sleeve if not far else s.shirt2 if s.top == 'hoodie' else s.sleeve
@@ -147,12 +205,13 @@ LOOKS = {
 @contextmanager
 def wearing(look, pfx):
     """Draw with `look`'s colours and pieces for the duration of the block."""
-    names = ['SK', 'SK2', 'PANT', 'PANT2', 'SHOE', 'SHOE2', 'upper_side', 'upper_front', 'upper_back', 'arm_art', 'leg_art']
+    names = ['SK', 'SK2', 'PANT', 'PANT2', 'SHOE', 'SHOE2', 'upper_side', 'upper_front', 'upper_back', 'upper_qfront', 'upper_qback', 'arm_art', 'leg_art']
     saved = {n: getattr(rig, n) for n in names}
     rig._PEOPLE_PFX = pfx
     rig.SK, rig.SK2 = look.skin, look.skin2
     rig.PANT, rig.PANT2, rig.SHOE, rig.SHOE2 = look.pants, look.pants2, look.shoe, look.shoe2
     rig.upper_side, rig.upper_front, rig.upper_back = look.upper_side, look.upper_front, look.upper_back
+    rig.upper_qfront, rig.upper_qback = look.upper_qfront, look.upper_qback
     rig.arm_art, rig.leg_art = look.arm_art, look.leg_art
     try:
         yield

@@ -43,9 +43,21 @@ describe('player', () => {
     expect(chooseView(0, -1, c).view).toBe('back');
     expect(chooseView(0, 0, { view: 'back', face: -1 })).toEqual({ view: 'back', face: -1 });
   });
-  it('keeps the current view on a near-diagonal (no flicker)', () => {
-    expect(chooseView(1, 0.95, { view: 'front', face: 1 }).view).toBe('front');
-    expect(chooseView(1, 0.95, { view: 'side', face: 1 }).view).toBe('side');
+  it('faces all 8 directions: the diagonals use the 3/4 views, flipped for the left', () => {
+    const c = { view: 'side' as const, face: 1 };
+    expect(chooseView(1, 1, c)).toEqual({ view: 'qfront', face: 1 });     // down-right
+    expect(chooseView(-1, 1, c)).toEqual({ view: 'qfront', face: -1 });   // down-left
+    expect(chooseView(1, -1, c)).toEqual({ view: 'qback', face: 1 });     // up-right
+    expect(chooseView(-1, -1, c)).toEqual({ view: 'qback', face: -1 });   // up-left
+  });
+  it('keeps the current facing near a sector edge (no flicker), and switches when clearly past it', () => {
+    const at = (deg: number) => [Math.cos(deg * Math.PI / 180), Math.sin(deg * Math.PI / 180)] as const;
+    // 25 degrees: just past the side/diagonal edge (22.5) -- stays with whichever it was
+    expect(chooseView(...at(25), { view: 'side', face: 1 }).view).toBe('side');
+    expect(chooseView(...at(20), { view: 'qfront', face: 1 }).view).toBe('qfront');
+    // well past the edge: switches
+    expect(chooseView(...at(40), { view: 'side', face: 1 }).view).toBe('qfront');
+    expect(chooseView(...at(5), { view: 'qfront', face: 1 }).view).toBe('side');
   });
   it('cannot walk into a building, and slides along it', () => {
     const b = SOLIDS[0];

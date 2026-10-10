@@ -19,50 +19,12 @@ from scene import Scene, ops_css, NAVY, FONT, OUT
 
 PFX = 'm'
 
-# ---------------------------------------------------------------- new 3/4 art
-def shoe_q():
-    # between end-on and side-on: a little longer, toe pointing right
-    return (f'<rect x="-12" y="-13" width="28" height="13" rx="6.5" fill="{rig.SHOE}"/>'
-            f'<rect x="-10" y="-4" width="24" height="4" rx="2" fill="#E9EEF3"/>')
-
-def torso_q(back):
-    s = (f'<rect x="-17" y="-6" width="34" height="14" rx="6" fill="{PANT}"/>'
-         f'<rect x="-6" y="-62" width="14" height="16" rx="5" fill="{SK2}"/>'
-         f'<rect x="-20" y="-52" width="40" height="54" rx="15" fill="url(#{PFX}plnear)"/>'
-         # the side of the body turned toward us, a shade darker
-         f'<rect x="-20" y="-50" width="9" height="50" rx="4.5" fill="url(#{PFX}plfar)"/>')
-    if not back:
-        c = PLAID['near'][4]
-        s += (f'<path d="M-3,-52 L7,-46 L1,-38 Z" fill="{c}"/><path d="M15,-51 L7,-46 L12,-38 Z" fill="{c}"/>'
-              + ''.join(f'<circle cx="7" cy="{y}" r="1.8" fill="{BUTTON}"/>' for y in (-36, -24, -12)))
-    else:
-        s += f'<path d="M-14,-52 Q-3,-47 9,-51 L8,-47 Q-3,-43 -12,-48 Z" fill="{PLAID["near"][4]}"/>'
-    return s
-
-def upper_q_front():
-    # Hair as in the front view (centre part, falling past the ears to the jaw), turned:
-    # the part sits right of centre, the near (left) side shows more hair, the far side a
-    # narrower fall beside the face. The ponytail hangs behind his neck, just out of sight.
-    return (f'<path d="M-11,-72 C-15,-62 -14,-50 -10,-42 C-6,-50 -4,-60 -3,-68 Z" fill="{HAIR}"/>' +
-        torso_q(False) +
-        f'<circle cx="2" cy="-86" r="29" fill="{SK}"/>'
-        f'<path d="M28,-61 C32,-70 34,-80 33,-90 C32,-108 18,{T} 2,{T} C-14,{T} -30,-108 -33,-90 '
-        f'C-34,-80 -31,-70 -24,-62 L-22,-60 L-16,-63 C-17,-80 -12,-96 8,-106 C17,-98 23,-84 24,-62 Z" fill="{HAIR}"/>'
-        # face turned right: near eye round, far eye a little narrower
-        f'<circle cx="0" cy="-85" r="3.6" fill="{EYE}"/><ellipse cx="17" cy="-85" rx="3" ry="3.6" fill="{EYE}"/>'
-        f'<path d="M1,-72 Q9,-63 17,-72" fill="none" stroke="{MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
-        f'<circle cx="-5" cy="-75" r="5" fill="{CHEEK}" opacity=".6"/><circle cx="19" cy="-75" r="4.2" fill="{CHEEK}" opacity=".6"/>')
-
-def upper_q_back():
-    # the back view turned right: hair over the whole back of the head and hanging to the
-    # jaw on the face side, with his cheek and jaw showing in front of it; ponytail down the back
-    return (torso_q(True) +
-        f'<circle cx="-2" cy="-86" r="29" fill="{SK}"/>'
-        f'<circle cx="21" cy="-76" r="3.5" fill="{CHEEK}" opacity=".5"/>'
-        f'<path d="M-33,-82 C-36,-108 -20,{T} -2,{T} C12,{T} 24,-110 22,-98 '
-        f'C17,-92 14,-80 15,-66 C12,-61 6,-60 0,-61 C-10,-60 -18,-59 -24,-62 C-30,-66 -33,-74 -33,-82 Z" fill="{HAIR}"/>'
-        f'<path d="M-13,-64 C-17,-50 -15,-36 -8,-24 C0,-36 2,-50 -2,-64 Z" fill="{HAIR}"/>'
-        f'<rect x="-13" y="-66" width="12" height="6" rx="3" fill="{HAIR_TIE}"/>')
+# ---------------------------------------------------------------- 3/4 art
+# (now lives in rig.py, used by the game; the mock-up draws the same art)
+shoe_q = rig.shoe_art_q
+torso_q = lambda back: rig._torso_q(back, PFX)
+upper_q_front = lambda: rig.upper_qfront(PFX)
+upper_q_back = lambda: rig.upper_qback(PFX)
 
 def quarter(view):
     """Standing 3/4 Nico, hip-local like the rig (ground y=0). Far arm behind the body,

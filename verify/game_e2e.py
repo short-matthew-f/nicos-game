@@ -50,6 +50,10 @@ with sync_playwright() as p:
     check(g3['nico']['view'] == 'front', f"drag down shows the front view ({g3['nico']['view']})")
     g3b = drag(-80, 0, 600)
     check(g3b['nico']['view'] == 'side' and g3b['nico']['face'] == -1, f"drag left faces left ({g3b['nico']})")
+    # diagonals: the 3/4 views, flipped for the left
+    for (dx, dy), want in [((60, 60), ('qfront', 1)), ((-60, 60), ('qfront', -1)), ((60, -60), ('qback', 1)), ((-60, -60), ('qback', -1))]:
+        gd = drag(dx, dy, 400)
+        check((gd['nico']['view'], gd['nico']['face']) == want, f"drag ({dx},{dy}) faces {want} ({gd['nico']['view']}, {gd['nico']['face']})")
     g4 = G()
     check(g4['nico']['amp'] < 0.2, f"stops walking when the finger lifts (amp {g4['nico']['amp']:.2f})")
 

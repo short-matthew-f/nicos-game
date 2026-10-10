@@ -268,3 +268,11 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   - **Tests:** escape from an overlap, reverse off a wall, wait for Nico on foot, squeeze past his car. All three mutations went red.
 - **Scale:** `K` went from 1.6 to 1.35, a middle ground (Matthew was getting lost). Building heights (`HK`) are unchanged, so Nico still isn't as tall as the houses. The save went to v3 (positions are dropped, money is kept; tested).
 - **Minimap** under the money: roads, lots and buildings in their roof colours, emoji markers for home, Burger Barn, the school, hospital, fire station and toy shop. Live dots: Nico (orange, ringed), his car, James and Primo, and the fire truck flashing while it's out.
+
+## 2026-10-09 (overnight): 8 directions
+- **The signed-off 3/4 views are in the rig** (`rig.py`: `upper_qfront`, `upper_qback`, `_torso_q`, `shoe_art_q`, `Nico.q_parts`). They use the front/back gait numbers (stance foot planted, hip sway, arm swing), with hips at -10/+9 and shoulders at -19/+15 for a turned body. The near leg sits 2 units lower. Draw order: far arm, far leg, near leg, body, near arm. `gen.py` output for the existing scenes is unchanged (`git status out/` clean), and Nico's existing PNGs are unchanged.
+- **James and Primo** get turned versions too (`people.py`): James's short cap and fringe with the ear showing; Primo's loose hair to the jaw with bangs; hoodie and jersey details moved for the turn.
+- **Export:** 5 views per person. The parity fixtures went from 59 to 97 poses, including 3/4 walk cycles. `pose.ts` `qOps` passes parity, and `partOps` throws on an unknown view instead of falling back to front/back.
+- **Facing:** `chooseView` picks the nearest of 8 directions. Side and 3/4 views flip for the left. There's an 8° sticky band past each sector edge so diagonals don't flicker.
+- **Tests:** Vitest 148 (8 facings, sticky edges, parity). e2e 61: dragging in each diagonal gives qfront/qback with the right flip. Mutation: removing the diagonal facings went red in 4 e2e checks.
+- `mock_diag.py` now draws the rig's real diagonal art, and its output is identical.
