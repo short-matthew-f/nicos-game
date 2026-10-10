@@ -103,10 +103,10 @@ async function main() {
   }
   function stopPlay() {
     if (!play) return;
-    if (play.kind === 'swing') { seats[play.seat].scale.y = 1; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
+    if (play.kind === 'swing') { seats[play.seat].set(1); nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
     play = null; mode = 'walk';
     nico.view.root.scale.y = Math.abs(nico.view.root.scale.y);
-    Object.assign(nico.st, { crouch: 0, hold: 0, amp: 0 });
+    Object.assign(nico.st, { crouch: 0, hold: 0, sit: 0, amp: 0 });
   }
   const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
 
@@ -232,12 +232,12 @@ async function main() {
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
       } else {
         const sw = swingAt(play.t, play.seat);
-        seats[play.seat].scale.y = sw.chain; b = sw.body;
+        seats[play.seat].set(sw.chain); b = sw.body;
         if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.6) stopPlay();
       }
       if (play) {
         nico.x = b.x; nico.y = b.y;
-        Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, stride_y: 0 });
+        Object.assign(nico.st, { view: b.view, face: b.face, crouch: b.crouch, hold: b.hold, sit: b.sit, stride_y: 0 });
         stepGait(nico.st, b.amp, 0, dt);
         nico.view.pose(nico.x, nico.y, nico.st);
         nico.view.root.zIndex = b.z;

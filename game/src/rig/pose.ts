@@ -14,6 +14,7 @@ export interface PoseState {
   crouch: number;    // 0..1
   hold: number;      // 0..1 arms forward
   breath: number;    // idle chest rise (units)
+  sit?: number;      // 0..1 sitting (game-only: not in the Python rig, so parity poses leave it out)
 }
 
 export const CYCLE = 0.7;
@@ -23,7 +24,7 @@ const LX = 10.0, AX = 20.0, LIFT = 9.0, SWAY = 1.5, ARM_OUT = 7.0;
 const RAD = Math.PI / 180;
 
 export const neutral = (view: View = 'side'): PoseState =>
-  ({ view, face: 1, phase: 0, amp: 0, stride_y: 0, crouch: 0, hold: 0, breath: 0 });
+  ({ view, face: 1, phase: 0, amp: 0, stride_y: 0, crouch: 0, hold: 0, breath: 0, sit: 0 });
 
 function gait(st: PoseState): [number, number] {
   const an = 28.0 * st.amp * Math.sin(2 * Math.PI * st.phase / CYCLE);
@@ -31,20 +32,27 @@ function gait(st: PoseState): [number, number] {
   return [an, DC * st.crouch + dw];
 }
 
+export const SIT_LEG = -68;   // side view: sitting legs point forward and a little down (deg)
+export const SIT_DROP = 44;   // how far the hips drop when sitting (units), so they rest near the feet's level
+
 function sideOps(st: PoseState): Record<string, Op[]> {
-  const [an, dd] = gait(st);
+  const sit = st.sit ?? 0;
+  const [an, gdd] = gait(st);
+  const dd = gdd + SIT_DROP * sit;   // sitting lowers the hips
   const lean = LEAN_C * st.crouch + 3.0 * st.amp;
   const armang = (far: boolean) => {
     const free = far ? 0.85 * an : -0.85 * an;
     return (1 - st.hold) * free + st.hold * -56.0;
   };
   const l = 58 - DC * st.crouch;
+  // leg angle: the walk swing (legs opposite), blended toward both legs forward when sitting
+  const legAn = (far: boolean) => (far ? -an : an) * (1 - sit) + SIT_LEG * sit;
   const arm = (far: boolean): Op[] =>
     [['t', 0, -58 + dd - st.breath], ['r', lean], ['t', 2, -42], ['r', armang(far)]];
   const leg = (far: boolean): Op[] =>
-    [['t', far ? -3 : 3, -58 + dd], ['r', far ? -an : an], ['s', 1 + 0.35 * st.crouch, (l - 8) / 50.0]];
+    [['t', far ? -3 : 3, -58 + dd], ['r', legAn(far)], ['s', 1 + 0.35 * st.crouch, (l - 8) / 50.0]];
   const shoe = (far: boolean): Op[] => {
-    const a = far ? -an : an, r = a * RAD, hx = far ? -3 : 3;
+    const a = legAn(far), r = a * RAD, hx = far ? -3 : 3;
     return [['t', hx - l * Math.sin(r), -58 + dd + l * Math.cos(r)], ['r', a * 0.4]];
   };
   return {

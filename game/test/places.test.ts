@@ -35,7 +35,7 @@ describe('playground', () => {
     expect(freeAt(end.x, end.y, SOLIDS, WORLD)).toBe(true);
     // facing down the chute and sitting while sliding
     const mid = slideAt(SLIDE_LEN - 0.6, from);
-    expect(mid.view).toBe('side'); expect(mid.crouch).toBeGreaterThan(0.5);
+    expect(mid.view).toBe('side'); expect(mid.sit).toBeGreaterThan(0.9);
     // drawn in front of the slide the whole time
     for (let t = 0; t < SLIDE_LEN; t += 0.05) expect(slideAt(t, from).z).toBeGreaterThan(SLIDE.y);
   });

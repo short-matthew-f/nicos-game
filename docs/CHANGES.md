@@ -218,3 +218,9 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
 - **Correction:** the braking zone started a set distance ahead of a vehicle's centre. Scaled up, that start fell inside the truck's own front end, so the truck braked, rolled past and drove through someone standing at its bumper. The zone now starts at 0.1 × length. Caught by the "stops for someone" unit test.
 - **Save v2:** v1 positions are from the smaller town, so `migrate` keeps the money but drops Nico's and the car's positions (tested).
 - **Tests:** Vitest 100, e2e 50. The e2e now starts from open ground (`at('home', 700, 230)`), because the new start by his door is near the world edge, where the camera is clamped.
+
+## 2026-10-09: Nico's feedback, part 3 (sitting properly)
+- **`sit` (0..1) added to the pose.** This is game-only: the Python rig doesn't have it, so the parity fixtures leave it out and the code reads it as `st.sit ?? 0`. All 62 parity tests still pass. In the side view, sitting blends both legs from the walk swing to pointing forward (-68°) and drops the hips 44 units. Both legs go forward together, not opposite as in walking.
+- **Slide:** he climbs, turns and sits at the top of the chute, rides down its surface (seated, legs forward, hands out), then stands up off the end. He used to crouch-stand on the slide.
+- **Swing ("the bar was on his lap"):** the plank now draws behind him and is wider than he is, so its ends show at his hips. Only the chains draw in front, at his hands. Full crouch in the front view gives short, dangling legs.
+- **Tests:** the slide unit test now checks he's sitting (`sit > 0.9`) while he slides. Vitest 100, e2e 50.

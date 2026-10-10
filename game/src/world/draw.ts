@@ -104,7 +104,9 @@ export function drawTree(x: number, y: number): Container {
 /** The slide and the swing frame (not solid), plus the swing seats. The seats hang from
  * the bar and are separate layer items drawn just in front of the frame, so a swing can
  * move and Nico can sit between the frame and his seat's chains. */
-export function drawPlayground(): { items: Container[]; seats: Container[] } {
+export interface Seat { set(chain: number): void }   // a swing seat: 1 = hanging still
+
+export function drawPlayground(): { items: Container[]; seats: Seat[] } {
   // each piece gets its own white band and shadow (not one box round the whole thing),
   // so the grass shows through the gaps when Nico walks behind it
   const sticker = (g: Graphics, draw: (g: Graphics) => Graphics, fill: string) => {
@@ -127,22 +129,25 @@ export function drawPlayground(): { items: Container[]; seats: Container[] } {
   const swingShadow = new Graphics(); frame(swingShadow).fill({ color: NAVY, alpha: SH.a }); swingShadow.position.set(SH.x, SH.y);
   const swings = new Graphics();
   sticker(swings, frame, '#D77B72');
-  const seats = SWINGS.seats.map(ox => {
-    // drawn hanging from the bar, origin at the bar: scale.y swings it toward the camera
-    const g = new Graphics();
-    const l = SWING_SEAT - SWING_BAR;
-    g.rect(-24, 0, 3, l).fill('#34495E').rect(21, 0, 3, l).fill('#34495E')
-     .roundRect(-27, l - 5, 54, 11, 4).fill('#3E8F8A');
-    const c = new Container(); c.addChild(g);
-    c.position.set(wx + ox, SWING_BAR); c.zIndex = wy + 2;
-    return c;
+  // Each seat hangs from the bar (origin at the bar; scale.y swings it toward the camera).
+  // The plank draws just behind a sitting Nico and the chains just in front of him, so he
+  // sits on it rather than having it across his lap.
+  const l = SWING_SEAT - SWING_BAR;
+  const seatParts = SWINGS.seats.map(ox => {
+    const plank = new Container(), chains = new Container();
+    plank.addChild(new Graphics().roundRect(-44, l - 6, 88, 13, 5).fill('#3E8F8A'));   // wider than Nico, so it shows at his hips
+    chains.addChild(new Graphics().rect(-34, 0, 3, l).fill('#34495E').rect(31, 0, 3, l).fill('#34495E'));   // at his hands
+    for (const c of [plank, chains]) c.position.set(wx + ox, SWING_BAR);
+    plank.zIndex = wy + 0.5; chains.zIndex = wy + 2;
+    return { plank, chains };
   });
+  const seats: Seat[] = seatParts.map(({ plank, chains }) => ({ set: (k: number) => { plank.scale.y = chains.scale.y = k; } }));
   const a = new Container(); a.addChild(slideShadow, slide); a.zIndex = sy;
   const b = new Container(); b.addChild(swingShadow, swings); b.zIndex = wy;
-  return { items: [a, b, ...seats], seats };
+  return { items: [a, b, ...seatParts.flatMap(p => [p.plank, p.chains])], seats };
 }
 
-export function drawWorld(layer: Container): { seats: Container[] } {
+export function drawWorld(layer: Container): { seats: Seat[] } {
   for (const b of BUILDINGS) layer.addChild(drawBuilding(b));
   for (const [x, y] of TREES) layer.addChild(drawTree(x, y));
   const pg = drawPlayground();
