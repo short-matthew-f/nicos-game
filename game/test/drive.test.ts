@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { steer, moveCar, carFits, angleTo, CAR, type CarState } from '../src/drive';
+import { steer, moveCar, carFits, angleTo, circles, CAR, type CarState } from '../src/drive';
+import { makeTraffic, SQUEEZE } from '../src/world/cars';
 import { SOLIDS, WORLD, PARKED_CAR, DRIVEWAYS, ROADS_X, ROADS_Y, TREES } from '../src/world/map';
 
 const run = (c: CarState, sx: number, sy: number, secs: number, solids = SOLIDS) => {
   for (let t = 0; t < secs; t += 1 / 60) { const h = c.h; steer(c, sx, sy, 1 / 60); moveCar(c, h, 1 / 60, solids, WORLD); }
   return c;
 };
-const open = () => ({ x: ROADS_X[0], y: ROADS_Y[0] + 400, h: 0, speed: 0 });   // on a road, nothing near
+const open = () => ({ x: ROADS_X[0], y: ROADS_Y[1] - 60, h: 0, speed: 0 });   // on a road, a long straight run up ahead
 
 describe('driving', () => {
   it('angleTo takes the short way round', () => {
@@ -56,5 +57,38 @@ describe('driving', () => {
     const d = DRIVEWAYS.find(r => r.id === 'home')!;
     expect(PARKED_CAR.x > d.x && PARKED_CAR.x < d.x + d.w && PARKED_CAR.y > d.y && PARKED_CAR.y < d.y + d.d).toBe(true);
     expect(carFits(PARKED_CAR.x, PARKED_CAR.y, PARKED_CAR.h, SOLIDS, WORLD)).toBe(true);
+  });
+  it('a car that ends up overlapping another car can always steer out (the crash lock-up)', () => {
+    const c: CarState = { ...open(), h: 0, speed: 0 };
+    // a traffic car stopped across Nico's nose, overlapping it
+    const other = circles(c.x + CAR.len * 0.55, c.y, Math.PI / 2);
+    expect(carFits(c.x, c.y, c.h, [], WORLD, other)).toBe(false);
+    for (let t = 0; t < 2; t += 1 / 60) { const h = c.h; steer(c, -1, 0, 1 / 60); moveCar(c, h, 1 / 60, [], WORLD, other); }
+    expect(carFits(c.x, c.y, c.h, [], WORLD, other)).toBe(true);
+  });
+  it('nose against a wall: pulling back reverses out', () => {
+    const wall = [{ x: 600, y: 0, w: 50, d: 2000 }];
+    const c = run({ x: 400, y: 1000, h: 0, speed: 0 }, 1, 0, 2, wall);   // drive into the wall
+    const x0 = c.x;
+    run(c, -1, 0, 1, wall);
+    expect(c.x).toBeLessThan(x0 - 80);
+    expect(Math.abs(angleTo(c.h, 0))).toBeLessThan(0.3);                   // backed straight out
+  });
+});
+
+describe('traffic and a parked Nico car', () => {
+  const lane = () => { const cars = makeTraffic(1); const c = cars[0]; const [x, y] = c.pos, h = c.loop.heading(c.s);
+    return { c, block: (tag?: string): [number, number, string?][] => [[x + Math.cos(h) * CAR.len, y + Math.sin(h) * CAR.len, tag]] }; };
+  it('waits for Nico on foot as long as he stands there', () => {
+    const { c, block } = lane(); const b = block();
+    for (let t = 0; t < 20; t += 1 / 30) c.update(1 / 30, null, b);
+    expect(c.speed).toBe(0);
+  });
+  it("squeezes past Nico's car after waiting a while, instead of waiting forever", () => {
+    const { c, block } = lane(); const b = block('mine'); const s0 = c.s;
+    for (let t = 0; t < SQUEEZE.after - 1; t += 1 / 30) c.update(1 / 30, null, b);
+    expect(c.speed).toBe(0);
+    for (let t = 0; t < 4; t += 1 / 30) c.update(1 / 30, null, b);
+    expect(c.s - s0).toBeGreaterThan(CAR.len);
   });
 });

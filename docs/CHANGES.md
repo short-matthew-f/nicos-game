@@ -257,3 +257,14 @@ The first playable piece, in `game/`, built with Vite + TypeScript + PixiJS 8.21
   **Kept:**
   - **3/4 front:** the front view's centre-part hairstyle, turned. The part is right of centre, the near side shows more hair, and the far side has a narrow fall beside his face. The ponytail hangs out of sight behind his neck.
   - **3/4 back:** hair covers the back of his head and hangs to the jaw, with his cheek showing in front of it.
+
+## 2026-10-09 (overnight): crash lock-up, a middle-sized town, a minimap
+- **Crash lock-up** (Matthew: crashing locked his car and the oncoming one "basically forever"):
+  - **Cause:** `carFits` was all-or-nothing. Once Nico's car overlapped a traffic car, every move still overlapped, so his speed stayed 0. The traffic car was braking for him too, so both stayed stuck.
+  - **Fixes:**
+    - `moveCar` now accepts a move that doesn't dig in deeper (`overlap()` measures how deep). An overlapping car can always steer out.
+    - **Reverse:** with the nose against something, pulling the stick back backs out at 170 px/s, swinging the tail toward the stick.
+    - Traffic, and the fire truck, waiting on Nico's car for more than 6 s squeeze past at a crawl for 5 s. They still wait for Nico on foot, however long he stands there.
+  - **Tests:** escape from an overlap, reverse off a wall, wait for Nico on foot, squeeze past his car. All three mutations went red.
+- **Scale:** `K` went from 1.6 to 1.35, a middle ground (Matthew was getting lost). Building heights (`HK`) are unchanged, so Nico still isn't as tall as the houses. The save went to v3 (positions are dropped, money is kept; tested).
+- **Minimap** under the money: roads, lots and buildings in their roof colours, emoji markers for home, Burger Barn, the school, hospital, fire station and toy shop. Live dots: Nico (orange, ringed), his car, James and Primo, and the fire truck flashing while it's out.

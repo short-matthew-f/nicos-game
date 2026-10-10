@@ -8,7 +8,7 @@
 // grow without retyping it. Things sized against Nico himself (doors' stand-spots, the
 // playground equipment) are not scaled; building heights have their own factor, so a
 // house is well taller than he is (Nico, 2026-10-09: "not the same height as buildings").
-export const K = 1.6;                 // world size per plan unit
+export const K = 1.35;                // world size per plan unit (1.6 felt too big to find your way round: 2026-10-09)
 export const HK = 2.4;                // building wall height per plan unit
 const k = (v: number) => Math.round(v * K);
 

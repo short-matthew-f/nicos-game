@@ -25,6 +25,10 @@ describe('save', () => {
     expect(migrate({ v: 1, money: 11, nico: { x: 5, y: 6 }, car: { x: 1, y: 2, h: 0 }, driving: true }))
       .toEqual({ v: VERSION, money: 11, nico: null, car: null, driving: false });
   });
+  it('a v2 save (1.6x town) keeps its money but not its positions', () => {
+    expect(migrate({ v: 2, money: 9, nico: { x: 5, y: 6 }, car: null, driving: false }))
+      .toEqual({ v: VERSION, money: 9, nico: null, car: null, driving: false });
+  });
   it('a save from a newer game version is not misread', () => {
     expect(migrate({ v: VERSION + 1, money: 999 })).toEqual(fresh());
   });

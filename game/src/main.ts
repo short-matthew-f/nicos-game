@@ -4,6 +4,7 @@ import { drawGround, drawWorld } from './world/draw';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
 import { Siren } from './sound';
+import { Minimap } from './minimap';
 import { loadArt, PersonView } from './rig/person';
 import { neutral, type PoseState } from './rig/pose';
 import { Input } from './input/stick';
@@ -43,6 +44,8 @@ async function main() {
   const layer = new Container(); layer.sortableChildren = true;
   world.addChild(drawGround(), layer);
   app.stage.addChild(world);
+  const minimap = new Minimap(window.innerWidth < 640 ? 130 : 170);
+  app.stage.addChild(minimap.view);
   const { seats } = drawWorld(layer);
 
   const cars = makeTraffic(3);
@@ -330,7 +333,7 @@ async function main() {
 
     // traffic brakes for Nico on foot, and for every part of his car
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
-    const mine: [number, number][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y]);
+    const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
     if (mode !== 'drive') mine.push([nico.x, nico.y]);
     for (const l of locals) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
@@ -363,6 +366,17 @@ async function main() {
     world.position.set(app.screen.width / 2 - cx * zoom, app.screen.height / 2 - cy * zoom);
 
     siren.update(dt, truckOut ? Math.hypot(truck.pos[0] - cx, truck.pos[1] - cy) : null);
+
+    // minimap: top-left, under the money
+    const mr = moneyEl.getBoundingClientRect();
+    minimap.view.position.set(mr.left + 6, mr.bottom + 16);
+    const flash = Math.floor(performance.now() / 250) % 2 === 0;
+    minimap.update([
+      ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
+      ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
+      ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
+      { x: mode === 'drive' ? car.x : nico.x, y: mode === 'drive' ? car.y : nico.y, color: '#F08A3C', r: 5, ring: true },
+    ]);
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {

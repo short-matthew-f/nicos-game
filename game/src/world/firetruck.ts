@@ -4,6 +4,7 @@ import { Container, Graphics } from 'pixi.js';
 import { Loop, roundCorners } from './path';
 import { fireRoute } from './map';
 import { NAVY } from './draw';
+import { SQUEEZE } from './cars';
 
 const S = 1.4;   // drawn at 1.4x its base art (160 x 64)
 export const TRUCK = { max: 330, acc: 240, brake: 760, len: 160 * S, wid: 64 * S, firstRun: 25, every: [70, 130] as [number, number] };
@@ -59,7 +60,9 @@ export class FireTruck {
 
   /** `yieldTo`: things in front to stop for. Cars already stopped for the truck are left
    * out by the caller, so the two never wait for each other. Returns true while out. */
-  update(dt: number, yieldTo: [number, number][]): boolean {
+  private stuck = 0; private squeeze = 0;   // as for cars: squeeze past Nico's car if it's parked in the way
+
+  update(dt: number, yieldTo: [number, number, string?][]): boolean {
     this.t += dt;
     if (!this.out) {
       this.wait -= dt;
@@ -68,12 +71,18 @@ export class FireTruck {
     }
     const [x, y] = this.pos, h = this.heading, fx = Math.cos(h), fy = Math.sin(h);
     let blocked = false;
-    for (const [bx, by] of yieldTo) {
+    if (this.squeeze > 0) this.squeeze -= dt;
+    let byMine = false;
+    for (const [bx, by, tag] of yieldTo) {
+      if (this.squeeze > 0 && tag === 'mine') continue;
       const rx = bx - x, ry = by - y;
       const along = rx * fx + ry * fy, side = Math.abs(-rx * fy + ry * fx);
-      if (along > TRUCK.len * 0.1 && along < TRUCK.len * 1.2 && side < TRUCK.wid * 0.85) { blocked = true; break; }
+      if (along > TRUCK.len * 0.1 && along < TRUCK.len * 1.2 && side < TRUCK.wid * 0.85) { blocked = true; byMine = tag === 'mine'; break; }
     }
-    this.speed = blocked ? Math.max(0, this.speed - TRUCK.brake * dt) : Math.min(TRUCK.max, this.speed + TRUCK.acc * dt);
+    this.stuck = byMine && this.speed < 5 ? this.stuck + dt : 0;
+    if (this.stuck > SQUEEZE.after) { this.squeeze = SQUEEZE.for; this.stuck = 0; }
+    const top = this.squeeze > 0 ? SQUEEZE.speed : TRUCK.max;
+    this.speed = blocked ? Math.max(0, this.speed - TRUCK.brake * dt) : Math.min(top, this.speed + TRUCK.acc * dt);
     this.s += this.speed * dt;
     if (this.s >= this.loop.length) {
       this.out = false; this.s = 0; this.speed = 0;
