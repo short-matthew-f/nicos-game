@@ -563,10 +563,11 @@ export class Workshop {
         slots.append(g);
       });
     };
+    let slow = false;
     const demo = () => {
       turn = false; done = []; showSlots(); setButtons(false);
       strip.textContent = `Watch Sensei... (${round + 1}/${CLASS.rounds})`;
-      const t = callTime(toward) * 1000;
+      const t = callTime(toward) * 1000 * (slow ? 1.35 : 1);   // (after a miss, Sensei shows it again more slowly)
       want.forEach((m, i) => later(500 + i * t, () => {
         big.replaceChildren(icon(m)); call(m); strip.textContent = MOVES.find(q => q.id === m)!.call;
         later(t * 0.7, () => big.replaceChildren());
@@ -579,13 +580,13 @@ export class Workshop {
       else if (m === 'block') { audio.noise(0.05, 0.3, 3000); audio.tone('triangle', 500, 400, 0.06, 0.05); }
       else { audio.tone('sawtooth', 520, 700, 0.18, 0.06); audio.tone('square', 780, 1040, 0.14, 0.04, 0.05); }
     };
-    const start = () => { want = combo(toward); demo(); };
+    const start = () => { want = combo(toward); slow = false; demo(); };
     const press = (m: KMove) => {
       if (!turn) return;
       done.push(m); call(m); big.replaceChildren(icon(m, 0.8)); showSlots();
       const r = check(want, done);
       if (r === 'miss') {
-        turn = false; setButtons(false); sfx.boing(); strip.textContent = 'Sensei: "Not quite. Watch again!"';
+        turn = false; setButtons(false); sfx.boing(); slow = true; strip.textContent = 'Sensei: "Not quite. Watch again, slowly!"';
         later(1100, demo);
       } else if (r === 'done') {
         turn = false; setButtons(false); round++; sfx.sparkle(); strip.textContent = `Sensei: "Good!" (${round}/${CLASS.rounds})`;

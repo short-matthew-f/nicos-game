@@ -23,8 +23,10 @@ export const CLASS = { rounds: 3 };
 export const nextBelt = (belt: number) => Math.min(BELTS.length - 1, belt + 1);
 export const isBlack = (belt: number) => belt >= BELTS.length - 1;
 /** How many moves in a combination, and how long Sensei shows each (s), for a class toward belt `toward`. */
-export const comboLength = (toward: number) => 3 + toward;
-export const callTime = (toward: number) => Math.max(0.42, 0.85 - toward * 0.06);
+// (Nico, 2026-10-11: "a little too hard", stuck around brown belt: was 3 + belt moves, down to 0.42 s each;
+// now a move longer every other belt, 6 at most, and never quicker than 0.62 s)
+export const comboLength = (toward: number) => 3 + Math.floor(toward / 2);
+export const callTime = (toward: number) => Math.max(0.62, 0.85 - toward * 0.035);
 /** A combination: never the same move three times running, and it ends with a kiai on the higher belts. */
 export function combo(toward: number, r: () => number = Math.random): Move[] {
   const n = comboLength(toward), out: Move[] = [];

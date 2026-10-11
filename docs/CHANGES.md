@@ -989,3 +989,7 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **New icons:** a seagull and a crab.
 - **Tests:** `test/book.test.ts` (every icon sticker has real art). E2e: open the book, collect a full page once, read a hint.
 - **Change (the user, 2026-10-11):** "The belt should only be on in the dojo." Nico now wears his belt only while he's inside the dojo (`wearBelt` in the loop); it comes off when he leaves. E2e checks both.
+- **Easier karate (2026-10-11):** Nico found it "a little too hard" and was stuck around brown belt. The brown-belt test was 9 moves at 0.49 s each.
+  - **Combinations:** now a move longer only every other belt: 3, 3, 4, 4, 5, 5, 6, 6 (was 3 to 10).
+  - **Calling speed:** Sensei never calls faster than 0.62 s a move.
+  - **After a miss:** Sensei shows the same combination again 35% slower.

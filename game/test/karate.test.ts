@@ -7,10 +7,11 @@ describe('karate', () => {
     expect(nextBelt(-1)).toBe(0); expect(nextBelt(6)).toBe(7); expect(nextBelt(7)).toBe(7);
     expect(isBlack(7)).toBe(true); expect(isBlack(6)).toBe(false);
   });
-  it('each belt asks for a longer combination, called a little faster', () => {
-    for (let b = 1; b < BELTS.length; b++) { expect(comboLength(b)).toBeGreaterThan(comboLength(b - 1)); expect(callTime(b)).toBeLessThanOrEqual(callTime(b - 1)); }
+  it('the belts get a little harder, but never too hard (Nico got stuck at brown)', () => {
+    for (let b = 1; b < BELTS.length; b++) { expect(comboLength(b)).toBeGreaterThanOrEqual(comboLength(b - 1)); expect(callTime(b)).toBeLessThanOrEqual(callTime(b - 1)); }
     expect(comboLength(0)).toBe(3);
-    expect(callTime(7)).toBeGreaterThanOrEqual(0.42);
+    expect(comboLength(7)).toBeLessThanOrEqual(6);
+    expect(callTime(7)).toBeGreaterThanOrEqual(0.6);
   });
   it('combinations are the right length, never the same move three times running, no kiai before orange', () => {
     for (let b = 0; b < BELTS.length; b++) for (let n = 0; n < 50; n++) {
