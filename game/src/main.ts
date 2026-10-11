@@ -45,6 +45,8 @@ import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
+import { CABINETS } from './arcade/games';
+import { PeelGame } from './peelView';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
@@ -417,11 +419,18 @@ async function main() {
     setHigh: n => { state.biz.scores.pinball = n; persist(); },
     opened: on => { cardOpen = on ? 'pinball' : null; if (on) { see(state.biz, 'game', 'pinball'); app.ticker.stop(); } else { app.ticker.start(); } },   // (the town waits while he plays: one thing to draw)
   });
-  // the Snake cabinet in Alpha's Retro Games (arcade/view.ts): the same, with its own best score
+  // the cabinets in Alpha's Retro Games (arcade/): the same, each with its own best score
   const arcade = new Arcade({
-    high: () => state.biz.scores.snake ?? 0,
-    setHigh: n => { state.biz.scores.snake = n; persist(); },
-    opened: on => { cardOpen = on ? 'arcade' : null; if (on) { see(state.biz, 'game', 'snake'); app.ticker.stop(); } else { app.ticker.start(); } },
+    high: id => state.biz.scores[id] ?? 0,
+    setHigh: (id, n) => { state.biz.scores[id] = n; persist(); },
+    opened: (on, id) => { cardOpen = on ? 'arcade' : null; if (on) { see(state.biz, 'game', id); app.ticker.stop(); } else { app.ticker.start(); } },
+  });
+  // peeling potatoes for Yarosh (peel.ts): he pays for each one
+  const peeler = new PeelGame({
+    best: () => state.biz.scores.peel ?? 0,
+    setBest: n => { state.biz.scores.peel = n; persist(); },
+    pay: n => { state.money += n; showMoney(); sfx.cash(Math.min(6, n)); toast(`🥔 Yarosh pays you $${n} for the peeling!`); persist(); },
+    opened: on => { cardOpen = on ? 'peel' : null; if (on) { see(state.biz, 'job', 'peel'); app.ticker.stop(); } else { app.ticker.start(); } },
   });
   const work = new Workshop({
     biz: state.biz,
@@ -726,14 +735,15 @@ async function main() {
   /** The building's own business (its menu, buying, selling...), from the counter. */
   const placeAction = (id: string) => {
     if (GRAN[id]) { GRAN[id](); return; }
-    if (id === 'snake') { arcade.open(); return; }
+    if (id.startsWith('arcade:')) { arcade.open(id.slice(7)); return; }
+    if (id === 'peel') { peeler.open(); return; }
     if (id === 'scores') { showScores(); return; }
     const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p);
   };
   /** Alpha's high-score board: Nico's best at every game in town. */
   function showScores() {
     const s = biz.scores, row = (name: string, n: number | undefined) => `${name}: ${n ? n.toLocaleString() : '—'}`;
-    const lines = [row('🐍 Snake', s.snake), row('🕹️ Pinball', s.pinball), ...SONGS.map(sg => row(`🥁 ${sg.name}`, s[`rhythm:${sg.id}`])),
+    const lines = [...CABINETS.map(c => row(`👾 ${c.name[0]}${c.name.slice(1).toLowerCase()}`, s[c.id])), row('🕹️ Pinball', s.pinball), row('🥔 Potatoes peeled in a shift', s.peel), ...SONGS.map(sg => row(`🥁 ${sg.name}`, s[`rhythm:${sg.id}`])),
       `🥋 Sparring: ${RIVALS.filter(r => s[`spar:${r.who}`]).length} of ${RIVALS.length} instructors beaten`];
     showCard('scores', "🏆 High scores", lines.join('\n'), [], 'Cool!');
   }
@@ -1654,8 +1664,11 @@ async function main() {
     pinball: () => pinball.snapshot(),
     pinballOpen: () => pinball.open(),
     arcade: () => arcade.snapshot(),
-    arcadeOpen: () => arcade.open(),
+    arcadeOpen: (id?: string) => arcade.open(id),
     arcadeClose: () => arcade.close(),
+    peel: () => peeler.snapshot(),
+    peelOpen: () => peeler.open(),
+    peelAt: (x: number, y: number) => peeler.screenAt(x, y),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
     games: () => ({ showing: games.showing, spar: games.spar ? { nico: { ...games.spar.nico }, rival: { ...games.spar.rival }, over: games.spar.over, winner: games.spar.winner, intro: games.spar.intro } : null, rhythm: games.rhythm ? { score: games.rhythm.score, combo: games.rhythm.combo, notes: games.rhythm.notes.length, judged: games.rhythm.notes.filter(n => n.judged).length } : null, last: games.last }),

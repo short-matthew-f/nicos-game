@@ -167,9 +167,11 @@ const BIG: Record<string, Draw> = {
     .moveTo(-34 * k, -24 * k).lineTo(-6 * k, -60 * k).lineTo(22 * k, -60 * k).lineTo(34 * k, -24 * k).moveTo(-6 * k, -60 * k).lineTo(0, -24 * k).lineTo(-34 * k, -24 * k).stroke({ width: 5, color: '#2F7FD8' }).rect(-14 * k, -68 * k, 18 * k, 6 * k).fill('#2C3440'),
   bear: (g, k) => g.circle(-26 * k, -100 * k, 12 * k).fill('#8A5A3B').circle(26 * k, -100 * k, 12 * k).fill('#8A5A3B').ellipse(0, -36 * k, 34 * k, 36 * k).fill('#8A5A3B').circle(0, -86 * k, 28 * k).fill('#9C6A42').ellipse(0, -78 * k, 12 * k, 9 * k).fill('#D9A066')
     .circle(-9 * k, -92 * k, 3 * k).fill('#2C3440').circle(9 * k, -92 * k, 3 * k).fill('#2C3440').circle(0, -82 * k, 4 * k).fill('#2C3440'),
-  // an arcade cabinet (the screen and marquee colours vary by game: 'arcade' snake green, 'arcade2' pinball amber)
+  // the arcade cabinets (the marquee colour is the game's: arcade/games.ts)
   arcade: (g, k) => arcadeCab(g, k, '#4FE3C1', '#2B2A4A'),
   arcade2: (g, k) => arcadeCab(g, k, '#FF9A2E', '#7A1F2B'),
+  arcade3: (g, k) => arcadeCab(g, k, '#E5486D', '#1E2733'),
+  arcade4: (g, k) => arcadeCab(g, k, '#B8FF6A', '#2E5A2E'),
   // a big burlap sack of potatoes
   potsack: (g, k) => { g.poly([-34 * k, -78 * k, 34 * k, -78 * k, 42 * k, 0, -42 * k, 0]).fill('#C9A46A').stroke({ width: 4, color: WH }).rect(-34 * k, -82 * k, 68 * k, 8 * k).fill('#8A6A3E');
     for (const [x, y] of [[-20, -90], [0, -96], [20, -90], [-10, -104], [12, -104]]) g.ellipse(x * k, y * k, 13 * k, 9 * k).fill('#C9955A').stroke({ width: 2, color: '#A87A45' });

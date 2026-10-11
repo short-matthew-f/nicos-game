@@ -48,7 +48,8 @@ export const PAGES: Page[] = [
   { id: 'town', title: 'Around town', reward: 20, entries: [
     { id: 'dog', label: 'A dog of your own', art: ['icon', 'heart'], hint: 'The doghouse in your yard.', has: b => bool(b.unlocked.includes('doghouse')) },
     { id: 'potatoes', label: "Yarosh's potatoes", art: ['icon', 'bakedpot'], hint: "Order something at Yarosh's Potatoes (next to the school).", has: b => bool(['bakedpot', 'curly', 'mash', 'tots'].some(i => seen(b, `food:${i}`))) },
-    { id: 'snake', label: 'Snake at the arcade', art: ['icon', 'joystick'], hint: "Play Snake at Alpha's Retro Games.", has: b => seen(b, 'game:snake') },
+    { id: 'peel', label: 'Potato peeler', art: ['icon', 'potato'], hint: "Help Yarosh peel potatoes (at his shop).", has: b => seen(b, 'job:peel') },
+    { id: 'snake', label: 'At the arcade', art: ['icon', 'joystick'], hint: "Play a game at Alpha's Retro Games.", has: b => bool(['snake', 'blasters', 'bricks', 'frog'].some(g => seen(b, `game:${g}`))) },
     { id: 'pinball', label: 'Pinball!', art: ['icon', 'target'], hint: 'Play the machine in your house.', has: b => seen(b, 'game:pinball') },
     { id: 'goal', label: 'Score a goal', art: ['icon', 'target'], hint: 'Kick the ball into a goal at the soccer field.', has: b => seen(b, 'town:goal') },
     { id: 'fire', label: 'A fire put out', art: ['icon', 'extinguisher'], hint: 'Follow the fire truck when the alarm rings.', has: b => seen(b, 'town:fire') },

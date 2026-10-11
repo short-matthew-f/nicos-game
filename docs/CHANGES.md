@@ -1075,3 +1075,26 @@ The user: "Black shirt is Yarosh, white is Alpha. Yarosh needs a potato shop. An
   - New `test/snake.test.ts`.
   - The e2e orders a potato, opens the Snake machine, starts it, steers, and plays to game over. It then reads the high-score board.
 - **Known issue (not fixed here):** the pinball test "a ball left alone drains" can fail now and then, because the plunger has random jitter.
+
+## Yarosh very tall, potato peeling, four arcade games (2026-10-11)
+The user: "Yarosh should be very tall. The potato shop should have a potato peeling mini game. The retro arcade should have a few retro inspired games."
+- **Yarosh** is now height 1.42, taller than anyone in town (Mr. Master Krantz is 1.3).
+- **Potato peeling** (`peel.ts` holds the rules; `peelView.ts` draws the screen). Nico starts it from the peeling board in Yarosh's shop.
+  - A lumpy potato sits on a wooden board. Dragging a finger takes the skin off in strips, and curls of peel fly off. Tapping an eye digs it out.
+  - A potato is done when 90% of the skin is off and every eye is gone. It flies into Yarosh's pot and the next one rolls in.
+  - A shift lasts 60 seconds. Yarosh pays $1 a potato, and the best shift is saved (`scores.peel`).
+  - The skin is tracked on a grid of 8 px cells, so the peeled share is exact. The drawing is cut from a skin canvas with the same strokes.
+  - About one potato in four is a red one.
+- **Alpha's arcade** now has four cabinets. The OUT OF ORDER machine is gone.
+  - Each game is pure rules plus a 420×300 drawing (`arcade/games.ts`).
+  - `arcade/view.ts` is now one shared cabinet screen. Its controls depend on the game: an arrow pad, or ◀ ▶ and a big FIRE.
+  - **Snake.**
+  - **Space Blasters** (`blasters.ts`): aliens march and drop bombs, and a saucer is worth 100. Holding FIRE keeps firing, and each wave comes faster. The last alien is slowed a little so it can be hit.
+  - **Brick Breaker** (`bricks.ts`): drag on the screen or use the arrows to move the paddle, and FIRE launches the ball. Where the ball hits the paddle sets its angle. It speeds up with every brick, and clearing the wall moves on to the next level.
+  - **Frog Hop** (`frog.ts`): cross a road of cars and a river of logs to reach five lily pads, with three lives.
+  - Each game keeps its own best score. The HIGH SCORES board lists them all, plus pinball, the drum songs, sparring and potato peeling.
+- **Sticker book:** a new "Potato peeler" sticker. "At the arcade" now counts any of the four games.
+- **Pinball fix:** about 2% of launches, an untouched ball came to rest balanced on top of a flipper's hinge. That was the occasional failure of the "drains" test. A ball sitting still there now rolls off toward the flipper tip. Re-checked over 200 launches: 0 stuck.
+- **Tests:**
+  - New: `test/arcade.test.ts` and `test/peel.test.ts`.
+  - The e2e peels two potatoes with the mouse and gets paid. It also fires in Space Blasters, launches in Brick Breaker, hops in Frog Hop, and reads the full high-score board.

@@ -843,6 +843,22 @@ with sync_playwright() as p:
     m0 = G()['money']
     pg.click('#place-menu button[data-item="bakedpot"]'); pg.wait_for_timeout(300)
     check(G()['money'] == m0 - 4 and G()['biz']['seen'].get('food:bakedpot'), f"a loaded baked potato: $4, and he's speedy ({m0} -> {G()['money']})")
+    # peeling potatoes for Yarosh: drag to peel, tap the eyes, into the pot; he pays for each one
+    room_at('thing4'); pg.click('#action'); pg.wait_for_timeout(400)   # (the peeling board)
+    check(pg.evaluate('()=>window.__game.peel()')['open'], 'the peeling board opens')
+    pg.click('.pl-btn'); pg.wait_for_timeout(300)
+    for spud in range(2):
+        sn = pg.evaluate('()=>window.__game.peel()'); rx, ry = sn['rx'], sn['ry']
+        for y in range(int(-ry * 1.1), int(ry * 1.1) + 1, 16):
+            a1 = pg.evaluate(f'()=>window.__game.peelAt({-rx * 1.15},{y})'); b1 = pg.evaluate(f'()=>window.__game.peelAt({rx * 1.15},{y})')
+            pg.mouse.move(a1['x'], a1['y']); pg.mouse.down(); pg.mouse.move(b1['x'], b1['y'], steps=10); pg.mouse.up()
+        for ex, ey in pg.evaluate('()=>window.__game.peel()')['eyes']:
+            q = pg.evaluate(f'()=>window.__game.peelAt({ex},{ey})'); pg.mouse.click(q['x'], q['y'])
+        pg.wait_for_timeout(900)
+    sn = pg.evaluate('()=>window.__game.peel()')
+    check(sn['done'] == 2, f"peel all over, dig out the eyes: two potatoes in the pot ({sn})")
+    m0 = G()['money']; pg.click('.pl-close'); pg.wait_for_timeout(300)
+    check(G()['money'] == m0 + 2 and not pg.locator('#peel').is_visible() and G()['biz']['scores'].get('peel') == 2, f"stop: Yarosh pays $2, and it's his best shift ({m0} -> {G()['money']})")
     door('retro'); pg.wait_for_timeout(300)
     check(G()['room'] == 'retro', "inside Alpha's Retro Games")
     room_at('thing3'); pg.click('#action'); pg.wait_for_timeout(400)
@@ -855,8 +871,23 @@ with sync_playwright() as p:
     check(pg.locator('.ac-start').is_visible(), 'into the wall: game over, play again')
     pg.click('.ac-close'); pg.wait_for_timeout(300)
     check(not pg.locator('#arcade').is_visible() and G()['biz']['seen'].get('game:snake'), 'close the machine (and it goes in the sticker book)')
+    # the other cabinets: Space Blasters (hold FIRE), Brick Breaker (FIRE launches), Frog Hop (hop)
+    room_at('thing4'); pg.click('#action'); pg.wait_for_timeout(300); pg.click('.ac-start'); pg.wait_for_timeout(200)
+    fb = pg.locator('.ac-fire').bounding_box(); pg.mouse.move(fb['x'] + 40, fb['y'] + 40); pg.mouse.down(); pg.wait_for_timeout(500)
+    a2 = pg.evaluate('()=>window.__game.arcade()'); pg.mouse.up()
+    check(a2['cab'] == 'blasters' and a2['playing'] and a2['shots'] > 0 and a2['aliens'] == 32, f"Space Blasters: hold FIRE and it fires ({a2})")
+    pg.click('.ac-close'); pg.wait_for_timeout(200)
+    room_at('thing5'); pg.click('#action'); pg.wait_for_timeout(300); pg.click('.ac-start'); pg.wait_for_timeout(300)
+    check(pg.evaluate('()=>window.__game.arcade()')['ball']['stuck'], 'Brick Breaker: the ball waits on the paddle')
+    pg.click('.ac-fire'); pg.wait_for_timeout(400); a3 = pg.evaluate('()=>window.__game.arcade()')
+    check(a3['cab'] == 'bricks' and not a3['ball']['stuck'] and a3['ball']['y'] < 260, f"...FIRE launches it ({a3['ball']})")
+    pg.click('.ac-close'); pg.wait_for_timeout(200)
+    room_at('thing6'); pg.click('#action'); pg.wait_for_timeout(300); pg.click('.ac-start'); pg.wait_for_timeout(200)
+    pg.click('.ac-dpad .ac-up'); pg.wait_for_timeout(250); a4 = pg.evaluate('()=>window.__game.arcade()')
+    check(a4['cab'] == 'frog' and a4['row'] == 8, f"Frog Hop: one hop up ({a4})")
+    pg.click('.ac-close'); pg.wait_for_timeout(200)
     room_at('thing0'); pg.click('#action'); pg.wait_for_timeout(300)
-    check('Snake' in pg.locator('#place-text').inner_text() and 'Pinball' in pg.locator('#place-text').inner_text(), 'the high-score board lists his games')
+    check(all(w in pg.locator('#place-text').inner_text() for w in ['Snake', 'Space blasters', 'Frog hop', 'Pinball', 'peeled']), f"the high-score board lists his games ({pg.locator('#place-text').inner_text()})")
     pg.click('#place-close'); pg.wait_for_timeout(200); pg.evaluate("()=>window.__game.exitRooms()")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']

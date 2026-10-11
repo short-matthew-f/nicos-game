@@ -134,6 +134,8 @@ export class Table {
     if (d >= R || d === 0) return;
     const nx = (b.x - cx) / d, ny = (b.y - cy) / d;
     b.x = cx + nx * R; b.y = cy + ny * R;
+    // a ball balanced on top of the pivot (a real one would never stay there): roll it off toward the tip
+    if (t < 0.12 && ny < -0.9 && Math.hypot(b.vx, b.vy) < 30) { const k = 40 / Math.sqrt(L2); b.vx += abx * k; b.vy += aby * k; }
     // the speed of the flipper's surface at the contact point (ω × r)
     const rx = b.x - px, ry = b.y - py, svx = -s.w * ry, svy = s.w * rx;
     const rvx = b.vx - svx, rvy = b.vy - svy, vn = rvx * nx + rvy * ny;
