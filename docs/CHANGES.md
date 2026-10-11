@@ -988,3 +988,4 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **New records:** Nonna's pasta, a goal, a fire put out nearby, being out in rain or snow, playing pinball.
 - **New icons:** a seagull and a crab.
 - **Tests:** `test/book.test.ts` (every icon sticker has real art). E2e: open the book, collect a full page once, read a hint.
+- **Change (the user, 2026-10-11):** "The belt should only be on in the dojo." Nico now wears his belt only while he's inside the dojo (`wearBelt` in the loop); it comes off when he leaves. E2e checks both.

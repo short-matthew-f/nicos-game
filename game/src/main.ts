@@ -223,8 +223,14 @@ async function main() {
   }
   const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new PersonView() };
   /** Nico's karate belt, round his waist (only Nico wears it: friends he plays as don't). */
-  const beltOn = (v: PersonView) => { if (v.who === 'nico' && saved.biz.belt >= 0) v.setBelt(BELTS[saved.biz.belt].color, saved.biz.belt === BELTS.length - 1 ? '#FFFFFF44' : '#00000033'); };
-  beltOn(nico.view);
+  // (only in the dojo: the user, "The belt should only be on in the dojo"; the loop keeps it right)
+  let beltShown: string | null = null;
+  function wearBelt(inDojo: boolean) {
+    const want = inDojo && nico.view.who === 'nico' && saved.biz.belt >= 0 ? `${saved.biz.belt}` : null;
+    if (want === beltShown) return;
+    beltShown = want;
+    nico.view.setBelt(want === null ? null : BELTS[saved.biz.belt].color, saved.biz.belt === BELTS.length - 1 ? '#FFFFFF44' : '#00000033');
+  }
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
   /** Where Nico is in the town (outside the door, while he's in a building). */
@@ -618,7 +624,7 @@ async function main() {
     if (what === 'metalstar' && !isUnlocked(biz, 'metalstar')) biz.unlocked.push('metalstar');
     if (what === 'belt' && data) {
       const i = BELTS.findIndex(q => q.id === data);
-      if (i > biz.belt) { biz.belt = i; see(biz, 'belt', data); beltOn(nico.view); for (const l of locals) beltOn(l.view); toast(`🥋 You earned your ${BELTS[i].name} belt! It's round your waist now.`); }
+      if (i > biz.belt) { biz.belt = i; see(biz, 'belt', data); beltShown = '?'; toast(`🥋 You earned your ${BELTS[i].name} belt! You'll wear it here at the dojo.`); }
     }
     if (what === 'painting' && data) { see(biz, 'art', 'painting'); biz.paintings.push(data); biz.paintings.splice(0, Math.max(0, biz.paintings.length - PAINTINGS_KEPT)); if (room?.id === 'yiayia') enterInside('yiayia', [nico.x, nico.y]); }
     persist();
@@ -1285,7 +1291,7 @@ async function main() {
     v.setZoom(zoom, resolution); if (low) v.setLow(true);
     v.root.visible = old.root.visible; v.root.zIndex = old.root.zIndex; v.root.position.copyFrom(old.root.position);
     if (o.bubble) { const b = o.bubble as unknown as Container; b.removeFromParent(); v.root.addChild(b); }
-    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; beltOn(v);
+    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; if (o === nico) beltShown = '?';   // (a new look: the loop puts the belt back if it should be on)
   }
   function playAs(who: string) {
     for (const l of locals) {
@@ -1746,6 +1752,7 @@ async function main() {
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     { const was = clock; clock = (clock + dt / DAY.length) % 1; if (clock < was) newDay(); }
+    wearBelt(room?.id === 'dojo');
     weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
     if (!room && mode !== 'drive') { if (weather.rain > 0.6 && !biz.seen['sky:rain']) see(biz, 'sky', 'rain'); if (weather.snow > 0.6 && !biz.seen['sky:snow']) see(biz, 'sky', 'snow'); }
     if ((stickerCheck -= dt) <= 0) { stickerCheck = 1.5; checkStickers(); }
@@ -1925,6 +1932,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
+      beltShown,
       weather: { kind: weather.kind, rain: weather.rain, snow: weather.snow, wet: weather.wet, cover: weather.cover, season: seasonOf(day), day, lights: weather.decor[0]?.visible ?? false },
       fiat: { at: fiat.at, out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
