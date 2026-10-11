@@ -383,7 +383,38 @@ export const HOME_FURNITURE: Record<string, { x: number; y: number; w: number; d
   nightstand: { x: 320, y: 250, w: 70, d: 60, h: 60 },
   couch: { x: 520, y: 262, w: 300, d: 70, h: 70 },       // under the windows, facing the room
   kitchen: { x: 930, y: 250, w: 300, d: 80, h: 70 },     // counter along the wall, the fridge at the end
+  pinball: { x: 825, y: 262, w: 100, d: 90, h: 200 },    // Nico's own pinball machine (pinball/), against the wall between the couch and the kitchen
 };
+/** Nico's pinball machine: legs, a long cabinet with the playfield glowing under glass, and the
+ * backbox standing up at the back with its lit marquee. */
+export function pinballArt(): Container {
+  const s = HOME_FURNITURE.pinball, c = new Container(), g = new Graphics(), F = s.y + s.d, x0 = s.x, x1 = s.x + s.w;
+  g.ellipse(s.x + s.w / 2 + 6, F + 2, s.w / 2 + 14, 12).fill({ color: NAVY, alpha: 0.2 });
+  // legs
+  for (const [lx, ly] of [[x0 + 8, F - 4], [x1 - 14, F - 4], [x0 + 10, s.y + 30], [x1 - 16, s.y + 30]]) g.rect(lx - BAND, ly - 46, 6 + 2 * BAND, 50).fill('#FFFFFF').rect(lx, ly - 46, 6, 50).fill('#34495E');
+  // the cabinet, seen from above and in front: the top (the glass) and the front face
+  const top = F - 70, back = s.y - 40;
+  g.poly([x0 - BAND, top + BAND, x0 + 6 - BAND, back - BAND, x1 - 6 + BAND, back - BAND, x1 + BAND, top + BAND, x1 + BAND, top + 24 + BAND, x0 - BAND, top + 24 + BAND]).fill('#FFFFFF');
+  g.poly([x0, top, x0 + 6, back, x1 - 6, back, x1, top]).fill('#2B2350');
+  g.poly([x0 + 8, top - 4, x0 + 12, back + 6, x1 - 12, back + 6, x1 - 8, top - 4]).fill('#24347A');   // the playfield under glass
+  for (const [bx, by, col] of [[x0 + 40, back + 30, '#E5484D'], [x1 - 40, back + 30, '#F06A8A'], [x0 + s.w / 2, back + 52, '#F9A826']] as const) g.circle(bx, by, 7).fill(col).circle(bx, by, 3).fill('#FFFFFF');
+  g.moveTo(x0 + s.w / 2 - 22, top - 12).lineTo(x0 + s.w / 2 - 6, top - 6).moveTo(x0 + s.w / 2 + 22, top - 12).lineTo(x0 + s.w / 2 + 6, top - 6).stroke({ width: 4, color: '#FFFFFF', cap: 'round' });
+  g.circle(x0 + s.w / 2 + 14, back + 80, 4).fill('#DDE3EA');   // the ball
+  g.rect(x0, top, s.w, 24).fill('#7A4A2C').rect(x0, top, s.w, 4).fill('#9C6640');                    // the front of the cabinet
+  g.roundRect(x0 + 6, top + 8, 14, 8, 3).fill('#D9342B').roundRect(x1 - 20, top + 8, 14, 8, 3).fill('#D9342B');   // flipper buttons
+  g.rect(x0 + s.w / 2 - 10, top + 6, 20, 14).fill('#1A0F08').rect(x0 + s.w / 2 - 6, top + 9, 12, 4).fill('#F9C846');  // the coin door
+  // the backbox, standing up at the back
+  const bb = { x: x0 + 4, y: back - 96, w: s.w - 8, h: 92 };
+  g.roundRect(bb.x - BAND, bb.y - BAND, bb.w + 2 * BAND, bb.h + 2 * BAND, 6).fill('#FFFFFF').roundRect(bb.x, bb.y, bb.w, bb.h, 5).fill('#4A2A18');
+  g.roundRect(bb.x + 6, bb.y + 6, bb.w - 12, 50, 4).fill('#13204F');
+  g.circle(bb.x + 22, bb.y + 22, 2).fill('#FFFFFF').circle(bb.x + 70, bb.y + 16, 1.6).fill('#FFFFFF').circle(bb.x + 86, bb.y + 30, 6).fill('#F4F1DE');
+  g.roundRect(bb.x + 8, bb.y + 62, bb.w - 16, 22, 3).fill('#0B0604');
+  for (let i = 0; i < 9; i++) g.circle(bb.x + 16 + i * 9, bb.y + 73, 2).fill('#FF9A2E');   // the score display
+  const t = new Text({ text: 'PINBALL', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 15, fill: '#F9C846', stroke: { color: '#2B1A0A', width: 3 } } });
+  t.anchor.set(0.5); t.position.set(bb.x + bb.w / 2, bb.y + 38);
+  c.addChild(g, t); c.zIndex = F;
+  return c;
+}
 /** Where Nico's head goes on the pillow (he's tucked in under the blanket). */
 export const PILLOW: [number, number] = [HOME_FURNITURE.bed.x + HOME_FURNITURE.bed.w / 2, HOME_FURNITURE.bed.y + 50];
 export function drawHomeRoom(paper = WALLPAPERS.blue, rug = RUGS.sunny): { view: Container; layer: Container; windows: Graphics } {

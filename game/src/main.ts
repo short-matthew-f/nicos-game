@@ -33,7 +33,7 @@ import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
 import { POOL, WSLIDE } from './world/zones';
-import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
+import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, pinballArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
 import { WALLPAPERS, RUGS, REDECORATE, PAINTINGS_KEPT } from './decor';
 import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
 import { RECIPES, PANTRY, BAKERY as BAKERY_RULES, recipe, cantBake, visit as bakeryVisit, whileAway as bakeryAway, emptyTill as bakeryEmpty, visitGap as bakeryGap, HENS } from './bakery';
@@ -43,6 +43,7 @@ import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
+import { Pinball } from './pinball/view';
 import { DOG, freshDog, stepDog, fetch as dogFetch, mouthOf, type DogState } from './dog';
 import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
@@ -371,6 +372,12 @@ async function main() {
   window.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (work.screen) work.close(); else if (cardOpen) closePlace(); });
 
   // ---- the business (v2): storage auction, Parts & Tools, the garage workbench, the Toy Shop
+  // Nico's pinball machine (in his house): its own screen, with the best score kept in the save
+  const pinball = new Pinball({
+    high: () => state.biz.scores.pinball ?? 0,
+    setHigh: n => { state.biz.scores.pinball = n; persist(); },
+    opened: on => { cardOpen = on ? 'pinball' : null; if (on) { see(state.biz, 'game', 'pinball'); app.ticker.stop(); } else { app.ticker.start(); } },   // (the town waits while he plays: one thing to draw)
+  });
   const work = new Workshop({
     biz: state.biz,
     money: () => state.money,
@@ -642,8 +649,8 @@ async function main() {
     const f0 = HOME_FURNITURE;
     const { view, layer: rl, windows } = drawHomeRoom(WALLPAPERS[biz.home.wall], RUGS[biz.home.rug]), { bed, blanket } = bedArt(), stand = nightstandArt();
     const lamp = light(stand.bulb[0], stand.bulb[1], 110, 90, 0xFFD98A, 0.8); lamp.zIndex = 9999;
-    rl.addChild(bed, blanket, stand.view, couchArt(), kitchenArt(), lamp);
-    if (dog) { const g = new Graphics(); drawDog(g, 'sleep'); g.position.set(f0.bed.x + f0.bed.w / 2 - 10, f0.bed.y + f0.bed.d + 44); g.scale.set(1.25); g.zIndex = f0.bed.y + f0.bed.d + 40; rl.addChild(g); }   // (Biscuit, asleep at the foot of the bed)
+    rl.addChild(bed, blanket, stand.view, couchArt(), kitchenArt(), pinballArt(), lamp);
+    if (dog) { const g = new Graphics(); drawDog(g, 'sleep'); g.position.set(f0.bed.x + f0.bed.w / 2 - 14, f0.bed.y + f0.bed.d - 24); g.scale.set(1.2); g.zIndex = 9000; rl.addChild(g); }   // (Biscuit, curled up asleep on the foot of the bed)
     paintWindows(windows, darkness(clock));
     const f = HOME_FURNITURE, outlines: Record<string, Container> = {};
     // decorations: the ones he's bought, and outlines (with prices) for the rest
@@ -739,6 +746,7 @@ async function main() {
         if (snackIn > 0) { toast('🥤 You just had one! Save some for later.'); return; }
         snackIn = 120; boost = Math.min(BOOST.max, boost + 15); sfx.coin(); toast('🍎 An apple from the fridge. Crunch! You feel speedy! ⚡');
       } },
+      { id: 'pinball', x: HOME_FURNITURE.pinball.x + HOME_FURNITURE.pinball.w / 2, y: HOME_FURNITURE.pinball.y + HOME_FURNITURE.pinball.d + 50, r: 110, label: '🕹️ Play pinball', run: () => pinball.open() },
       ...decorSpots(),
       { id: 'leave', x: HOME_EXIT[0], y: HOME_EXIT[1], r: 120, label: '🚪 Go outside', run: leaveRoom },
     ];
@@ -1394,6 +1402,8 @@ async function main() {
     // test/inspection: show the whole town (zoom out to fit) until called again with false
     overview: (on: boolean) => { overview = on; },
     alarm: () => truck.alarm(),
+    pinball: () => pinball.snapshot(),
+    pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },

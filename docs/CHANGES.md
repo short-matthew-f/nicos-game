@@ -890,3 +890,39 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - The bark is synthesised (`sfx.bark`).
 - **Fixed:** the house crashed when Nico walked in after earning Poppop's carved sign or metal star (`decorSpots` looked up a walk-up spot those wall pieces don't have). The new e2e caught it.
 - **Debug:** `kickBall(vx, vy)`; `__game.dog`.
+
+### Nico's City Pinball (2026-10-10)
+- **What the user asked for:** "a real working pinball game... inside of Nico's house... when you walk up to it you can push play, and a pinball sized screen pops up complete with buttons for left and right flippers and a load ball."
+- **The machine in the house:** stands against the wall between the couch and the kitchen (`HOME_FURNITURE.pinball`, `pinballArt`). Walking up to it offers "Play pinball".
+- **The screen** (`pinball/view.ts`): a full-screen cabinet.
+  - A dot-matrix score display on top: amber dots, words drawn 4x and averaged down so they stay readable.
+  - The playfield under glass.
+  - Big arcade buttons: left and right flippers, and LAUNCH. Hold LAUNCH to pull the plunger back (the ball sinks with it); a quick tap gives a varied normal launch.
+  - Touching the left or right half of the glass also flips.
+  - Keys: arrows, Z and /, Shift; space to launch; Esc to close.
+  - Portrait puts the buttons in a row under the cabinet.
+  - The town's ticker is paused while it's open.
+- **The table** (`pinball/table.ts`):
+  - Arched top, plunger lane with a one-way gate, N-I-C-O rollover lanes, three pop bumpers, the Burger Barn saucer, three F-I-R drop targets (flush to the wall), a spinner lane, two slingshots and two flippers.
+  - Playfield art: night sky, moon, the city skyline with lit windows, and NICO'S CITY painted on.
+- **Physics** (`pinball/physics.ts`, pure):
+  - Substepped capsule collisions, so nothing tunnels.
+  - Flippers are tapered capsules that give the ball their surface speed (ω × r).
+  - Bumpers and slingshots kick; ball-to-ball collisions for multiball.
+- **Rules** (`pinball/rules.ts`):
+  - 3 balls and an 8 s ball save.
+  - Lighting N-I-C-O raises the bonus multiplier (up to 5X); the flipper buttons rotate the lit lanes.
+  - All three targets light the lock; the saucer then starts MULTIBALL.
+  - End-of-ball bonus, an extra ball at 100,000, and ball search (a ball sitting still for 5 s gets a kick).
+  - The high score is saved in `Biz.scores.pinball`.
+  - Score popups float up from hits; the display between games explains the rules.
+- **Found and fixed by simulation:**
+  - The saucer re-caught its own eject forever (it now has a cooldown).
+  - The ball wedged under the slingshots (they were raised) and behind the drop targets (moved flush, one-sided, with a deflector over the bank).
+  - The ball could escape the enclosed drain (the left wall now runs to the bottom).
+  - Every tap launched identically and fed the drain; the plunger range is now 1720-2350 plus a ±1.5% wobble.
+- **Tests:**
+  - `test/pinball.test.ts`: launches, cradle, flip shots, drain, no tunnelling under random flipping, and the rules.
+  - A robot player runs for 3 minutes on three seeds, including multiball, and must never get stuck.
+  - `test/pinball-targets.test.ts`.
+  - e2e: walk up, PLAY, hold LAUNCH, flipper button, arrow key, close.
