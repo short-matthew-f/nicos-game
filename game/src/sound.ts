@@ -171,7 +171,7 @@ export function footstep(surface: string, vol = 0.35) {
 
 // ---- the world's own sounds: birds by day (owls and crickets at night), the wind in the trees,
 // waves on the beach. Ambience.update is told where Nico is and what's round him.
-export interface Around { trees: number; shore: number; forest: boolean; dark: number; inside: boolean }
+export interface Around { trees: number; shore: number; forest: boolean; dark: number; inside: boolean; rain?: number }
 const SONGS: ((pan: number) => void)[] = [
   pan => { for (let i = 0; i < 2; i++) audio.chirp(3800, 2600, 0.11, 0.035, i * 0.16, pan); },                       // tweet-tweet
   pan => { for (let i = 0; i < 6; i++) audio.chirp(4200 + (i % 2) * 300, 3900, 0.05, 0.025, i * 0.06, pan); },       // a trill
@@ -180,9 +180,10 @@ const SONGS: ((pan: number) => void)[] = [
 ];
 export class Ambience {
   private wind: { gain: GainNode; filter: BiquadFilterNode } | null = null;
+  private rain: { gain: GainNode; filter: BiquadFilterNode } | null = null;
   private waves: { gain: GainNode; filter: BiquadFilterNode } | null = null;
   private birdIn = 2; private owlIn = 6; private cricketIn = 1; private t = 0;
-  constructor() { audio.onReady(() => { this.wind = audio.bed('bandpass', 1400, 0.6); this.waves = audio.bed('lowpass', 420); }); }
+  constructor() { audio.onReady(() => { this.wind = audio.bed('bandpass', 1400, 0.6); this.waves = audio.bed('lowpass', 420); this.rain = audio.bed('highpass', 900, 0.5); }); }
   update(dt: number, a: Around) {
     const c = audio.ctx; if (!c) return;
     this.t += dt;
@@ -194,6 +195,9 @@ export class Ambience {
     // waves: a slow swell near the shore
     const swell = 0.5 + 0.5 * Math.sin(this.t * 0.8);
     this.waves?.gain.gain.setTargetAtTime(out * Math.max(0, 1 - a.shore / 700) * (0.03 + 0.07 * swell), now, 0.3);
+    // rain: a soft hiss (muffled indoors, on the roof)
+    this.rain?.gain.gain.setTargetAtTime((a.rain ?? 0) * (out ? 0.07 : 0.025), now, 0.5);
+    this.rain?.filter.frequency.setTargetAtTime(out ? 900 : 300, now, 0.5);
     if (!out) return;
     // birds sing by day (more of them among trees), owls hoot and crickets chirp at night
     if (a.dark < 0.5) {

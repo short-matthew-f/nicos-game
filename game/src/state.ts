@@ -20,6 +20,7 @@ export interface Save {
   job: SavedJob | null;                           // the odd job in progress (the game checks the id still exists)
   clock?: number | null;                          // the time of day, 0..1 (night.ts); null: a fresh morning
   player?: string;                                // who he's playing as (Nico, or a friend: PLAYABLE)
+  day?: number;                                   // in-game days gone by (the seasons: world/weather.ts)
 }
 export const PLAYABLE: [string, string][] = [['nico', 'Nico'], ['james', 'James'], ['primo', 'Primo'], ['tempo', 'Tempo']];
 /** A job in progress: which one ('want:<giver>:<item>' for an item request), which step, and
@@ -64,6 +65,7 @@ export function migrate(raw: unknown): Save {
     biz: cleanBiz(o.biz),
     job: cleanJob(o.job),
     ...(typeof o.clock === 'number' && isFinite(o.clock) ? { clock: ((o.clock % 1) + 1) % 1 } : {}),
+    ...(typeof o.day === 'number' && Number.isInteger(o.day) && o.day > 0 ? { day: o.day } : {}),
     ...(typeof o.player === 'string' && o.player !== 'nico' && PLAYABLE.some(([w]) => w === o.player) ? { player: o.player } : {}),
   };
 }

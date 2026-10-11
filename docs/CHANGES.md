@@ -939,3 +939,17 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **Save:** `Biz.belt` (-1 none; 0..7).
 - **Moved:** a coin that sat under the new building.
 - **Tests:** `test/karate.test.ts`; e2e takes a whole class, including a wrong move.
+
+### Weather and seasons (2026-10-10)
+- **Seasons** (`world/weather.ts`): turn every 3 in-game days (a day is 12 minutes), spring → summer → fall → winter. A new game starts in summer, with winter about 70 minutes of play away. Sleeping through the night counts as a new day. `Save.day` is kept only when > 0. A toast announces each new season.
+- **Weather spells:** 80-200 s each, wet by season (summer 18%, spring/fall 40%, winter 55%: snow instead of rain).
+- **Rain:**
+  - Slanting streaks and splashes in screen space, a grey tint, and a soft rain hiss (muffled indoors).
+  - Puddles fade in by the roads as the ground gets wet and dry out slowly. Walking through one splashes.
+  - Everyone out in it, Nico included, puts up an umbrella (`umbrellaArt`).
+- **Snow:**
+  - Flakes drift down, and a blanket of snow settles over the ground (melts slowly in winter, fast after).
+  - Footsteps crunch (the soft step set) and kick up a puff.
+- **Winter:** strings of coloured lights along every house's eaves, glowing after dark, and a wreath on each door.
+- **Fall:** leaves drift down when it isn't raining.
+- **Debug:** `setWeather(kind, hold)`, `setSeason(name)`, `__game.weather`. The e2e holds the sky clear except for its own weather checks.

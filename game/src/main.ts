@@ -45,6 +45,7 @@ import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
 import { BELTS, nextBelt, isBlack } from './karate';
+import { Weather, seasonOf, SEASON, SEASONS, puddleAt, umbrellaArt, type Sky, type Season } from './world/weather';
 import { DOG, freshDog, stepDog, fetch as dogFetch, mouthOf, type DogState } from './dog';
 import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
@@ -117,6 +118,12 @@ async function main() {
   const clouds = new Clouds(); world.addChild(clouds.view);   // above everything: shadows fall on it all
   // day and night: the dark and the lights go over everything, the moon over the world on screen
   const night = new Night(); world.addChild(night.view); app.stage.addChildAt(night.moon, app.stage.getChildIndex(world) + 1);
+  // the weather and the seasons: puddles and snow on the ground, holiday lights on the houses, the sky falling over it all
+  const weather = new Weather();
+  world.addChildAt(weather.ground, 1); for (const c of weather.decor) layer.addChild(c); world.addChild(weather.glow);
+  app.stage.addChildAt(weather.sky, app.stage.getChildIndex(night.moon) + 1);
+  const umbrellas = new Map<object, Graphics>();   // (one for anyone out in the rain)
+  const UMBRELLA_COLORS = [0xE5484D, 0x2F6FD0, 0xF9C846, 0x3BB273, 0x8E5BC8, 0xF06A8A];
   const animals = new Animals(); for (const a of animals.list) { a.view.cullable = true; layer.addChild(a.view); }
   // the beach: shells to pick up, treasure to find with the metal detector
   const shells = new Shells(); for (const v of shells.views) { v.cullable = true; layer.addChild(v); }
@@ -162,8 +169,15 @@ async function main() {
   const saved: Save = load();
   const state = { money: saved.money, biz: saved.biz };
   let clock = saved.clock ?? DAY.start;   // the time of day (0..1)
+  let day = saved.day ?? SEASON.start;     // days gone by (the seasons)
+  /** A new day: maybe a new season too. */
+  function newDay() {
+    const was = seasonOf(day); day++;
+    const now = seasonOf(day);
+    if (now !== was) toast({ spring: '🌷 Spring is here! Flowers and showers.', summer: '☀️ Summer! Sunny days and ice cream.', fall: '🍂 Fall is here: the leaves are falling.', winter: '❄️ Winter! Snow is on the way, and the houses are putting up their lights.' }[now]);
+  }
   let player = saved.player ?? 'nico';   // who he's playing as (playAs)
-  const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false };
+  const ambience = new Ambience(), around = { trees: 0, shore: 9999, forest: false, dark: 0, inside: false, rain: 0 };
   let aroundIn = 0, lastFoot = 0, squash = 0, shake = 0, windowsIn = 0, lastDt = 0;
   const nv = [0, 0], cam = { x: NaN, y: NaN };   // Nico's velocity (eased); where the camera's looking (it trails a little)
   // a sticker hitting the world: a thump, a ring of dust along its bottom, a little jolt
@@ -221,7 +235,7 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock, ...(player !== 'nico' ? { player } : {}) });
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock, day, ...(player !== 'nico' ? { player } : {}) });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -770,7 +784,7 @@ async function main() {
   function sleepStep(t: number, night: boolean): Body {
     if (t > 0.8) sleepEl.classList.add('on');
     if (t >= 2.4 && t - lastDt < 2.4) {   // (once, while it's dark)
-      if (night) { clock = 0.03; boost = Math.min(BOOST.max, boost + 30); }
+      if (night) { clock = 0.03; newDay(); boost = Math.min(BOOST.max, boost + 30); }
       else boost = Math.min(BOOST.max, boost + 15);
       if (room?.windows) paintWindows(room.windows, darkness(clock));
       persist();
@@ -1329,6 +1343,18 @@ async function main() {
     if (l && !gone(l)) return '📝 “Gone to paint the sea at the beach! Come find me. Love, Yia-Yia”';
     return null;
   }
+  /** Umbrellas up over everyone out in the rain (and down again when it stops). */
+  function umbrellaUp(who: { key: object; x: number; y: number; h: number }[]) {
+    const up = weather.rain > 0.35, seen = new Set<object>();
+    for (const p of who) {
+      seen.add(p.key);
+      let u = umbrellas.get(p.key);
+      if (!u && up) { u = umbrellaArt(UMBRELLA_COLORS[umbrellas.size % UMBRELLA_COLORS.length]); layer.addChild(u); umbrellas.set(p.key, u); }
+      if (!u) continue;
+      u.visible = up; u.position.set(p.x, p.y); u.scale.set(p.h); u.zIndex = p.y + 2;
+    }
+    for (const [k, u] of umbrellas) if (!seen.has(k)) u.visible = false;
+  }
   function standFacing(l: Local, mx: number, my: number, dt: number) {
     l.w.vx = l.w.vy = 0;
     Object.assign(l.st, chooseView(mx - l.w.x, my - l.w.y, l.st));
@@ -1421,6 +1447,8 @@ async function main() {
     pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
+    setWeather: (k: Sky, hold = true) => weather.set(k, hold),
+    setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },
@@ -1590,7 +1618,10 @@ async function main() {
       const foot = Math.floor(nico.st.phase / (CYCLE / 2));
       if (foot !== lastFoot && nico.st.amp > 0.4 && sp > 0.2) {
         const ground = room ? roomSurface(room.kind) : surfaceAt(nico.x, nico.y);
-        footstep(ground); squash = 1;
+        const splash = !room && weather.wet > 0.4 && puddleAt(nico.x, nico.y), snowy = !room && weather.cover > 0.35 && ground !== 'wood';
+        footstep(snowy ? 'sand' : ground); squash = 1;   // (snow crunches like the beach's soft set)
+        if (splash) { audio.noise(0.14, 0.28, 1700); dust.puff(nico.x, nico.y, '#CFE6F7', 5, 90, 10); }
+        if (snowy) dust.puff(nico.x + (foot % 2 ? 10 : -10), nico.y, '#FFFFFF', 2, 40, 8);
         if (ground === 'sand') dust.puff(nico.x + (foot % 2 ? 10 : -10), nico.y, '#E8D5A0', 2, 40, 8);   // (sand kicked up)
       }
       lastFoot = foot;
@@ -1672,7 +1703,10 @@ async function main() {
     ballView.draw(ball, dt);
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
-    clock = (clock + dt / DAY.length) % 1; dust.update(dt); snackIn -= dt; pastaIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
+    { const was = clock; clock = (clock + dt / DAY.length) % 1; if (clock < was) newDay(); }
+    weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
+    umbrellaUp([...locals.filter(l => !gone(l)).map(l => ({ key: l as object, x: l.w.x, y: l.w.y, h: l.view.height })), ...(mode === 'walk' && !room ? [{ key: nico as object, x: nico.x, y: nico.y, h: nico.view.height }] : [])]);
+    dust.update(dt); snackIn -= dt; pastaIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
     if (room?.kind === 'home') {   // the fish swim round their tank (faster when they've just been fed)
       fishFed = Math.max(0, fishFed - dt); const T = HOME_DECOR.fishtank, sp = fishFed > 0 ? 2.5 : 1, tt = performance.now() / 1000;
       fish.forEach((g, i) => { if (g.destroyed) return; const u = tt * 0.5 * sp + i * 2.1, x = T.x + T.w / 2 + Math.sin(u) * (T.w / 2 - 26); g.position.set(x, T.y + T.d - T.h + 24 + i * 18 + Math.sin(u * 1.7) * 4); g.scale.x = Math.cos(u) >= 0 ? 1 : -1; });
@@ -1683,7 +1717,7 @@ async function main() {
       aroundIn = 0.5; const [ax, ay] = here(), near = (p: [number, number]) => Math.abs(p[0] - ax) < 600 && Math.abs(p[1] - ay) < 500;
       around.trees = TREES.filter(near).length + PINES.filter(near).length; around.shore = Math.max(0, shoreY(ax) - ay); around.forest = inForest(ax, ay);
     }
-    around.dark = night.dark; around.inside = !!room; ambience.update(dt, around);
+    around.dark = night.dark; around.inside = !!room; around.rain = weather.rain; ambience.update(dt, around);
     night.update(clock, dt, here(), { w: app.screen.width, h: app.screen.height });
     night.headlights([[car.x, car.y, car.h], ...cars.map(c => [c.pos[0], c.pos[1], c.loop.heading(c.s)] as [number, number, number]), ...(fiat.out ? [[fiat.pos[0], fiat.pos[1], fiat.heading] as [number, number, number]] : [])], CAR.len, CAR.wid);
     if (room) night.moon.visible = false;
@@ -1847,6 +1881,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
+      weather: { kind: weather.kind, rain: weather.rain, snow: weather.snow, wet: weather.wet, cover: weather.cover, season: seasonOf(day), day, lights: weather.decor[0]?.visible ?? false },
       fiat: { at: fiat.at, out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,

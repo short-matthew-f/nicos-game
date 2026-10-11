@@ -24,6 +24,7 @@ with sync_playwright() as p:
         pg.evaluate(f'()=>window.__game.place({x}, {y})'); return x, y
     away = lambda: at('home')   # somewhere well off the roads
     CARLEN = 112
+    pg.evaluate('()=>window.__game.setWeather("clear")')   # (the sky stays clear unless a check asks for weather)
     at('home', 700, 230); pg.wait_for_timeout(300)   # open ground, away from the world's edge
     g0 = G()
     check(not errs, f'page errors: {errs}')
@@ -801,6 +802,12 @@ with sync_playwright() as p:
     pg.wait_for_timeout(1000)
     check(G()['biz']['belt'] == 0, f"three clean combinations: the white belt ({G()['biz']['belt']})")
     pg.click('#work [data-done]'); pg.evaluate("()=>window.__game.exitRooms()")
+    # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
+    pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
+    check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")
+    pg.evaluate('()=>{window.__game.setSeason("winter"); window.__game.setWeather("snow")}'); pg.wait_for_timeout(6000); w = G()['weather']
+    check(w['season'] == 'winter' and w['snow'] > 0.8 and w['cover'] > 0.05 and w['lights'], f"winter: snow falls and settles, and the holiday lights are up ({w})")
+    pg.evaluate('()=>{window.__game.setSeason("summer"); window.__game.setWeather("clear")}'); pg.wait_for_timeout(300)
     # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
     ws = [t['who'] for t in G()['townsfolk']]
