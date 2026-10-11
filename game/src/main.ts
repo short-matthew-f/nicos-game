@@ -7,7 +7,7 @@ import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
 import { Dust } from './world/dust';
-import { icon } from './world/icons';
+import { icon, itemIcon } from './world/icons';
 import { yiayiaPainting } from './world/paintings';
 import { Night, DAY, inForest, darkness, light } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
@@ -83,7 +83,7 @@ async function main() {
   // tap the minimap for the big map; tap again to close it
   const bigMap = new Container(); bigMap.visible = false;
   const bigBack = new Graphics(); bigMap.addChild(bigBack);
-  const bigNote = new Text({ text: 'Tap anywhere to close  ·  🟠 you  ·  🟡 your job', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 16, fill: '#FFFFFF' } });
+  const bigNote = new Text({ text: 'Tap anywhere to close  ·  orange: you  ·  yellow ring: your job', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 16, fill: '#FFFFFF' } });
   bigNote.anchor.set(0.5, 1);
   let big: Minimap | null = null;
   app.stage.addChild(bigMap);
@@ -211,7 +211,7 @@ async function main() {
   type Box = { x: number; y: number; w: number; d: number };
   let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop' | 'home' | 'bakery' | 'inside'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
     outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container; windows?: Graphics; lamp?: Container } | null = null;
-  let carrying: { label: string; boost: number } | null = null;   // a tray of food, from the counter to a table
+  let carrying: { label: string; boost: number; food?: string } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
   if (saved.job) {
@@ -512,7 +512,7 @@ async function main() {
   // ---- inside the shed: equipment outlines, the workbench
   const shedArt: Record<string, () => Container> = {
     workbench: workbenchArt, bins: binsArt, paint: paintArt,
-    shelves: () => shelvesArt([...biz.finds.map(f => item(f.id).label.split(' ')[0]), ...SHELL_KINDS.filter(k => biz.found.includes(k.id)).map(() => '🐚')]),
+    shelves: () => shelvesArt([...biz.finds.map(f => itemIcon(f.id)), ...SHELL_KINDS.filter(k => biz.found.includes(k.id)).map(() => 'shell')]),
   };
   function enterShed() {
     const { view, layer: rl } = drawShedRoom(), outlines: Record<string, Container> = {};
@@ -1053,7 +1053,7 @@ async function main() {
     ];
   }
   // ---- inside buildings (Burger Barn): order at the counter, carry the tray to a table, eat
-  const trayView = trayArt('🍔'); trayView.visible = false;
+  const trayView = trayArt('burger'); trayView.visible = false;
   let tableTray: { view: { destroy(): void } } | null = null;
   /** Swap in a room (from the town, or from another room of the same building: the hallway and a unit). */
   function showRoom(next: Omit<NonNullable<typeof room>, 'outside'>, at: [number, number], face: View = 'back') {
@@ -1068,7 +1068,7 @@ async function main() {
   }
   function enterRoom(id: string) {
     const r = ROOMS[id], place = PLACES.find(p => p.building === id)!;
-    const { view, layer: rl } = drawRoom(r, (place.menu ?? []).map(m => ({ label: m.label, price: m.price })));
+    const { view, layer: rl } = drawRoom(r, (place.menu ?? []).map(m => ({ id: m.id, label: m.label, price: m.price })));
     const worker = new PersonView(r.worker.who); worker.setZoom(zoom, resolution); rl.addChild(worker.root);
     worker.pose(r.worker.x, r.worker.y, neutral('front')); worker.root.zIndex = r.worker.y;
     showRoom({ kind: 'diner', id, w: r.w, h: r.h, view, layer: rl, solids: roomSolids(r), worker, diner: r }, r.enter);
@@ -1091,12 +1091,12 @@ async function main() {
     const ap = biz.skills.includes('appraiser'), want = wanted();
     DOOR_NAMES.forEach((nm, i) => {
       const st = doorState(biz, i), d = biz.doors[i];
-      let sign = `${nm}`, note = '', peek = '';
-      if (st === 'sale') { const u = doorUnit(biz, i), [lo, hi] = guess(u, ap || !!u.starter); sign = `${nm} · $${u.price}`; note = `worth ~$${lo}–$${hi}`; peek = peekOf(u, want).map(id => item(id).label.split(' ')[0]).join(' ') + ' ❓'; }
+      let sign = `${nm}`, note = '', peek: string[] = [];
+      if (st === 'sale') { const u = doorUnit(biz, i), [lo, hi] = guess(u, ap || !!u.starter); sign = `${nm} · $${u.price}`; note = `worth ~$${lo}–$${hi}`; peek = peekOf(u, want).map(itemIcon); }
       if (st === 'yours') { sign = `${nm} · YOURS`; note = `${biz.unit!.items.length} left to sort`; }
       if (st === 'sold') { const t = Math.ceil(d.sold); sign = `${nm} · SOLD`; note = `new stuff in ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }
-      if (st === 'locked') { sign = `${nm} · 🔒`; note = 'buy Unit A first'; }
-      const key = [st, sign, note, peek].join('|');
+      if (st === 'locked') { sign = `${nm} · LOCKED`; note = 'buy Unit A first'; }
+      const key = [st, sign, note, peek.join(' ')].join('|');
       if (room!.painted![i] !== key) { room!.painted![i] = key; paintDoor(room!.doors![i], i, st, sign, note, peek); }
     });
   }
@@ -1127,7 +1127,7 @@ async function main() {
   function enterUnit() {
     const u = biz.unit; if (!u) return;
     const { view, layer: rl } = drawUnit(), finds = new Map<number, Container>();
-    for (const it of u.items) { const [x, y] = unitSlot(it.slot), a = findArt(item(it.id).label.split(' ')[0]); a.position.set(x, y); a.zIndex = y; rl.addChild(a); finds.set(it.slot, a); }
+    for (const it of u.items) { const [x, y] = unitSlot(it.slot), a = findArt(itemIcon(it.id)); a.position.set(x, y); a.zIndex = y; rl.addChild(a); finds.set(it.slot, a); }
     showRoom({ kind: 'unit', id: `unit${u.door}`, w: UNIT_ROOM.w, h: UNIT_ROOM.h, view, layer: rl, finds, solids: unitSolids() }, [UNIT_EXIT[0], UNIT_EXIT[1] - 70]);
     sfx.door();
   }
@@ -1178,8 +1178,8 @@ async function main() {
       onClick: () => {
         if (m.price > state.money) return;
         state.money -= m.price; showMoney(); persist(); sfx.tap();
-        carrying = { label: m.label, boost: m.boost };
-        trayView.removeChildren().forEach(c => c.destroy()); trayView.addChild(...trayArt(m.label.split(' ')[0]).removeChildren()); trayView.visible = true;
+        carrying = { label: m.label, boost: m.boost, food: m.id };
+        trayView.removeChildren().forEach(c => c.destroy()); trayView.addChild(...trayArt(m.id).removeChildren()); trayView.visible = true;
         toast(`Cook: "One ${m.label.split(' ').slice(1).join(' ').toLowerCase()}, coming up! Find a table."`);
       },
     })), 'Not now');
@@ -1188,7 +1188,7 @@ async function main() {
     if (!room) return;
     const [tx, ty] = room.diner!.tables[i];
     mode = 'play'; play = { kind: 'eat', t: 0, from: [tx - STOOL, ty + 12], seat: i };   // on the left stool
-    if (carrying) { trayView.visible = false; const t = trayArt(carrying.label.split(' ')[0]); t.position.set(tx - 10, ty - TABLE_TOP + 4); t.zIndex = ty + 15; room.layer.addChild(t); tableTray = { view: t }; }
+    if (carrying) { trayView.visible = false; const t = trayArt(carrying.food ?? 'burger'); t.position.set(tx - 10, ty - TABLE_TOP + 4); t.zIndex = ty + 15; room.layer.addChild(t); tableTray = { view: t }; }
   }
   function startDig() {
     const n = treasure.nearest(nico.x, nico.y);

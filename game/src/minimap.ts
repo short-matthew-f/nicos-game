@@ -1,6 +1,7 @@
 // A small map in the corner so the town is easy to find your way round: roads, lots and
 // buildings drawn once, plus live dots for Nico, his car, friends and the fire truck.
 import { Container, Graphics, Text } from 'pixi.js';
+import { icon } from './world/icons';
 import { WORLD, ROAD_SEGS, roadRect, BUILDINGS, LOTS, PINES, LAKE, POOL, PIER, SHED, SHOP, BAKERY } from './world/map';
 import { sandPolygon, waterPolygon, ZONE_LABELS } from './world/zones';
 
@@ -27,10 +28,11 @@ export class Minimap {
     for (const b of [...BUILDINGS, SHED, SHOP, BAKERY]) g.roundRect(b.x * s, b.y * s, b.w * s, b.d * s, 2).fill(b.roof);   // (the shed and the beach shop too, bought or not: places to head for)
     this.view.addChild(g);
     // a few labels for the places you'll look for
-    for (const [id, label] of [['burger', '🍔'], ['fire', '🚒'], ['school', '🏫'], ['hospital', '🏥'], ['home', '🏠'], ['toys', '🧸'], ['icecream', '🍦'], ['parts', '🔧'], ['storage', '📦'], ['barn', '🐄'], ['poolhouse', '🏊'], ['cabin', '🌲'], ['bibs', '🐚'], ['bakery', '🧁']] as const) {
+    // (drawn icons, not emoji: world/icons.ts)
+    for (const [id, name] of [['burger', 'burger'], ['fire', 'helmet'], ['school', 'books'], ['hospital', 'stethoscope'], ['home', 'heart'], ['toys', 'teddy'], ['icecream', 'icecream'], ['parts', 'wrench'], ['storage', 'toolbox'], ['barn', 'egg'], ['poolhouse', 'goggles'], ['cabin', 'binoculars'], ['bibs', 'shell'], ['bakery', 'cupcake'], ['dojo', 'gi'], ['yiayia', 'palette'], ['woodshop', 'hammer']] as const) {
       const b = [...BUILDINGS, SHOP, BAKERY].find(b => b.id === id); if (!b) continue;
-      const t = new Text({ text: label, style: { fontSize: 13 } });
-      t.anchor.set(0.5); t.position.set((b.x + b.w / 2) * s, (b.y + b.d / 2) * s);
+      const t = icon(name, 13);
+      t.position.set((b.x + b.w / 2) * s, (b.y + b.d / 2) * s);
       this.view.addChild(t);
     }
     // the big map names every place

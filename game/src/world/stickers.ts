@@ -16,7 +16,7 @@ export function outlineArt(x: number, y: number, w: number, h: number, label: st
   }
   g.stroke({ width: 7, color: '#FFFFFF', cap: 'round' });
   c.addChild(g);
-  const t = new Text({ text: label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 30, fill: '#FFFFFF', stroke: { color: NAVY, width: 6 } } });
+  const t = new Text({ text: label.replace(/^[^\p{L}\p{N}]+/u, ''), style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 30, fill: '#FFFFFF', stroke: { color: NAVY, width: 6 } } });
   t.anchor.set(0.5); t.position.set(x + w / 2, y + h / 2 - 24); c.addChild(t);
   const tag = new Container(), tt = new Text({ text: `$${price}`, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 28, fill: NAVY } });
   tt.anchor.set(0.5);

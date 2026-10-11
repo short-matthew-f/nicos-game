@@ -9,6 +9,32 @@ type Draw = (g: Graphics, k: number) => void;
 const edge = { width: 3, color: WH };
 /** Each icon is drawn on a 40-unit square centred at 0 (k scales it). */
 const ICONS: Record<string, Draw> = {
+  // storage finds and beach treasure (business.ts ITEMS: ITEM_ICON below)
+  radio: (g, k) => g.roundRect(-15 * k, -8 * k, 30 * k, 20 * k, 4 * k).fill('#C8463D').stroke(edge).circle(-6 * k, 2 * k, 6 * k).fill('#5B6472').rect(3 * k, -3 * k, 9 * k, 3 * k).fill('#F4F1EA').rect(3 * k, 3 * k, 9 * k, 3 * k).fill('#F4F1EA').moveTo(8 * k, -8 * k).lineTo(14 * k, -16 * k).stroke({ width: 2, color: NV }),
+  oillamp: (g, k) => g.ellipse(0, 8 * k, 14 * k, 6 * k).fill('#C9A04A').stroke(edge).roundRect(-6 * k, -10 * k, 12 * k, 16 * k, 5 * k).fill({ color: '#CFE6F7', alpha: 0.9 }).stroke(edge).ellipse(0, -2 * k, 3 * k, 5 * k).fill('#F9A826').rect(-8 * k, -13 * k, 16 * k, 4 * k).fill('#C9A04A'),
+  chair: (g, k) => g.rect(-10 * k, -16 * k, 4 * k, 30 * k).fill('#8A5A3B').rect(-10 * k, -16 * k, 18 * k, 4 * k).fill('#8A5A3B').rect(-10 * k, -2 * k, 22 * k, 5 * k).fill('#B07A4A').rect(8 * k, 2 * k, 4 * k, 12 * k).fill('#8A5A3B').rect(-10 * k, -8 * k, 18 * k, 3 * k).fill('#B07A4A'),
+  suitcase: (g, k) => g.roundRect(-15 * k, -8 * k, 30 * k, 22 * k, 4 * k).fill('#8A5A3B').stroke(edge).roundRect(-5 * k, -14 * k, 10 * k, 7 * k, 3 * k).stroke({ width: 2.5, color: NV }).rect(-15 * k, 0, 30 * k, 3 * k).fill('#C9A04A'),
+  skateboard: (g, k) => g.roundRect(-17 * k, -5 * k, 34 * k, 9 * k, 4.5 * k).fill('#F28C38').stroke(edge).circle(-10 * k, 8 * k, 3.5 * k).fill(NV).circle(10 * k, 8 * k, 3.5 * k).fill(NV).rect(-6 * k, -3 * k, 12 * k, 3 * k).fill('#FFFFFF'),
+  guitar: (g, k) => g.circle(-4 * k, 7 * k, 9 * k).fill('#D9A066').stroke(edge).circle(3 * k, 0, 7 * k).fill('#D9A066').circle(-3 * k, 5 * k, 3 * k).fill('#5A3A22').moveTo(2 * k, 0).lineTo(14 * k, -15 * k).stroke({ width: 4 * k, color: '#5A3A22' }),
+  console: (g, k) => g.roundRect(-16 * k, -8 * k, 32 * k, 18 * k, 8 * k).fill('#8E96A3').stroke(edge).rect(-11 * k, 0, 7 * k, 2.5 * k).fill(NV).rect(-8.75 * k, -2.25 * k, 2.5 * k, 7 * k).fill(NV).circle(8 * k, -1 * k, 2.5 * k).fill('#E5484D').circle(12 * k, 3 * k, 2.5 * k).fill('#2F7FD8'),
+  trophy: (g, k) => g.poly([-11 * k, -14 * k, 11 * k, -14 * k, 7 * k, 2 * k, -7 * k, 2 * k]).fill('#F9C846').stroke(edge).rect(-2 * k, 2 * k, 4 * k, 7 * k).fill('#E3A92A').roundRect(-9 * k, 9 * k, 18 * k, 5 * k, 2 * k).fill('#8A5A3B').circle(-12 * k, -8 * k, 4 * k).stroke({ width: 2, color: '#E3A92A' }).circle(12 * k, -8 * k, 4 * k).stroke({ width: 2, color: '#E3A92A' }),
+  socks: (g, k) => g.poly([-10 * k, -14 * k, -2 * k, -14 * k, -2 * k, 4 * k, 8 * k, 6 * k, 8 * k, 13 * k, -10 * k, 12 * k]).fill('#F06A8A').stroke(edge).rect(-10 * k, -14 * k, 8 * k, 4 * k).fill('#FFFFFF'),
+  papers: (g, k) => g.rect(-14 * k, -11 * k, 28 * k, 22 * k).fill('#ECE6D8').stroke(edge).rect(-11 * k, -8 * k, 22 * k, 4 * k).fill(NV).rect(-11 * k, -1 * k, 10 * k, 9 * k).fill('#BFC8D2').rect(2 * k, -1 * k, 9 * k, 2 * k).fill('#9AA6B2').rect(2 * k, 3 * k, 9 * k, 2 * k).fill('#9AA6B2'),
+  bucket: (g, k) => g.poly([-12 * k, -9 * k, 12 * k, -9 * k, 9 * k, 13 * k, -9 * k, 13 * k]).fill('#9AA6B2').stroke(edge).ellipse(0, -9 * k, 12 * k, 3 * k).fill('#5B6472').moveTo(-12 * k, -9 * k).quadraticCurveTo(0, -24 * k, 12 * k, -9 * k).stroke({ width: 2, color: NV }).circle(4 * k, 15 * k, 1.8 * k).fill('#5BB8E8'),
+  bottle: (g, k) => g.roundRect(-6 * k, -4 * k, 12 * k, 19 * k, 4 * k).fill('#3E8F5A').stroke(edge).rect(-2.5 * k, -15 * k, 5 * k, 12 * k).fill('#3E8F5A').rect(-3 * k, -16 * k, 6 * k, 3 * k).fill('#8A5A3B').rect(-6 * k, 2 * k, 12 * k, 6 * k).fill('#F4F1EA'),
+  oldkey: (g, k) => g.circle(-9 * k, 0, 7 * k).stroke({ width: 4 * k, color: '#C9A04A' }).rect(-2 * k, -2 * k, 18 * k, 4 * k).fill('#C9A04A').rect(10 * k, 2 * k, 3 * k, 5 * k).fill('#C9A04A').rect(14 * k, 2 * k, 2 * k, 4 * k).fill('#C9A04A'),
+  watch: (g, k) => g.roundRect(-5 * k, -16 * k, 10 * k, 32 * k, 3 * k).fill('#8A5A3B').circle(0, 0, 9 * k).fill('#C9A04A').stroke(edge).circle(0, 0, 6.5 * k).fill('#FFFFFF').moveTo(0, 0).lineTo(0, -4.5 * k).moveTo(0, 0).lineTo(3 * k, 1 * k).stroke({ width: 1.5, color: NV }),
+  piratecoin: (g, k) => g.circle(0, 0, 13 * k).fill('#F9C846').stroke(edge).circle(0, 0, 9 * k).stroke({ width: 1.5, color: '#E3A92A' }).circle(0, -2 * k, 4 * k).fill('#E3A92A').rect(-4 * k, 3 * k, 8 * k, 2 * k).fill('#E3A92A'),
+  ring: (g, k) => g.ellipse(0, 4 * k, 11 * k, 9 * k).stroke({ width: 4 * k, color: '#F9C846' }).poly([-5 * k, -6 * k, 5 * k, -6 * k, 0, -14 * k]).fill('#BFE9FF').stroke({ width: 1.5, color: WH }),
+  axle: (g, k) => g.rect(-15 * k, -2 * k, 30 * k, 4 * k).fill('#9AA6B2').stroke(edge).circle(-15 * k, 0, 4 * k).fill('#5B6472').circle(15 * k, 0, 4 * k).fill('#5B6472'),
+  detector: (g, k) => g.moveTo(-8 * k, -14 * k).lineTo(6 * k, 8 * k).stroke({ width: 3.5 * k, color: '#5B6472' }).ellipse(8 * k, 11 * k, 9 * k, 4 * k).fill('#3BB273').stroke(edge).roundRect(-12 * k, -16 * k, 8 * k, 6 * k, 2 * k).fill(NV),
+  camera: (g, k) => g.roundRect(-15 * k, -8 * k, 30 * k, 20 * k, 4 * k).fill(NV).stroke(edge).rect(-8 * k, -12 * k, 9 * k, 5 * k).fill(NV).circle(1 * k, 2 * k, 7 * k).fill('#9AA6B2').circle(1 * k, 2 * k, 4 * k).fill('#2F7FD8').circle(10 * k, -4 * k, 2 * k).fill('#F9C846'),
+  shell: (g, k) => { g.poly([-14 * k, 8 * k, 0, -13 * k, 14 * k, 8 * k]).fill('#F4B8A6').stroke(edge); for (const x of [-8, -3, 3, 8]) g.moveTo(0, -11 * k).lineTo(x * k, 8 * k).stroke({ width: 1.5, color: '#D98A74' }); g.roundRect(-5 * k, 7 * k, 10 * k, 5 * k, 2 * k).fill('#F4B8A6'); },
+  // Burger Barn's tray
+  burger: (g, k) => g.ellipse(0, -5 * k, 15 * k, 9 * k).fill('#E3A857').stroke(edge).rect(-16 * k, -1 * k, 32 * k, 3 * k).fill('#3BB273').rect(-15 * k, 2 * k, 30 * k, 5 * k).fill('#7A4A2C').roundRect(-14 * k, 7 * k, 28 * k, 6 * k, 3 * k).fill('#E3A857').circle(-5 * k, -9 * k, 1 * k).fill('#FFF4C2').circle(4 * k, -10 * k, 1 * k).fill('#FFF4C2'),
+  fries: (g, k) => { for (const [x, h] of [[-7, 16], [-3, 20], [1, 17], [5, 21], [8, 15]]) g.rect(x * k, (-h + 2) * k, 3 * k, h * k).fill('#F9C846'); g.poly([-11 * k, -2 * k, 11 * k, -2 * k, 8 * k, 14 * k, -8 * k, 14 * k]).fill('#E5484D').stroke(edge); },
+  shake: (g, k) => g.poly([-9 * k, -8 * k, 9 * k, -8 * k, 6 * k, 15 * k, -6 * k, 15 * k]).fill('#F7C8D0').stroke(edge).ellipse(0, -10 * k, 10 * k, 5 * k).fill('#FFFFFF').circle(0, -15 * k, 3 * k).fill('#E5484D').moveTo(4 * k, -10 * k).lineTo(8 * k, -22 * k).stroke({ width: 2.5, color: '#2F7FD8' }),
+  gi: (g, k) => g.poly([-13 * k, -12 * k, 13 * k, -12 * k, 15 * k, 14 * k, -15 * k, 14 * k]).fill('#FAFAF7').stroke(edge).poly([-6 * k, -12 * k, 6 * k, 4 * k, 9 * k, 0, -2 * k, -12 * k]).fill('#DCDCD3').rect(-15 * k, 2 * k, 30 * k, 4 * k).fill('#1F1F24'),
   // food
   tomato: (g, k) => g.circle(0, 2 * k, 13 * k).fill('#E5484D').stroke(edge).poly([-5 * k, -10 * k, 0, -6 * k, 5 * k, -10 * k, 0, -13 * k]).fill('#3BB273'),
   garlic: (g, k) => g.ellipse(0, 3 * k, 12 * k, 11 * k).fill('#F4EBD6').stroke(edge).poly([-3 * k, -8 * k, 3 * k, -8 * k, 0, -16 * k]).fill('#E9DCC7').moveTo(0, -6 * k).lineTo(0, 12 * k).stroke({ width: 1.5, color: '#D8C7A4' }),
@@ -139,3 +165,13 @@ export function iconRow(names: string, x: number, y: number, size = 30, gap = 40
   const list = names.split(' ').filter(Boolean);
   return list.map((n, i) => { const g = icon(n, size); g.position.set(x + (i - (list.length - 1) / 2) * gap, y); return g; });
 }
+
+/** The drawn icon for each item in the game (business.ts ITEMS), by id. */
+export const ITEM_ICON: Record<string, string> = {
+  wheel: 'wheel', axle: 'axle', body: 'wood', tin: 'tin', gear: 'gear', battery: 'battery', bulb: 'bulb', twine: 'twine',
+  flour: 'flour', sugar: 'sugar', butter: 'butter', egg: 'egg', chocolate: 'chocolate',
+  teddy: 'teddy', radio: 'radio', books: 'books', lamp: 'oillamp', chair: 'chair', suitcase: 'suitcase', skateboard: 'skateboard', guitar: 'guitar',
+  painting: 'canvas', console: 'console', clock: 'clock', trophy: 'trophy', socks: 'socks', papers: 'papers', bucket: 'bucket', bottle: 'bottle',
+  oldkey: 'oldkey', watch: 'watch', piratecoin: 'piratecoin', ring: 'ring', detector: 'detector', camera: 'camera',
+};
+export const itemIcon = (id: string) => ITEM_ICON[id] ?? id;

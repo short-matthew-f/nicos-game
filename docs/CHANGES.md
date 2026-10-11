@@ -953,3 +953,16 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **Winter:** strings of coloured lights along every house's eaves, glowing after dark, and a wreath on each door.
 - **Fall:** leaves drift down when it isn't raining.
 - **Debug:** `setWeather(kind, hold)`, `setSeason(name)`, `__game.weather`. The e2e holds the sky clear except for its own weather checks.
+
+### No more emoji in the drawn world; a frame-rate check (2026-10-10)
+- **New drawn icons** (`world/icons.ts`) for every storage and beach find: radio, oil lamp, chair, suitcase, skateboard, guitar, console, trophy, socks, newspapers, bucket, bottle, old key, watch, pirate coin, ring, axle, metal detector, camera, shell. Also Burger Barn's burger, fries and shake, and a gi. `ITEM_ICON` maps every item id to one.
+- **Now drawn as icons instead of emoji:**
+  - the finds in a storage unit (`findArt`) and the shed shelves;
+  - the tray at Burger Barn and its menu board;
+  - what you can see under each storage door;
+  - the minimap's place markers (plus the dojo, Yia-Yia's studio and the woodshop).
+- **Text changes:**
+  - Locked storage doors say LOCKED.
+  - Buy outlines drop the emoji from their labels (the buttons keep theirs).
+  - The big map's legend is words.
+- **Frame rate** (WebKit on the Mac, 2x): a steady 60 fps in all of these: town by day, clear and in rain; the forest at night, clear and in snow; and town on a winter night with the holiday lights. Still to check on the real iPad: `?debug` shows the fps.

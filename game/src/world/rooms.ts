@@ -44,7 +44,7 @@ export function roomSolids(r: Room): Rect[] {
 }
 
 /** Draw a room: floor, back wall with the menu board, counter (in front of the worker), tables. */
-export function drawRoom(r: Room, menu: { label: string; price: number }[]): { view: Container; layer: Container } {
+export function drawRoom(r: Room, menu: { id?: string; label: string; price: number }[]): { view: Container; layer: Container } {
   const view = new Container(), floor = new Graphics(), layer = new Container(); layer.sortableChildren = true;
   // a dark surround, so a small room doesn't float in nothing
   floor.rect(-3000, -3000, r.w + 6000, r.h + 6000).fill('#2B2320');
@@ -60,8 +60,9 @@ export function drawRoom(r: Room, menu: { label: string; price: number }[]): { v
   const t = new Text({ text: r.menuTitle, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 26, fill: '#F9C846' } });
   t.anchor.set(0.5, 0); t.position.set(r.w / 2, by + 10); view.addChild(t);
   menu.forEach((m, i) => {
-    const line = new Text({ text: `${m.label}   $${m.price}`, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '700', fontSize: 22, fill: '#FFFFFF' } });
-    line.anchor.set(0.5, 0); line.position.set(r.w / 2, by + 48 + i * 30); view.addChild(line);
+    const line = new Text({ text: `${m.label.replace(/^[^\p{L}\p{N}]+/u, '')}   $${m.price}`, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '700', fontSize: 22, fill: '#FFFFFF' } });
+    line.anchor.set(0.5, 0); line.position.set(r.w / 2 + 14, by + 48 + i * 30); view.addChild(line);
+    const ic = icon(m.id ?? '', 22); ic.position.set(r.w / 2 + 14 - line.width / 2 - 20, by + 61 + i * 30); view.addChild(ic);   // (drawn, not emoji)
   });
   // a drinks machine and a plant against the back wall
   const deco = new Graphics()
@@ -102,9 +103,9 @@ export function drawRoom(r: Room, menu: { label: string; price: number }[]): { v
 }
 
 /** A tray with something on it (carried, or on a table while you eat). */
-export function trayArt(emoji: string): Container {
+export function trayArt(food: string): Container {
   const c = new Container(), g = new Graphics().roundRect(-30, -10, 60, 20, 6).fill('#FFFFFF').roundRect(-27, -8, 54, 16, 5).fill('#E5484D');
-  const t = new Text({ text: emoji, style: { fontSize: 30 } }); t.anchor.set(0.5, 0.9); t.position.set(0, -2);
+  const t = icon(food, 30); t.position.set(0, -16);   // (the burger, fries or shake: drawn, world/icons.ts)
   c.addChild(g, t); return c;
 }
 
@@ -115,7 +116,7 @@ export const DOOR_W = 210;
 export const HALL_DESK = { x: 40, y: 380, w: 200, d: 56 };   // the office desk (the clerk stands behind it)
 export const HALL_EXIT: [number, number] = [HALL_ROOM.w / 2, HALL_ROOM.h - 30];
 
-export interface DoorView { g: Graphics; sign: Text; note: Text; peek: Text }
+export interface DoorView { g: Graphics; sign: Text; note: Text; peek: Container }
 export function drawHall(): { view: Container; layer: Container; doors: DoorView[] } {
   const view = new Container(), floor = new Graphics(), layer = new Container(); layer.sortableChildren = true;
   const { w, h, wall } = HALL_ROOM;
@@ -133,7 +134,7 @@ export function drawHall(): { view: Container; layer: Container; doors: DoorView
     const st = { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900' as const, fill: '#2B3F55' };
     const sign = new Text({ text: '', style: { ...st, fontSize: 24 } }); sign.anchor.set(0.5); sign.position.set(doorX(i), 40);
     const note = new Text({ text: '', style: { ...st, fontSize: 18, fill: '#FFFFFF', fontWeight: '800' as const } }); note.anchor.set(0.5); note.position.set(doorX(i), 190);
-    const peek = new Text({ text: '', style: { fontSize: 26 } }); peek.anchor.set(0.5, 1); peek.position.set(doorX(i), wall - 4);
+    const peek = new Container(); peek.position.set(doorX(i), wall - 18);   // (what you can see through the gap under the door)
     view.addChild(sign, note, peek);
     doors.push({ g, sign, note, peek });
   }
@@ -150,7 +151,7 @@ export function drawHall(): { view: Container; layer: Container; doors: DoorView
 }
 
 /** Redraw one door: for sale (closed, with a gap you can peek through), yours (rolled up, open), sold, or locked. */
-export function paintDoor(v: DoorView, i: number, state: 'sale' | 'yours' | 'sold' | 'locked', sign: string, note: string, peek: string) {
+export function paintDoor(v: DoorView, i: number, state: 'sale' | 'yours' | 'sold' | 'locked', sign: string, note: string, peek: string[]) {
   const x = doorX(i) - DOOR_W / 2, top = 64, bottom = HALL_ROOM.wall - 2, g = v.g.clear();
   g.roundRect(x - BAND - 6, top - BAND - 6, DOOR_W + 2 * BAND + 12, bottom - top + BAND + 6, 8).fill('#FFFFFF').roundRect(x - 6, top - 6, DOOR_W + 12, bottom - top + 6, 6).fill('#5A6570');
   g.roundRect(x + 30 - BAND, 20 - BAND, DOOR_W - 60 + 2 * BAND, 40 + 2 * BAND, 8).fill('#FFFFFF').roundRect(x + 30, 20, DOOR_W - 60, 40, 6).fill(state === 'sale' ? '#F9C846' : state === 'yours' ? '#7CD3A0' : '#C9D3DC');
@@ -163,7 +164,13 @@ export function paintDoor(v: DoorView, i: number, state: 'sale' | 'yours' | 'sol
     if (state === 'sale') g.rect(x, bottom - 30, DOOR_W, 30).fill('#2C3440');   // the gap at the bottom you can peek through
     g.roundRect(x + DOOR_W / 2 - 18, bottom - 52, 36, 10, 4).fill('#5A6570');      // handle
   }
-  v.sign.text = sign; v.note.text = note; v.peek.text = peek;
+  v.sign.text = sign; v.note.text = note;
+  v.peek.removeChildren().forEach(c => c.destroy());
+  if (peek.length) {
+    const n = peek.length + 1;
+    peek.forEach((name, k) => { const ic = icon(name, 26); ic.x = (k - (n - 1) / 2) * 32; v.peek.addChild(ic); });
+    const q = new Text({ text: '?', style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: 24, fill: '#F9C846' } }); q.anchor.set(0.5); q.x = ((n - 1) / 2) * 32; v.peek.addChild(q);
+  }
 }
 
 // ---- inside a storage unit: a concrete box with the finds lying about, and the door behind you
@@ -190,11 +197,11 @@ export function drawUnit(): { view: Container; layer: Container } {
   return { view, layer };
 }
 /** A find lying in a unit: big emoji on a sticker disc, with a shadow. */
-export function findArt(emoji: string): Container {
+export function findArt(name: string): Container {
   const c = new Container(), g = new Graphics()
     .ellipse(6, 4, 40, 12).fill({ color: NAVY, alpha: 0.18 })
     .circle(0, -38, 36 + BAND).fill('#FFFFFF').circle(0, -38, 36).fill('#FFF4DA');
-  const t = new Text({ text: emoji, style: { fontSize: 46 } }); t.anchor.set(0.5); t.position.set(0, -38);
+  const t = icon(name, 46); t.position.set(0, -38);   // (a drawn icon: world/icons.ts)
   c.addChild(g, t); return c;
 }
 
@@ -253,8 +260,8 @@ export function shelvesArt(things: string[]): Container {
   g.rect(s.x + 8, top + 8, s.w - 16, s.h + s.d - 16).fill({ color: '#000000', alpha: 0.12 });
   c.addChild(g);
   things.slice(0, 18).forEach((e, i) => {
-    const t = new Text({ text: e, style: { fontSize: 30 } }); t.anchor.set(0.5, 1);
-    t.position.set(s.x + 30 + (i % 6) * 48, boards[Math.floor(i / 6)] + 2); c.addChild(t);
+    const t = icon(e, 30);   // (things are icon names: world/icons.ts)
+    t.position.set(s.x + 30 + (i % 6) * 48, boards[Math.floor(i / 6)] - 15); c.addChild(t);
   });
   c.zIndex = s.y + s.d; return c;
 }
