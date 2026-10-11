@@ -44,6 +44,7 @@ import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep,
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
+import { BELTS, nextBelt, isBlack } from './karate';
 import { DOG, freshDog, stepDog, fetch as dogFetch, mouthOf, type DogState } from './dog';
 import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
@@ -204,6 +205,9 @@ async function main() {
     if (j && saved.job.step < j.steps.length) job = { job: j, step: saved.job.step, at: saved.job.at.length === j.steps.length ? saved.job.at : startJob(j).at };
   }
   const nico = { x: NICO_START.x, y: NICO_START.y, st: neutral('front'), view: new PersonView() };
+  /** Nico's karate belt, round his waist (only Nico wears it: friends he plays as don't). */
+  const beltOn = (v: PersonView) => { if (v.who === 'nico' && saved.biz.belt >= 0) v.setBelt(BELTS[saved.biz.belt].color, saved.biz.belt === BELTS.length - 1 ? '#FFFFFF44' : '#00000033'); };
+  beltOn(nico.view);
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
   /** Where Nico is in the town (outside the door, while he's in a building). */
@@ -581,6 +585,13 @@ async function main() {
       { label: '🎨 Paint a picture', sub: 'at the easel', id: 'paint', onClick: () => work.paint() },
     ], 'Bye, Yia-Yia!'),
     birdhouse: () => work.birdhouse(), cnc: () => work.cnc(), plasma: () => work.plasma(), paint: () => work.paint(),
+    // the dojo: Sensei's class (karate.ts); playing as a friend, they just say hi
+    dojo: () => {
+      const has = biz.belt >= 0, next = BELTS[nextBelt(biz.belt)], black = isBlack(biz.belt);
+      showCard('dojo', '🥋 Sensei', `Sensei: “${has ? pick([`Osu, Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to the dojo! Would you like to try a class?'}”`, [
+        { label: black ? '🥋 Train with Sensei' : has ? `🥋 Class: earn your ${next.name} belt` : '🥋 Your first class', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
+      ], 'Osu!');
+    },
   };
   /** Something made with a grandparent: it goes where it belongs (the bakery's recipes, Nico's house and garden, the gallery). */
   function madeWith(what: string, data?: string) {
@@ -588,6 +599,10 @@ async function main() {
     if (what === 'birdhouse' && !isUnlocked(biz, 'birdhouse')) { biz.unlocked.push('birdhouse'); placeBirdhouse(); }
     if (what === 'sign') { if (!isUnlocked(biz, 'sign')) biz.unlocked.push('sign'); if (data) biz.home.sign = data; }
     if (what === 'metalstar' && !isUnlocked(biz, 'metalstar')) biz.unlocked.push('metalstar');
+    if (what === 'belt' && data) {
+      const i = BELTS.findIndex(q => q.id === data);
+      if (i > biz.belt) { biz.belt = i; see(biz, 'belt', data); beltOn(nico.view); for (const l of locals) beltOn(l.view); toast(`🥋 You earned your ${BELTS[i].name} belt! It's round your waist now.`); }
+    }
     if (what === 'painting' && data) { see(biz, 'art', 'painting'); biz.paintings.push(data); biz.paintings.splice(0, Math.max(0, biz.paintings.length - PAINTINGS_KEPT)); if (room?.id === 'yiayia') enterInside('yiayia', [nico.x, nico.y]); }
     persist();
   }
@@ -1215,7 +1230,7 @@ async function main() {
     v.setZoom(zoom, resolution); if (low) v.setLow(true);
     v.root.visible = old.root.visible; v.root.zIndex = old.root.zIndex; v.root.position.copyFrom(old.root.position);
     if (o.bubble) { const b = o.bubble as unknown as Container; b.removeFromParent(); v.root.addChild(b); }
-    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v;
+    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; beltOn(v);
   }
   function playAs(who: string) {
     for (const l of locals) {
@@ -1405,6 +1420,7 @@ async function main() {
     pinball: () => pinball.snapshot(),
     pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
+    karateWant: () => work.karateWant(),
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },

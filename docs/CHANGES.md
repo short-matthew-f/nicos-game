@@ -926,3 +926,16 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - A robot player runs for 3 minutes on three seeds, including multiball, and must never get stuck.
   - `test/pinball-targets.test.ts`.
   - e2e: walk up, PLAY, hold LAUNCH, flipper button, arrow key, close.
+
+### Karate dojo and belts (2026-10-10)
+- **The dojo:** "KARATE DOJO" on the open ground past the storage yard (x 4660, y 3300). Inside: a training mat, a 空手 scroll, the belt board, a bench, and a punching bag (a new drawn `bag` big thing).
+- **Sensei:** a new look in `src/people.py`: white gi with a black belt, grey hair, barefoot. A new `top='gi'` draws the crossed lapels and the belt in all views.
+- **The class** (`karate.ts`; screen `workshop.karate()`):
+  - Sensei calls a combination (punch, kick, block; kiai from orange up). Nico watches, then does it back in order.
+  - A miss means "Not quite. Watch again!"; three clean combinations earn the next belt.
+  - Combinations are 3 + belt moves long and called a little faster each belt.
+  - The belts: white, yellow, orange, green, blue, purple, brown, black.
+- **The belt shows on Nico:** `PersonView.setBelt` draws it over the torso part in every view, with the knot and tails at the front. Nico's exported art is unchanged (hash `f7e1f80e...`). Friends Nico plays as don't wear it.
+- **Save:** `Biz.belt` (-1 none; 0..7).
+- **Moved:** a coin that sat under the new building.
+- **Tests:** `test/karate.test.ts`; e2e takes a whole class, including a wrong move.

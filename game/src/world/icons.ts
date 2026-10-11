@@ -115,6 +115,10 @@ const BIG: Record<string, Draw> = {
     .moveTo(-34 * k, -24 * k).lineTo(-6 * k, -60 * k).lineTo(22 * k, -60 * k).lineTo(34 * k, -24 * k).moveTo(-6 * k, -60 * k).lineTo(0, -24 * k).lineTo(-34 * k, -24 * k).stroke({ width: 5, color: '#2F7FD8' }).rect(-14 * k, -68 * k, 18 * k, 6 * k).fill('#2C3440'),
   bear: (g, k) => g.circle(-26 * k, -100 * k, 12 * k).fill('#8A5A3B').circle(26 * k, -100 * k, 12 * k).fill('#8A5A3B').ellipse(0, -36 * k, 34 * k, 36 * k).fill('#8A5A3B').circle(0, -86 * k, 28 * k).fill('#9C6A42').ellipse(0, -78 * k, 12 * k, 9 * k).fill('#D9A066')
     .circle(-9 * k, -92 * k, 3 * k).fill('#2C3440').circle(9 * k, -92 * k, 3 * k).fill('#2C3440').circle(0, -82 * k, 4 * k).fill('#2C3440'),
+  // a punching bag on a chain, from a stand
+  bag: (g, k) => g.rect(-38 * k, -230 * k, 8 * k, 230 * k).fill('#3A3A44').rect(-38 * k, -230 * k, 60 * k, 8 * k).fill('#3A3A44').rect(14 * k, -222 * k, 3 * k, 30 * k).fill('#9AA3AE')
+    .roundRect(-6 * k, -194 * k, 42 * k, 130 * k, 18 * k).fill('#C8463D').rect(-6 * k, -170 * k, 42 * k, 6 * k).fill('#2B2B30').rect(-6 * k, -96 * k, 42 * k, 6 * k).fill('#2B2B30')
+    .ellipse(-34 * k, 0, 26 * k, 7 * k).fill('#3A3A44'),
   plant: (g, k) => g.poly([-20 * k, -40 * k, 20 * k, -40 * k, 15 * k, 0, -15 * k, 0]).fill('#C8463D').circle(0, -72 * k, 24 * k).fill('#3E8F5A').circle(-18 * k, -56 * k, 18 * k).fill('#3E8F5A').circle(18 * k, -58 * k, 18 * k).fill('#5DB86F').circle(-4 * k, -92 * k, 14 * k).fill('#5DB86F'),
 };
 export function icon(name: string, size = 32): Graphics {

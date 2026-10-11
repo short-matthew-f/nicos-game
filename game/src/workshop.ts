@@ -11,6 +11,7 @@ import { PLANS, type Slot } from './plans';
 import { design, make, cantMake, pieceValue, bonusOf, type Piece } from './jewelry';
 import { SHELL_KINDS } from './world/beach';
 import { recipe, cantBake, bake, doneness, priceFor, BAKE, type Doneness } from './bakery';
+import { BELTS, MOVES, CLASS, combo, check, callTime, nextBelt, type Move as KMove } from './karate';
 export { PLANS };
 
 export interface WorkHost {
@@ -526,6 +527,82 @@ export class Workshop {
     this.sub.textContent = msg; this.actions.replaceChildren();
     this.button('Done', () => this.close(), 'primary').dataset.done = '1';
   }
+  /** Karate class with Sensei: watch the combination, then do it back. Three clean ones earn the next belt. */
+  karate() {
+    const b = this.host.biz, toward = nextBelt(b.belt), belt = BELTS[toward], first = b.belt < 0;
+    this.show('karate', 'Karate class', first ? 'Sensei: "Welcome! Bow in. Watch me, then copy me, in the same order."' : `Sensei: "Three clean combinations, and you earn your ${belt.name} belt!"`);
+    const svg = s('svg', { viewBox: '0 0 600 250', class: 'blueprint' }) as SVGSVGElement;
+    svg.append(s('rect', { x: 0, y: 0, width: 600, height: 250, rx: 18, fill: '#E9DDB8' }));
+    for (let x = 0; x < 600; x += 100) svg.append(s('rect', { x: x + 2, y: 2, width: 96, height: 246, rx: 6, fill: 'none', stroke: '#CDBF93', 'stroke-width': 3 }));   // tatami mats
+    const big = s('g') as SVGGElement; at(big, 300, 112); svg.append(big);
+    const slots = s('g') as SVGGElement; svg.append(slots);
+    const beltBar = s('rect', { x: 230, y: 214, width: 140, height: 18, rx: 5, fill: belt.color, stroke: '#2B3F55', 'stroke-width': 2 });
+    svg.append(beltBar);
+    this.stage.append(svg);
+    const strip = h('div', 'strip'); this.stage.append(strip);
+    let round = 0, want: KMove[] = [], done: KMove[] = [], turn = false, timers: number[] = [];
+    const later = (ms: number, f: () => void) => { timers.push(window.setTimeout(() => { if (this.screen === 'karate') f(); }, ms)); };
+    this.cleanup = () => { for (const t of timers) clearTimeout(t); timers = []; };
+    const icon = (m: KMove, k = 1) => {
+      const g = s('g') as SVGGElement, mv = MOVES.find(q => q.id === m)!;
+      g.append(s('circle', { cx: 0, cy: 0, r: 52 * k, fill: mv.color, stroke: '#FFFFFF', 'stroke-width': 6 * k }));
+      const p = (d: string, fill = '#FFFFFF') => g.append(s('path', { d, fill, stroke: '#2B3F55', 'stroke-width': 3 * k, 'stroke-linejoin': 'round', transform: `scale(${k})` }));
+      if (m === 'punch') { p('M-26,-18 h40 a12,12 0 0 1 12,12 v20 a12,12 0 0 1 -12,12 h-40 a10,10 0 0 1 -10,-10 v-24 a10,10 0 0 1 10,-10 z'); p('M-12,-18 v10 M2,-18 v10', 'none'); }
+      else if (m === 'kick') p('M-30,-30 l20,0 l8,28 l30,4 a8,8 0 0 1 0,16 l-40,-2 a8,8 0 0 1 -7,-6 z');
+      else if (m === 'block') p('M-34,8 l58,-34 a8,8 0 0 1 10,14 l-58,34 a8,8 0 0 1 -10,-14 z');
+      else { p('M0,-36 l8,22 l24,-6 l-14,20 l20,14 l-24,2 l2,24 l-16,-18 l-16,18 l2,-24 l-24,-2 l20,-14 l-14,-20 l24,6 z', '#FFF4C2'); g.append(s('text', { x: 0, y: 9 * k, 'text-anchor': 'middle', 'font-size': 26 * k, 'font-weight': 900, fill: '#2B3F55' }, )); (g.lastChild as SVGTextElement).textContent = '!'; }
+      return g;
+    };
+    const showSlots = () => {
+      slots.replaceChildren();
+      const n = want.length, gap = Math.min(64, 520 / n), x0 = 300 - gap * (n - 1) / 2;
+      want.forEach((m, i) => {
+        const g = s('g') as SVGGElement; at(g, x0 + i * gap, 30);
+        if (i < done.length) g.append(icon(m, 0.32));
+        else g.append(s('circle', { cx: 0, cy: 0, r: 15, fill: '#FFFFFF', opacity: 0.7, stroke: '#2B3F55', 'stroke-width': 2, 'stroke-dasharray': '4 4' }));
+        slots.append(g);
+      });
+    };
+    const demo = () => {
+      turn = false; done = []; showSlots(); setButtons(false);
+      strip.textContent = `Watch Sensei... (${round + 1}/${CLASS.rounds})`;
+      const t = callTime(toward) * 1000;
+      want.forEach((m, i) => later(500 + i * t, () => {
+        big.replaceChildren(icon(m)); call(m); strip.textContent = MOVES.find(q => q.id === m)!.call;
+        later(t * 0.7, () => big.replaceChildren());
+      }));
+      later(500 + want.length * t + 200, () => { turn = true; setButtons(true); strip.textContent = 'Your turn! Same moves, same order.'; });
+    };
+    const call = (m: KMove) => {   // a little sound for each move
+      if (m === 'punch') { audio.noise(0.06, 0.35, 1600); audio.tone('square', 220, 150, 0.06, 0.04); }
+      else if (m === 'kick') { audio.noise(0.12, 0.3, 900); audio.tone('sine', 300, 120, 0.12, 0.08); }
+      else if (m === 'block') { audio.noise(0.05, 0.3, 3000); audio.tone('triangle', 500, 400, 0.06, 0.05); }
+      else { audio.tone('sawtooth', 520, 700, 0.18, 0.06); audio.tone('square', 780, 1040, 0.14, 0.04, 0.05); }
+    };
+    const start = () => { want = combo(toward); demo(); };
+    const press = (m: KMove) => {
+      if (!turn) return;
+      done.push(m); call(m); big.replaceChildren(icon(m, 0.8)); showSlots();
+      const r = check(want, done);
+      if (r === 'miss') {
+        turn = false; setButtons(false); sfx.boing(); strip.textContent = 'Sensei: "Not quite. Watch again!"';
+        later(1100, demo);
+      } else if (r === 'done') {
+        turn = false; setButtons(false); round++; sfx.sparkle(); strip.textContent = `Sensei: "Good!" (${round}/${CLASS.rounds})`;
+        if (round >= CLASS.rounds) { later(600, () => this.finish2('belt', `Sensei ties on your ${belt.name} belt. ${first ? 'Welcome to the dojo! ' : ''}You bow. Osu! 🥋`, belt.id)); return; }
+        later(1100, start);
+      }
+    };
+    const btns = MOVES.map(m => { const bt = this.button(m.id === 'kiai' ? 'Kiai!' : m.name, () => press(m.id)); bt.dataset.move = m.id; bt.style.background = m.color; bt.style.color = '#fff'; return bt; });
+    const setButtons = (on: boolean) => { for (const bt of btns) bt.disabled = !on; };
+    setButtons(false);   // (until Sensei has shown the first combination)
+    // (the low belts don't use the kiai yet)
+    if (toward < 2) btns[3].hidden = true;
+    later(600, start);
+    this.karateWant = () => [...want];
+  }
+  /** For tests: the combination being called. */
+  karateWant: () => KMove[] = () => [];
   /** Nonna's pizzelle: batter on the iron, close the lid, open it when it stops steaming (golden). */
   pizzelle() {
     this.show('pizzelle', 'Pizzelle with Nonna', 'Nonna: "A spoon of batter in the middle, close the iron, and open it when the steam stops!"');

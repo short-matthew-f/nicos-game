@@ -73,6 +73,8 @@ export const BUILDINGS: Building[] = [
   // (a red barn of a garage), and Yia-Yia's painting studio on the south block
   { id: 'nonna', label: 'POPPOP & NONNA', x: 5150, y: 1370, w: 360, d: 200, h: 240, wall: '#E8D7B8', roof: '#4E6B3A', trim: '#FFFFFF', kind: 'house' },
   { id: 'woodshop', label: 'WOODSHOP', x: 5580, y: 1400, w: 300, d: 170, h: 220, wall: '#B8382F', roof: '#5E2A24', trim: '#FFFFFF', kind: 'barn' },
+  // the karate dojo, on the open ground past the storage yard (karate.ts)
+  { id: 'dojo', label: 'KARATE DOJO', x: 4660, y: 3300, w: 440, d: 230, h: 300, wall: '#F4EFE4', roof: '#3A3A44', trim: '#B8382F', kind: 'civic' },
   { id: 'yiayia', label: "YIA-YIA'S STUDIO", x: 2530, y: 2780, w: 340, d: 200, h: 250, wall: '#F4F1EA', roof: '#2F6FD0', trim: '#F9C846', kind: 'shop' },
   // beyond the town (zones.ts)
   ...ZONE_BUILDINGS.map(b => ({ ...b, kind: (b.id === 'barn' ? 'barn' : 'shop') as Building['kind'] })),

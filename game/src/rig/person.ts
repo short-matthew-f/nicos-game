@@ -1,6 +1,6 @@
 // A person on screen (Nico, or anyone drawn on his rig: art/<who>/): one Sprite per exported rig part, posed every frame from pose.ts, with
 // the sticker outline + shadow applied live to the whole body (so part seams don't show).
-import { Assets, Container, Matrix, Sprite, Texture } from 'pixi.js';
+import { Assets, Container, Graphics, Matrix, Sprite, Texture } from 'pixi.js';
 import { DropShadowFilter, OutlineFilter } from 'pixi-filters';
 import { partOps, opsMatrix, mul, VIEWS, type PoseState, type View } from './pose';
 import { NAVY } from '../world/draw';
@@ -67,6 +67,25 @@ export class PersonView {
     this.shadow.offset = { x: SHADOW.x * px, y: SHADOW.y * px };
   }
 
+  /** A karate belt round the waist (Nico earns them at the dojo): drawn over the torso part, so the
+   * exported art never changes. null takes it off. (In rig units: the shirt meets the trousers at y = -4.) */
+  private belts: Partial<Record<View, Graphics>> = {};
+  setBelt(color: string | null, edge = '#00000033') {
+    for (const v of VIEWS) {
+      this.belts[v]?.destroy(); delete this.belts[v];
+      if (!color) continue;
+      const g = new Graphics(), c = this.views[v].c, up = this.views[v].parts.findIndex(p => p.meta.part === 'up');
+      const [x0, x1] = v === 'side' ? [-20, 18] : v === 'qfront' || v === 'qback' ? [-20, 21] : [-22, 22];
+      g.roundRect(x0 - 1, -13, x1 - x0 + 2, 9, 2).fill(color).rect(x0, -13, x1 - x0, 1.5).fill(edge).rect(x0, -5.5, x1 - x0, 1.5).fill(edge);
+      if (v === 'front' || v === 'qfront' || v === 'side') {
+        const k = v === 'side' ? 14 : v === 'qfront' ? 3 : 0;   // the knot, at the front
+        g.poly([k - 2, -7, k - 7, 9, k - 2.5, 10, k + 0.5, -6]).fill(color).poly([k + 2, -7, k + 7, 9, k + 2.5, 10, k - 0.5, -6]).fill(color);   // the two tails
+        g.roundRect(k - 4.5, -14, 9, 11, 2.5).fill(color).roundRect(k - 4.5, -14, 9, 11, 2.5).stroke({ width: 1, color: edge });
+      }
+      c.addChildAt(g, c.getChildIndex(this.views[v].parts[up].sprite) + 1); this.belts[v] = g;   // (just over the torso, under the front arm)
+    }
+  }
+
   /** Cheaper drawing for slow devices: keep the white sticker outline, drop the soft shadow. */
   setLow(low: boolean) { this.root.filters = low ? [this.outline] : [this.outline, this.shadow]; }
 
@@ -86,6 +105,8 @@ export class PersonView {
       const m = mul(opsMatrix(ops[meta.part]), [1 / res, 0, 0, 1 / res, meta.x, meta.y]);
       sprite.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5]));
     }
+    const belt = this.belts[st.view];
+    if (belt && ops.up) { const m = opsMatrix(ops.up); belt.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5])); }
     const sx = st.view === 'front' || st.view === 'back' ? 1 : st.face;   // side and 3/4 views flip to face left
     this.root.position.set(x, y);
     this.root.scale.set(RIG_SCALE * this.height * sx, RIG_SCALE * this.height);

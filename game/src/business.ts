@@ -282,10 +282,11 @@ export interface Biz {
   home: { wall: string; rug: string; sign?: string };   // how his house is decorated (the colours: decor.ts; sign: the CNC sign's design)
   paintings: string[];             // pictures painted at Yia-Yia's (small JPEG data URLs, newest last)
   learned: string[];               // recipes the grandparents taught him ('pizzelle')
+  belt: number;                    // karate belt earned (karate.ts BELTS index; -1: none yet)
   scores: Record<string, number>;  // best scores in the games he plays ('pinball')
   seen: Record<string, number>;    // everything ever found or made, as 'page:id' -> how many (the sticker book: book.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [], scores: {}, seen: {} });   // (keys of WALLPAPERS / RUGS: decor.ts)
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [], belt: -1, scores: {}, seen: {} });   // (keys of WALLPAPERS / RUGS: decor.ts)
 
 /** Note something found or made, for the sticker book (things get sold or used up; this remembers). */
 export function see(b: Biz, page: string, id: string, n = 1) { const k = `${page}:${id}`; b.seen[k] = (b.seen[k] ?? 0) + n; }

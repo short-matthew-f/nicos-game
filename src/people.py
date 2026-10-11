@@ -213,6 +213,12 @@ class Look:
         elif s.top == 'cardigan':   # an open cardigan over a collared shirt (shirt2 shows down the front)
             if not back: t += (f'<path d="M-9,-52 L9,-52 L7,0 L-7,0 Z" fill="{s.shirt2}"/>'
                                f'<path d="M-10,-54 L0,-44 L-4,-56 Z M10,-54 L0,-44 L4,-56 Z" fill="{s.trim}"/>')
+        elif s.top == 'gi':      # a karate gi: the jacket's lapels crossing over, and the belt (trim) tied at the front
+            if not back: t += (f'<path d="M-12,-53 L9,-13 L15,-13 L-4,-53 Z" fill="{s.shirt2}"/>'
+                               f'<path d="M12,-53 L4,-38 L1,-44 L5,-53 Z" fill="{s.shirt2}"/>')
+            t += f'<rect x="-22" y="-13" width="44" height="8" rx="2" fill="{s.trim}"/>'
+            if not back: t += (f'<rect x="-5" y="-15" width="10" height="11" rx="3" fill="{s.trim}"/>'
+                               f'<path d="M-3,-6 L-8,10 L-3,11 L0,-5 Z M3,-6 L8,10 L3,11 L0,-5 Z" fill="{s.trim}"/>')
         elif s.top == 'track':   # track jacket: a stand-up collar, a zip down the front, stripes down the sides
             t += f'<rect x="-14" y="-56" width="28" height="9" rx="4" fill="{s.shirt2}"/>'
             if not back: t += f'<rect x="-1.5" y="-50" width="3" height="50" fill="{s.trim}"/><rect x="-3" y="-50" width="6" height="5" rx="1.5" fill="{s.trim}"/>'
@@ -233,6 +239,10 @@ class Look:
                  f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{s.shirt}"/>')
         if s.top == 'hoodie':
             shirt += f'<path d="M-18,-56 C-26,-50 -26,-36 -18,-30 C-14,-40 -12,-48 -10,-56 Z" fill="{s.shirt2}"/>'
+        elif s.top == 'gi':
+            shirt += (f'<path d="M-2,-53 L14,-20 L18,-24 L6,-53 Z" fill="{s.shirt2}"/>'
+                      f'<rect x="-20" y="-13" width="38" height="8" rx="2" fill="{s.trim}"/>'
+                      f'<path d="M12,-7 L15,10 L19,9 L16,-6 Z" fill="{s.trim}"/>')
         elif s.top == 'track':
             shirt += (f'<rect x="-10" y="-56" width="20" height="9" rx="4" fill="{s.shirt2}"/>'
                       f'<rect x="15" y="-48" width="3" height="48" fill="{s.trim}"/>')
@@ -271,6 +281,10 @@ class Look:
                 t += (f'<path d="M-9,-55 C-8,-46 0,-42 6,-42 C12,-42 18,-46 19,-55 L14,-57 C12,-50 -2,-50 -4,-57 Z" fill="{s.shirt2}"/>'
                       f'<rect x="1" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="10" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
                       f'<path d="M-8,-18 L18,-18 L20,-4 L-11,-4 Z" fill="{s.shirt2}"/>')
+        elif s.top == 'gi':
+            if not back: t += f'<path d="M-6,-53 L13,-13 L19,-13 L3,-53 Z" fill="{s.shirt2}"/>'
+            t += f'<rect x="-20" y="-13" width="40" height="8" rx="2" fill="{s.trim}"/>'
+            if not back: t += f'<rect x="4" y="-15" width="10" height="11" rx="3" fill="{s.trim}"/><path d="M6,-6 L2,10 L6,11 L9,-5 Z M12,-6 L16,10 L12,11 L9,-5 Z" fill="{s.trim}"/>'
         elif s.top == 'track':
             t += f'<rect x="-10" y="-56" width="26" height="9" rx="4" fill="{s.shirt2}"/>'
             if not back: t += f'<rect x="5.5" y="-50" width="3" height="50" fill="{s.trim}"/>'
@@ -381,6 +395,9 @@ LOOKS = {
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
     # people who work inside the other buildings, and the grown-ups at home in the houses (made up)
+    # Sensei at the dojo: a white gi and a black belt, grey hair, barefoot on the mats
+    'sensei': Look('sensei', skin='#E3B48C', skin2='#CF9F78', hair='#9AA0A6', hl='#B8BDC2', style='short', top='gi',
+                   shirt='#FAFAF7', shirt2='#DCDCD3', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#E3B48C', shoe2='#CF9F78', height=1.2),
     'nurse': Look('nurse', skin='#D9A07A', skin2='#C48B66', hair='#2A1E18', hl='#4A362A', style='shaggy', top='tee',
                   shirt='#4FB3A9', shirt2='#3E978E', sleeve='#4FB3A9', trim='#FFFFFF', pants='#4FB3A9', pants2='#3E978E', shoe='#F4F6F8', shoe2='#D3DAE1', height=1.15),
     'firefighter': Look('firefighter', skin='#E8B48E', skin2='#D69C76', hair='#5B3B26', style='short', top='hoodie',

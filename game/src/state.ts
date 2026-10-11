@@ -94,6 +94,7 @@ function cleanBiz(raw: unknown): Biz {
       ...(typeof b.home?.sign === 'string' && b.home.sign.length <= 8 ? { sign: b.home.sign } : {}) },
     paintings: strs(b.paintings).filter(p => p.startsWith('data:image/') && p.length < 120_000).slice(-PAINTINGS_KEPT),
     learned: strs(b.learned),
+    belt: typeof b.belt === 'number' && Number.isInteger(b.belt) && b.belt >= 0 && b.belt < 8 ? b.belt : -1,
     scores: counts(b.scores),
     seen: counts(b.seen),
   };

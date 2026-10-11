@@ -130,6 +130,13 @@ export const INTERIORS: Record<string, Interior> = {
     block(880, 560, 240, 70, 60, '#F9C846', '#E3A92A', undefined, sitHere('🪑 Sit and admire the art')),
     big(1130, 380, 'plant', 70, undefined, [50, 30]),
   ], { who: 'yiayia', name: 'Yia-Yia', x: 760, y: 420, lines: ['Hello, my darling! Shall we paint?', 'Every painting is a good painting.', 'Look at those colours! You\'re an artist.'], action: 'yiayia' }),
+  dojo: room('dojo', 'Karate Dojo', { wall: '#F4EFE4', stripe: '#E4DCC8', trim: '#3A3A44', floor: ['#E2D3A4', '#D6C592'] }, [
+    rug(260, 440, 680, 300, '#B8382F', '#E9DDB8'),                                   // the training mat
+    onWall(130, 40, 90, 170, '#F4F1EA', '空手'),                                      // a scroll: "karate"
+    onWall(980, 50, 170, 110, '#2B2B30', 'BELTS', undefined, { label: 'canvas Look at the belts', lines: ['White, yellow, orange, green, blue, purple, brown... and black!', 'Every black belt started as a white belt.'] }),
+    big(1060, 520, 'bag', 120, { label: '👊 Hit the punching bag', lines: ['THWACK! The bag swings.', 'Hi-YAH! Great punch!', 'Pow! Pow! Pow!'] }, [40, 30]),
+    block(120, 600, 200, 60, 50, '#B9895A', '#8A5A3B', undefined, sitHere('🪑 Sit and watch')),
+  ], { who: 'sensei', name: 'Sensei', x: 600, y: 400, lines: ['Osu! Ready to train?', 'A black belt is a white belt who never gave up.', 'Bow when you step on the mat.'], action: 'dojo' }),
   h1: house('h1', "Maya's house", '#FBE3C7', '#F28C38', 'mom', "Maya's mom", ['Hi Nico! Maya\'s out playing.', 'Would you like some lemonade?'], { label: '🍋 Lemonade', boost: 20 }),
   h2: house('h2', "Leo's house", '#D6EEE9', '#3E8F8A', 'dad', "Leo's dad", ['Leo? He\'s at the ice cream shop, as usual.', 'Want a granola bar?'], { label: '🥜 Granola bar', boost: 20 }),
   h3: house('h3', "Sam's house", '#F7E9C8', '#5B78AA', 'grandma', "Sam's grandma", ['Oh, hello dear! Sam\'s at the toy shop.', 'Have a cookie, fresh out of the oven.'], { label: '🍪 A warm cookie', boost: 25 }),
