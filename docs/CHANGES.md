@@ -1098,3 +1098,8 @@ The user: "Yarosh should be very tall. The potato shop should have a potato peel
 - **Tests:**
   - New: `test/arcade.test.ts` and `test/peel.test.ts`.
   - The e2e peels two potatoes with the mouse and gets paid. It also fires in Space Blasters, launches in Brick Breaker, hops in Frog Hop, and reads the full high-score board.
+
+## Yarosh a bit skinnier (2026-10-11)
+- The user: "Yarosh can be a bit skinnier".
+- New `Look(slim=…)` option: it narrows the torso, sleeves, arms and legs (a horizontal scale on each part) and leaves the head alone. Yarosh uses `slim=0.8`.
+- The rig's shoulder and hip spacing don't change, so the arms still meet the shoulders.

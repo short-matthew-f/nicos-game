@@ -446,10 +446,14 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None, shorts=False, socks=None, watch=None):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None, shorts=False, socks=None, watch=None, slim=1.0):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
         if plaid: s.shirt = s.sleeve = 'url(#eplaid2)'   # (a plaid flannel: the pattern is in defs; the game export's prefix is 'e')
+        if slim != 1.0:   # a narrower body, arms and legs (the head stays as it is): Yarosh, tall and skinny
+            for name in ('torso', 'torso_q', 'arm_art', 'leg_art'):
+                fn = getattr(s, name); setattr(s, name, (lambda f: lambda *a: s.thin(f(*a)))(fn))
+    def thin(s, svg): return f'<g transform="scale({s.slim},1)">{svg}</g>'
 
     # -- torso, front and back views (replaces the flannel)
     def torso(s, back, pfx):
@@ -516,7 +520,7 @@ class Look:
                       f'<rect x="15" y="-48" width="3" height="48" fill="{s.trim}"/>')
         else:
             shirt += f'<rect x="-19" y="-40" width="3" height="40" fill="{s.trim}"/>'
-        return (behind_of(s, 'side') + shirt +
+        return (behind_of(s, 'side') + (s.thin(shirt) if s.slim != 1.0 else shirt) +
             s.skull(4) + f'<circle cx="31" cy="-81" r="4" fill="{rig.SK}"/>' + hair +
             f'<circle{f} cx="17" cy="-85" r="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M10,-71 Q18,-64 27,-71" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
@@ -708,10 +712,10 @@ LOOKS = {
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
     # Nico's friends (2026-10-11), drawn from photos the user shared (reference only)
-    # Yarosh: older and very tall (the user: "Yarosh should be very tall"); a big mop of curly brown hair, a black tee, grey shorts, white socks, black sneakers, a black watch
+    # Yarosh: older, very tall and skinny (the user: "Yarosh should be very tall", "a bit skinnier"); a big mop of curly brown hair, a black tee, grey shorts, white socks, black sneakers, a black watch
     'yarosh': Look('yarosh', skin='#EDC4A3', skin2='#DBA987', hair='#5A3B27', hl='#7C573A', style='tousle', top='tee',
                    shirt='#222429', shirt2='#191B1F', sleeve='#222429', trim='#2C2F35', pants='#6B6B70', pants2='#5C5C61',
-                   shoe='#1F2125', shoe2='#18191C', height=1.42, shorts=True, socks='#F4F6F8', watch='#1A1B1E'),
+                   shoe='#1F2125', shoe2='#18191C', height=1.42, slim=0.8, shorts=True, socks='#F4F6F8', watch='#1A1B1E'),
     # Alpha: younger and smaller; a thick dark mop with heavy bangs, a white tee, black sweatpants, black sneakers
     'alpha': Look('alpha', skin='#EAC09E', skin2='#D8A884', hair='#2C1F19', hl='#463229', style='mop', top='tee',
                   shirt='#F7F7F4', shirt2='#E3E3DE', sleeve='#F7F7F4', trim='#ECECE8', pants='#232428', pants2='#1B1C20',
