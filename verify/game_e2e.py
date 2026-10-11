@@ -804,6 +804,19 @@ with sync_playwright() as p:
     pg.click('#work [data-done]'); pg.wait_for_timeout(300)
     check(G()['beltShown'] == '0' and G()['nicoLook'] == 'nicodobok', f"in the dojo he's in his whites, with his belt ({G()['beltShown']}, {G()['nicoLook']})")
     check(all(k in G()['roomSpots'] for k in ('crew0', 'crew1', 'crew2')), f"Mrs. Master Krantz, Master Schindewolf and Erin are there too ({list(G()['roomSpots'])})")
+    # they do a form together, and Nico can step into the line; then the pads
+    pg.wait_for_function('window.__game.dojoCast >= 4', timeout=20000)
+    pg.evaluate("()=>window.__game.dojoGo('form')"); pg.wait_for_timeout(400)
+    check(G()['dojo'] and G()['dojo']['kind'] == 'form' and G()['dojo']['canJoin'], f"the instructors line up for a form ({G()['dojo']})")
+    room_at('joinform'); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(300)
+    check('nico' in G()['dojo']['actors'], f"Nico steps into the line ({G()['dojo']})")
+    try:
+        pg.wait_for_function('window.__game.dojo === null', timeout=40000); fin = True
+    except Exception: fin = False
+    check(fin and G()['mode'] == 'walk' and 'whole form' in pg.locator('#toast').inner_text(), f"...and does the whole form with them ({G()['dojo']}, {pg.locator('#toast').inner_text()})")
+    room_at('pads'); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(400)
+    check(G()['dojo'] and G()['dojo']['kind'] == 'nicopads', f"Nico kicks Mrs. Master Krantz's pads ({G()['dojo']})")
+    pg.wait_for_function('window.__game.dojo === null', timeout=30000)
     pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
     check(G()['beltShown'] is None and G()['nicoLook'] == 'nico', f"...and changes back outside ({G()['beltShown']}, {G()['nicoLook']})")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)

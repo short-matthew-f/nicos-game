@@ -17,6 +17,10 @@ export interface PoseState {
   breath: number;    // idle chest rise (units)
   sit?: number;      // 0..1 sitting (game-only: not in the Python rig, so parity poses leave it out)
   knee?: number;     // 0..1 side view: bend the knees (sitting on a stool): thigh forward, shin down (game-only too)
+  /** Side view, game-only: martial arts (the dojo). Angles in degrees from hanging straight down; negative is
+   * forward (fa/fl: the near arm and leg; ba/bl: the far ones). `bow`: lean the body forward (deg), `w`: how much
+   * of this replaces the walk (0..1). */
+  moves?: { fa: number; ba: number; fl: number; bl: number; bow?: number; w?: number };
 }
 
 export const CYCLE = 0.7;
@@ -40,15 +44,22 @@ export const SIT_DROP = 44;   // how far the hips drop when sitting (units), so 
 function sideOps(st: PoseState): Record<string, Op[]> {
   const sit = st.sit ?? 0;
   const [an, gdd] = gait(st);
-  const dd = gdd + SIT_DROP * sit;   // sitting lowers the hips
-  const lean = LEAN_C * st.crouch + 3.0 * st.amp;
+  const mv = st.moves, mw = mv ? (mv.w ?? 1) : 0;
+  // (a wide stance lowers the hips so both feet stay on the floor; the leg nearer upright is the one standing)
+  const stance = mv ? (58 - DC * st.crouch) * (1 - Math.cos(Math.min(Math.abs(mv.fl), Math.abs(mv.bl)) * RAD)) * mw : 0;
+  const dd = gdd + SIT_DROP * sit + stance;   // sitting lowers the hips
+  const lean = LEAN_C * st.crouch + 3.0 * st.amp + (mv?.bow ?? 0) * mw;
   const armang = (far: boolean) => {
     const free = far ? 0.85 * an : -0.85 * an;
-    return (1 - st.hold) * free + st.hold * -56.0;
+    const a = (1 - st.hold) * free + st.hold * -56.0;
+    return mv ? a * (1 - mw) + (far ? mv.ba : mv.fa) * mw : a;
   };
   const l = 58 - DC * st.crouch;
   // leg angle: the walk swing (legs opposite), blended toward both legs forward when sitting
-  const legAn = (far: boolean) => (far ? -an : an) * (1 - sit) + SIT_LEG * sit;
+  const legAn = (far: boolean) => {
+    const a = (far ? -an : an) * (1 - sit) + SIT_LEG * sit;
+    return mv ? a * (1 - mw) + (far ? mv.bl : mv.fl) * mw : a;
+  };
   const arm = (far: boolean): Op[] =>
     [['t', 0, -58 + dd - st.breath], ['r', lean], ['t', 2, -42], ['r', armang(far)]];
   const leg = (far: boolean): Op[] =>

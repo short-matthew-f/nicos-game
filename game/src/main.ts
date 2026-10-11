@@ -47,6 +47,7 @@ import { Pinball } from './pinball/view';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
+import { Routine, SHOW, type Actor, type DojoEvent } from './dojo';
 import { PAGES, type Art } from './book';
 import { shellArt } from './world/beach';
 import { Weather, seasonOf, SEASON, SEASONS, puddleAt, umbrellaArt, type Sky, type Season } from './world/weather';
@@ -282,7 +283,7 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep' | 'games'; t: number; from: [number, number]; seat: number } | null = null;
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep' | 'games' | 'dojo'; t: number; from: [number, number]; seat: number } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -582,11 +583,13 @@ async function main() {
       if (!r.person || room?.id !== id || room.worker) return;
       const v = new PersonView(r.person.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
       v.pose(r.person.x, r.person.y, neutral('front')); v.root.zIndex = r.person.y; rl.addChild(v.root); room.worker = v;
+      if (id === 'dojo') dojoCast.set(r.person.who as Actor, { view: v, home: [r.person.x, r.person.y], st: neutral('front') });
     };
     const out = r.person ? away(r.person.who) : null;
     if (r.person && !out) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
     if (id === 'fire') { const t = r.things.find(q => q.kind === 'emoji'); if (t && truck.out) rl.children.find(c => c.zIndex === (t as { y: number }).y)?.removeFromParent(); }   // (the truck's out on a call)
     if (id === 'yiayia') hangGallery(rl);
+    dojoCast.clear(); dojoRoutine = null; dojoIn = SHOW.first; for (const pd of dojoPads.values()) pd.destroy(); dojoPads.clear();
     if (id === 'dojo') { const e = emblem(92); e.position.set(r.w / 2, 128); e.zIndex = 1; rl.addChild(e); }   // the school's emblem, big on the back wall
     // everyone else there (the dojo's instructors), each turned their own way
     for (const p of r.crew ?? []) {
@@ -594,13 +597,92 @@ async function main() {
         if (room?.id !== id) return;
         const v = new PersonView(p.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
         v.pose(p.x, p.y, { ...neutral(p.face ?? 'front'), face: p.flip ? -1 : 1 }); v.root.zIndex = p.y; rl.addChild(v.root);
+        dojoCast.set(p.who as Actor, { view: v, home: [p.x, p.y], st: { ...neutral(p.face ?? 'front'), face: p.flip ? -1 : 1 } });
       };
-      if (hasArt(p.who)) add(); else void loadArt([p.who]).then(add);
+      if (hasArt(p.who)) queueMicrotask(add); else void loadArt([p.who]).then(add);   // (after the room's shown: add() checks it's still this room)
     }
     showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
     if (r.person && !out) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
     sfx.door();
   }
+  // ---- the dojo comes alive (dojo.ts): now and then the instructors do a form together, or work the pads
+  const dojoCast = new Map<Actor, { view: PersonView; home: [number, number]; st: PoseState }>();
+  let dojoRoutine: Routine | null = null, dojoIn = 0;
+  const dojoPads = new Map<Actor, Graphics>(), dojoWalk = new Map<Actor, PoseState>();
+  const bubbles: { c: Container; t: number; who?: string }[] = [];
+  function dojoSay(at: [number, number], text: string, loud = false, who?: string) {
+    if (!room) return;
+    if (who) for (const b of bubbles) if (b.who === who) b.t = Math.max(b.t, 1.5);   // (one bubble each: the last one goes)
+    const c = new Container(), t = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '900', fontSize: loud ? 30 : 22, fill: loud ? '#E5484D' : '#2B3F55' } });
+    t.anchor.set(0.5);
+    const g = new Graphics().roundRect(-t.width / 2 - 14, -t.height / 2 - 8, t.width + 28, t.height + 16, 14).fill('#FFFFFF').stroke({ width: 3, color: loud ? '#E5484D' : '#2B3F55' })
+      .poly([-8, t.height / 2 + 6, 0, t.height / 2 + 18, 8, t.height / 2 + 6]).fill('#FFFFFF');
+    c.addChild(g, t); c.position.set(at[0], at[1]); c.zIndex = 9000; room.layer.addChild(c); bubbles.push({ c, t: 0, who });
+  }
+  function padArt(): Graphics {   // a red kicking pad with a white face
+    return new Graphics().roundRect(-13, -26, 26, 52, 9).fill('#FFFFFF').roundRect(-10, -23, 20, 46, 7).fill('#C8282D').roundRect(-6, -18, 12, 36, 5).fill('#E5484D');
+  }
+  function burst(x: number, y: number) {   // a pop of white stars where the pad's hit
+    if (!room) return;
+    const g = new Graphics();
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 10, r2 = 26; g.moveTo(Math.cos(a) * r1, Math.sin(a) * r1).lineTo(Math.cos(a) * r2, Math.sin(a) * r2); }
+    g.stroke({ width: 4, color: '#FFE29A', cap: 'round' }); g.position.set(x, y); g.zIndex = 8999; room.layer.addChild(g);
+    bubbles.push({ c: g, t: 0.7 });
+  }
+  function dojoSound(e: DojoEvent) {
+    if (e.kind === 'hit') { audio.noise(0.07, 0.55, 2200); audio.tone('sine', 180, 70, 0.1, 0.22); }
+    if (e.kind === 'snap') audio.noise(0.05, 0.12, 4200);   // (the dobok snapping)
+    if (e.kind === 'kihap') { audio.tone('sawtooth', 300, 420, 0.08, 0.05); audio.tone('sawtooth', 420, 260, 0.16, 0.06, 0.07); }
+  }
+  /** The dojo's people, every frame: idle at their places, or doing the routine (Nico too, if he's joined in). */
+  function dojoStep(dt: number) {
+    for (const b of bubbles) { b.t += dt; b.c.y -= dt * 12; b.c.alpha = Math.max(0, 1 - Math.max(0, b.t - 1.1) / 0.4); }
+    for (const b of bubbles.filter(q => q.t > 1.5)) b.c.destroy({ children: true });
+    for (let i = bubbles.length - 1; i >= 0; i--) if (bubbles[i].c.destroyed) bubbles.splice(i, 1);
+    if (room?.id !== 'dojo') return;
+    const ready = ['krantz', 'mrskrantz', 'schindewolf', 'erin'].every(a => dojoCast.has(a as Actor));
+    if (!dojoRoutine) {
+      if (!ready || mode !== 'walk' || cardOpen) return;
+      if ((dojoIn -= dt) > 0) return;
+      dojoRoutine = new Routine(Math.random() < 0.5 ? 'form' : 'pads', Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin']);
+      if (dojoRoutine.kind === 'pads') dojoSay([600, 300], 'Grab the pads! Partner up!');
+    }
+    const { poses, events } = dojoRoutine.update(dt);
+    for (const [a, p] of poses) {
+      const isNico = a === 'nico', v = isNico ? nico.view : dojoCast.get(a)?.view; if (!v) continue;
+      const st = dojoWalk.get(a) ?? { ...neutral('side') }; dojoWalk.set(a, st);
+      st.view = p.side ? 'side' : 'front'; st.face = p.face; st.crouch = p.move?.crouch ?? 0; st.hold = 0; st.sit = 0;
+      st.moves = p.move ? { ...p.move } : undefined;
+      stepGait(st, p.walking ? 150 : 0, 0, dt);
+      v.pose(p.x, p.y, st);
+      if (isNico) { nico.x = p.x; nico.y = p.y; }
+      // the pad, in the holder's hands
+      let pad = dojoPads.get(a);
+      if (p.pad && !pad && room) { pad = padArt(); room.layer.addChild(pad); dojoPads.set(a, pad); }
+      if (pad) { pad.visible = !!p.pad; pad.position.set(p.x + p.face * 30 * v.height, p.y - 80 * v.height); pad.zIndex = p.y + 2; pad.rotation = p.face * 0.1; }
+    }
+    for (const e of events) {
+      dojoSound(e);
+      const v = e.actor === 'nico' ? nico.view : dojoCast.get(e.actor)?.view, p = poses.get(e.actor);
+      if (e.kind === 'hit' && e.x !== undefined) burst(e.x, e.y!);
+      if ((e.kind === 'say' || e.kind === 'kihap') && p && v) dojoSay([p.x, p.y - 190 * v.height], e.text!, e.kind === 'kihap', e.actor);
+    }
+    if (dojoRoutine.done) {
+      // back to their places, as they were
+      for (const [a, c] of dojoCast) { c.view.pose(c.home[0], c.home[1], c.st); dojoWalk.delete(a); }
+      for (const pd of dojoPads.values()) pd.destroy(); dojoPads.clear();
+      if (dojoRoutine.actors.includes('nico')) { dojoWalk.delete('nico'); stopPlay(); nico.st.moves = undefined; toast(dojoRoutine.kind === 'form' ? '🥋 You did the whole form with your masters! Kamsahamnida!' : '🥋 Great kicks! Mrs. Master Krantz high-fives you.'); boost = Math.min(BOOST.max, boost + 20); }
+      dojoRoutine = null; dojoIn = SHOW.every[0] + Math.random() * (SHOW.every[1] - SHOW.every[0]);
+    }
+  }
+  /** Nico joins in: the form (while they're lining up), or Mrs. Master Krantz's pads. */
+  function dojoJoin(kind: 'form' | 'nicopads') {
+    if (kind === 'form') { if (!dojoRoutine?.join([nico.x, nico.y])) return; }
+    else { if (dojoRoutine) return; dojoRoutine = new Routine('nicopads', Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['nico', 'mrskrantz']); dojoSay([600, 300], "Mrs. Master Krantz: “Show me what you've got!”"); }
+    mode = 'play'; play = { kind: 'dojo', t: 0, from: [nico.x, nico.y], seat: 0 };
+    sfx.tap();
+  }
+
   /** The building's own business (its menu, buying, selling...), from the counter. */
   const placeAction = (id: string) => {
     if (GRAN[id]) { GRAN[id](); return; }
@@ -694,7 +776,11 @@ async function main() {
         if (u.lines) toast(pick(u.lines));
       } });
     });
-    (r.crew ?? []).forEach((p, i) => out.push({ id: `crew${i}`, x: p.x, y: p.y + 110, r: 100, label: `💬 Talk to ${p.name}`, run: () => toast(`${p.name}: “${pick(p.lines)}”`) }));
+    (r.crew ?? []).forEach((p, i) => out.push({ id: `crew${i}`, x: p.x, y: p.y + 110, r: 100, label: `💬 Talk to ${p.name}`, run: () => toast(`${p.name}: “${pick(p.lines)}”`), when: () => !dojoRoutine }));
+    if (room.id === 'dojo') {
+      out.push({ id: 'joinform', x: 860, y: 620, r: 260, priority: 2, label: '🥋 Join the form!', when: () => !!dojoRoutine?.canJoin, run: () => dojoJoin('form') });
+      out.push({ id: 'pads', x: 560, y: 470, r: 70, priority: 1, label: "👊 Kick Mrs. Master Krantz's pads", when: () => !dojoRoutine && dojoCast.has('mrskrantz'), run: () => dojoJoin('nicopads') });
+    }
     out.push({ id: 'leave', x: r.w / 2, y: r.h - 30, r: 120, label: '🚪 Leave', run: leaveRoom });
     return out;
   }
@@ -1514,6 +1600,7 @@ async function main() {
     pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
+    dojoGo: (k: 'form' | 'pads') => { if (room?.id === 'dojo' && !dojoRoutine && dojoCast.size >= 4) dojoRoutine = new Routine(k, Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin']); },
     bookOpen: (p?: string) => book.open(p),
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
@@ -1606,6 +1693,7 @@ async function main() {
     const fast = boost > 0 ? BOOST.speed : 1;
     if (mode === 'play' && play) {
       play.t += dt; lastDt = dt;
+      if (play.kind !== 'dojo') {   // (in the dojo, the routine poses him: dojoStep)
       let b: Body;
       if (play.kind === 'slide') {
         b = slideAt(play.t, play.from);
@@ -1668,6 +1756,7 @@ async function main() {
         nico.view.pose(nico.x, nico.y + (b.dy ?? 0), nico.st);   // (dy: drawn lower, not moved: sunk in the water)
         nico.view.root.zIndex = b.z;
         nico.view.root.scale.y *= b.sy;
+      }
       }
     }
     if (mode === 'walk' && !frozen) {
@@ -1773,6 +1862,7 @@ async function main() {
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     { const was = clock; clock = (clock + dt / DAY.length) % 1; if (clock < was) newDay(); }
     wearBelt(room?.id === 'dojo');
+    dojoStep(dt);
     weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
     if (!room && mode !== 'drive') { if (weather.rain > 0.6 && !biz.seen['sky:rain']) see(biz, 'sky', 'rain'); if (weather.snow > 0.6 && !biz.seen['sky:snow']) see(biz, 'sky', 'snow'); }
     if ((stickerCheck -= dt) <= 0) { stickerCheck = 1.5; checkStickers(); }
@@ -1952,7 +2042,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
-      beltShown, nicoLook: nico.view.who,
+      beltShown, nicoLook: nico.view.who, dojo: dojoRoutine ? { kind: dojoRoutine.kind, t: dojoRoutine.t, actors: dojoRoutine.actors, canJoin: dojoRoutine.canJoin } : null, dojoCast: dojoCast.size,
       weather: { kind: weather.kind, rain: weather.rain, snow: weather.snow, wet: weather.wet, cover: weather.cover, season: seasonOf(day), day, lights: weather.decor[0]?.visible ?? false },
       fiat: { at: fiat.at, out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },

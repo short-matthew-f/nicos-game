@@ -1012,3 +1012,16 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **Glasses for everyone:** see-through lenses (the user: "I would like to be able to see eyes behind glasses"). Poppop, Nonna, Yia-Yia and the townspeople with glasses were re-exported.
 - **Still to confirm:** the belt colours are still the generic eight (white to black). If Litchfield uses different ones, it's a one-line change in `karate.ts`.
 - **Fixed (the user):** "Mr master Krantz side view is a little weird. The mouth shouldn't go outside the goatee." The side-view goatee now covers the whole curve of the mouth, and a shorter smile is drawn inside it.
+
+### The dojo comes alive (2026-10-11)
+- **The user:** "I'd love it if they occasionally did a form together or practiced kicking and punching while holding pads... making them actually super fun and interesting is important to us." (`src/dojo.ts`; drawn in `main.ts` `dojoStep`.)
+- **New poses:** `PoseState.moves` gives side-view arm and leg angles, a lean and a stance (the hips drop so both feet stay down), blended in over 0.14 s. The poses are ready, bow, low block, punch (either hand), high block, front kick, fighting guard, jab, cross, roundhouse, side kick, holding a pad, and a recoil.
+- **Every 16-30 s while Nico's in the dojo** (the first after 6 s), the instructors walk out onto the mats and do one of two things:
+  - **A form together:** Kicho Hyung Il Bu, in profile and in step. Mr. Master Krantz calls "Line up!", "Kyung ye!" and "Choon bi!", then counts in Korean (Hana! Dul! Set!...). They step and turn, and front-kick together with a "Kihap!" from everyone, then "Ba ro!" and a bow.
+  - **Pads:** Master Schindewolf strikes for Mrs. Master Krantz, and Mr. Master Krantz for Erin. The combinations are jab, cross, front kick (kihap), jab-cross-roundhouse, side kick (kihap). Each hit has a smack, a star burst, and the holder rocking back ("Great kick!", "Good snap!"). Then "Switch!" and they trade roles.
+  - Afterwards they walk back to their places.
+- **Nico joins in:**
+  - "Join the form!" appears while they line up: he steps into the end of the line and does the whole form with them (his controls are locked until the bow). Then "You did the whole form with your masters! Kamsahamnida!" and a boost.
+  - "Kick Mrs. Master Krantz's pads", any time they aren't busy: his own short combination on her pads.
+- **Sounds:** the dobok snapping on each move, a thump on the pads, a shout for each kihap. Speech bubbles show one at a time per person.
+- **Fixed:** on a second visit (once their art had loaded), Mrs. Master Krantz, Master Schindewolf and Erin weren't drawn, because they were added before the room was shown. The e2e now runs a full form with Nico and his pad turn.
