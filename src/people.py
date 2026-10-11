@@ -321,8 +321,9 @@ def _beard(look, view):
             return (f'<path d="M-3,-71 Q-2,-79 9,-77 Q20,-79 21,-71 Q21,-62 17,-58 Q9,-53 1,-58 Q-3,-62 -3,-71 Z M3,-70 Q9,-65 15,-70 Q14,-63 9,-62 Q4,-63 3,-70 Z" fill="{c}" fill-rule="evenodd"/>'
                     f'<path d="M4,-70 Q9,-66 14,-70" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
         if view == 'side':
-            return (f'<path d="M12,-75 Q22,-81 31,-74 Q32,-64 27,-59 Q18,-55 12,-61 Q16,-64 22,-66 Q16,-69 12,-75 Z" fill="{c}"/>'
-                    f'<path d="M17,-69 Q23,-66 28,-69" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+            # (covers the mouth's whole curve, so the smile drawn on top never pokes out past the beard)
+            return (f'<path d="M7,-74 Q19,-82 31,-75 Q33,-64 27,-57 Q18,-53 10,-59 Q6,-66 7,-74 Z" fill="{c}"/>'
+                    f'<path d="M15,-69 Q21,-65 27,-69" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
         return ''
     if kind == 'full':     # Master Schindewolf: a short full beard and mustache, grey through the brown
         if view == 'front':

@@ -1011,3 +1011,4 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **The class:** Mr. Master Krantz teaches it (was "Sensei"). The shout is "Kihap!" (Tang Soo Do's word, not "Kiai").
 - **Glasses for everyone:** see-through lenses (the user: "I would like to be able to see eyes behind glasses"). Poppop, Nonna, Yia-Yia and the townspeople with glasses were re-exported.
 - **Still to confirm:** the belt colours are still the generic eight (white to black). If Litchfield uses different ones, it's a one-line change in `karate.ts`.
+- **Fixed (the user):** "Mr master Krantz side view is a little weird. The mouth shouldn't go outside the goatee." The side-view goatee now covers the whole curve of the mouth, and a shorter smile is drawn inside it.
