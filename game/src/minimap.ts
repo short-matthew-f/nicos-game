@@ -29,7 +29,7 @@ export class Minimap {
     this.view.addChild(g);
     // a few labels for the places you'll look for
     // (drawn icons, not emoji: world/icons.ts)
-    for (const [id, name] of [['burger', 'burger'], ['fire', 'helmet'], ['school', 'books'], ['hospital', 'stethoscope'], ['home', 'heart'], ['toys', 'teddy'], ['icecream', 'icecream'], ['parts', 'wrench'], ['storage', 'toolbox'], ['barn', 'egg'], ['poolhouse', 'goggles'], ['cabin', 'binoculars'], ['bibs', 'shell'], ['bakery', 'cupcake'], ['dojo', 'gi'], ['yiayia', 'palette'], ['woodshop', 'hammer']] as const) {
+    for (const [id, name] of [['burger', 'burger'], ['fire', 'helmet'], ['school', 'books'], ['hospital', 'stethoscope'], ['home', 'heart'], ['toys', 'teddy'], ['icecream', 'icecream'], ['parts', 'wrench'], ['storage', 'toolbox'], ['potato', 'potato'], ['retro', 'joystick'], ['barn', 'egg'], ['poolhouse', 'goggles'], ['cabin', 'binoculars'], ['bibs', 'shell'], ['bakery', 'cupcake'], ['dojo', 'gi'], ['yiayia', 'palette'], ['woodshop', 'hammer']] as const) {
       const b = [...BUILDINGS, SHOP, BAKERY].find(b => b.id === id); if (!b) continue;
       const t = icon(name, 13);
       t.position.set((b.x + b.w / 2) * s, (b.y + b.d / 2) * s);
@@ -37,7 +37,7 @@ export class Minimap {
     }
     // the big map names every place
     if (labels) for (const b of [...BUILDINGS, SHED, SHOP, BAKERY]) if (b.label) {
-      const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 13, fill: '#2B3F55', stroke: { color: '#FFFFFF', width: 4 } } });
+      const t = new Text({ text: b.w < 400 && b.label.length > 14 ? b.label.replace(/^(\S+) /, '$1\n') : b.label, style: { align: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 13, fill: '#2B3F55', stroke: { color: '#FFFFFF', width: 4 } } });
       t.anchor.set(0.5, 0); t.position.set((b.x + b.w / 2) * s, (b.y + b.d) * s + 4);
       this.view.addChild(t);
     }

@@ -1044,3 +1044,34 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - Three songs: Warm-Up (92 bpm, Erin holds), Hana Dul Set (110, Mrs. Master Krantz), Black Belt Beat (128, Master Schindewolf).
 - **While a game's on:** the main HUD hides, the camera comes in close, and the other instructors watch from their places.
 - **Tests:** `test/spar.test.ts` (hits, whiffs, blocks, the meter, every instructor fights back, button-mashing can beat Erin) and `test/rhythm.test.ts`. E2e: the card's three options, landing a punch on Erin, quitting, and the first rhythm notes.
+
+## Yarosh's Potatoes and Alpha's Retro Games (2026-10-11)
+The user: "Black shirt is Yarosh, white is Alpha. Yarosh needs a potato shop. And alpha needs a retro gaming store." Six photos were used as reference only. They stay outside the repo.
+- **Yarosh and Alpha** (`src/people.py`):
+  - Two new hair styles: `tousle` (Yarosh's big mop of brown curls, falling onto his forehead) and `mop` (Alpha's thick dark hair, heavy bangs to the eyebrows, over the ears to the jaw).
+  - New `Look` options: `shorts` (bare legs, with `socks` above the shoes) and `watch`.
+  - Yarosh: tall, black tee, grey shorts, white socks, black sneakers, a black watch.
+  - Alpha: smaller, white tee, black sweatpants, black sneakers.
+- **The shops** sit side by side, east of the school (`map.ts`). Three trees moved to make room.
+- **Yarosh's Potatoes:**
+  - Roof landmark: a giant baked potato with butter and chives.
+  - Inside: a chalkboard menu, a fryer, a sack of potatoes and tables.
+  - Yarosh works the counter, selling a loaded baked potato, curly fries, mashed potatoes and tater tots for speed boosts (`places.ts`).
+- **Alpha's Retro Games:**
+  - Roof landmark: a pixel space invader.
+  - Inside: shelves of cartridges and old consoles, a HIGH SCORES board, two arcade cabinets, and Alpha at the counter.
+  - The board lists Nico's best at Snake, pinball and each rhythm song, plus how many instructors he's beaten at sparring.
+  - The second cabinet is OUT OF ORDER ("Alpha is fixing it"). That leaves room for another game later.
+- **Snake** (`arcade/snake.ts`, rules; `arcade/view.ts`, the screen) is a real playable cabinet:
+  - A marquee, and a green-glow CRT with scanlines.
+  - Steering: four big arrow buttons, swiping on the screen, or arrows/WASD on a keyboard.
+  - It speeds up as the snake grows. A gold dot sometimes appears for a few seconds and is worth 5.
+  - The best score is saved in `biz.scores.snake`.
+- **Small changes:**
+  - Sticker book: two new stickers ("Yarosh's potatoes", "Snake at the arcade").
+  - Minimap: new icons for both shops. Long building names now wrap onto two lines on the big map.
+  - The place card keeps line breaks.
+- **Tests:**
+  - New `test/snake.test.ts`.
+  - The e2e orders a potato, opens the Snake machine, starts it, steers, and plays to game over. It then reads the high-score board.
+- **Known issue (not fixed here):** the pinball test "a ball left alone drains" can fail now and then, because the plunger has random jitter.

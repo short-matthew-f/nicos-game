@@ -15,6 +15,14 @@ export const PLACES: Place[] = [
     { id: 'sundae', label: '🍨 Sundae', price: 4, boost: 70 },
     { id: 'float', label: '🥤 Root beer float', price: 3, boost: 50 },
   ] },
+  // Nico's friends' shops (2026-10-11)
+  { building: 'potato', title: "Yarosh's Potatoes", action: 'Order', text: 'Yarosh: “Potatoes! Every kind there is. What\'ll it be?”', menu: [
+    { id: 'bakedpot', label: '🥔 Loaded baked potato', price: 4, boost: 75 },
+    { id: 'curly', label: '🌀 Curly fries', price: 3, boost: 45 },
+    { id: 'mash', label: '🥣 Mashed potatoes', price: 3, boost: 50 },
+    { id: 'tots', label: '🟤 Tater tots', price: 2, boost: 30 },
+  ] },
+  { building: 'retro', title: "Alpha's Retro Games", text: '' },
   { building: 'school', title: 'School', text: "School's out for the summer. The janitor waves at you from the hallway." },
   { building: 'hospital', title: 'Hospital', text: 'The nurse at the desk smiles. "Hope we don\'t see you in here for a while!"' },
   { building: 'home', title: "Nico's house", text: 'Home sweet home. Mom left a note: "Be back by dinner!"' },

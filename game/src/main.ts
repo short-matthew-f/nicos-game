@@ -44,6 +44,7 @@ import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep,
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
+import { Arcade } from './arcade/view';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
@@ -396,7 +397,7 @@ async function main() {
         const r = buy(state.money, boost, item);
         if (!r) return;
         state.money = r.money; boost = r.boost; showMoney(); persist();
-        closePlace(); toast(`Yum! ${item.label}. You feel speedy!`);
+        see(state.biz, 'food', item.id); closePlace(); toast(`Yum! ${item.label}. You feel speedy!`);
       });
       menuEl.appendChild(b);
     }
@@ -415,6 +416,12 @@ async function main() {
     high: () => state.biz.scores.pinball ?? 0,
     setHigh: n => { state.biz.scores.pinball = n; persist(); },
     opened: on => { cardOpen = on ? 'pinball' : null; if (on) { see(state.biz, 'game', 'pinball'); app.ticker.stop(); } else { app.ticker.start(); } },   // (the town waits while he plays: one thing to draw)
+  });
+  // the Snake cabinet in Alpha's Retro Games (arcade/view.ts): the same, with its own best score
+  const arcade = new Arcade({
+    high: () => state.biz.scores.snake ?? 0,
+    setHigh: n => { state.biz.scores.snake = n; persist(); },
+    opened: on => { cardOpen = on ? 'arcade' : null; if (on) { see(state.biz, 'game', 'snake'); app.ticker.stop(); } else { app.ticker.start(); } },
   });
   const work = new Workshop({
     biz: state.biz,
@@ -719,8 +726,17 @@ async function main() {
   /** The building's own business (its menu, buying, selling...), from the counter. */
   const placeAction = (id: string) => {
     if (GRAN[id]) { GRAN[id](); return; }
+    if (id === 'snake') { arcade.open(); return; }
+    if (id === 'scores') { showScores(); return; }
     const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p);
   };
+  /** Alpha's high-score board: Nico's best at every game in town. */
+  function showScores() {
+    const s = biz.scores, row = (name: string, n: number | undefined) => `${name}: ${n ? n.toLocaleString() : '—'}`;
+    const lines = [row('🐍 Snake', s.snake), row('🕹️ Pinball', s.pinball), ...SONGS.map(sg => row(`🥁 ${sg.name}`, s[`rhythm:${sg.id}`])),
+      `🥋 Sparring: ${RIVALS.filter(r => s[`spar:${r.who}`]).length} of ${RIVALS.length} instructors beaten`];
+    showCard('scores', "🏆 High scores", lines.join('\n'), [], 'Cool!');
+  }
   // ---- the grandparents: Nonna's pasta and pizzelle, Poppop's woodshop projects, Yia-Yia's easel
   let pastaIn = 0;
   const done2 = (id: string) => isUnlocked(biz, id);
@@ -796,7 +812,7 @@ async function main() {
     if (note) out.push({ id: 'counter', x: r.person!.x, y: r.person!.y + 130, r: 120, label: '📝 Read the note', run: () => toast(note) });
     else if (r.person) {
       const pr = r.person, act = pr.action, treat = pr.treat;
-      out.push({ id: 'counter', x: pr.x, y: pr.y + 130, r: 120, label: act ? ({ icecream: '🍦 Order ice cream', parts: '🔧 Shop for parts', toys: '🧸 Sell your toys', barn: '🥚 Ask about eggs', cabin: '📷 Talk to the ranger' }[act] ?? `💬 Talk to ${pr.name}`) : treat ? `💬 Say hi to ${pr.name}` : `💬 Talk to ${pr.name}`,
+      out.push({ id: 'counter', x: pr.x, y: pr.y + 130, r: 120, label: act ? ({ icecream: '🍦 Order ice cream', parts: '🔧 Shop for parts', toys: '🧸 Sell your toys', barn: '🥚 Ask about eggs', cabin: '📷 Talk to the ranger', potato: '🥔 Order some potatoes' }[act] ?? `💬 Talk to ${pr.name}`) : treat ? `💬 Say hi to ${pr.name}` : `💬 Talk to ${pr.name}`,
         run: () => {
           if (act) { placeAction(act); return; }
           const line = pick(pr.lines);
@@ -1637,6 +1653,9 @@ async function main() {
     alarm: () => truck.alarm(),
     pinball: () => pinball.snapshot(),
     pinballOpen: () => pinball.open(),
+    arcade: () => arcade.snapshot(),
+    arcadeOpen: () => arcade.open(),
+    arcadeClose: () => arcade.close(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
     games: () => ({ showing: games.showing, spar: games.spar ? { nico: { ...games.spar.nico }, rival: { ...games.spar.rival }, over: games.spar.over, winner: games.spar.winner, intro: games.spar.intro } : null, rhythm: games.rhythm ? { score: games.rhythm.score, combo: games.rhythm.combo, notes: games.rhythm.notes.length, judged: games.rhythm.notes.filter(n => n.judged).length } : null, last: games.last }),

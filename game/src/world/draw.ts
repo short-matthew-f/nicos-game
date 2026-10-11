@@ -191,6 +191,22 @@ function roofDeco(b: Building): Container | null {
        .circle(cx + 2, cy - 74, 8).fill('#E5484D');                                                     // cherry
       break;
     }
+    case 'potato': {   // a giant baked potato, split, with butter and chives (Yarosh's)
+      g.ellipse(cx, cy + 40, 96, 18).fill({ color: NAVY, alpha: 0.18 });
+      g.ellipse(cx, cy + 4, 98, 58).fill(W);
+      g.ellipse(cx, cy + 6, 88, 48).fill('#B9824A').ellipse(cx - 30, cy + 20, 6, 4).fill('#8A5E33').ellipse(cx + 44, cy + 14, 5, 3).fill('#8A5E33');
+      g.ellipse(cx, cy - 6, 58, 24).fill('#FFF1C6').ellipse(cx - 8, cy - 18, 30, 14).fill('#FFFFFF');   // the fluffy inside and sour cream
+      g.roundRect(cx + 8, cy - 26, 26, 18, 4).fill('#F9E04A');                                         // a pat of butter
+      for (const [dx, dy] of [[-30, -8], [-14, 0], [2, -4], [20, 2], [36, -6], [-22, -16]]) g.roundRect(cx + dx, cy + dy, 7, 4, 2).fill('#3BB273');
+      break;
+    }
+    case 'retro': {   // a pixel space invader (Alpha's)
+      const px = 12, art = ['..X.....X..', '...X...X...', '..XXXXXXX..', '.XX.XXX.XX.', 'XXXXXXXXXXX', 'X.XXXXXXX.X', 'X.X.....X.X', '...XX.XX...'];
+      const x0 = cx - (art[0].length * px) / 2, y0 = cy - (art.length * px) / 2;
+      g.roundRect(x0 - 14, y0 - 14, art[0].length * px + 28, art.length * px + 28, 14).fill(W).roundRect(x0 - 8, y0 - 8, art[0].length * px + 16, art.length * px + 16, 10).fill('#1E2733');
+      art.forEach((row, j) => [...row].forEach((c, i) => { if (c === 'X') g.rect(x0 + i * px, y0 + j * px, px, px).fill('#4FE3C1'); }));
+      break;
+    }
     case 'toys': {   // a teddy bear
       g.circle(cx, cy - 6, 52).fill(W).circle(cx - 32, cy - 44, 20).fill(W).circle(cx + 32, cy - 44, 20).fill(W);
       g.circle(cx - 32, cy - 44, 14).fill('#B07A4A').circle(cx + 32, cy - 44, 14).fill('#B07A4A').circle(cx, cy - 6, 44).fill('#C48A55')

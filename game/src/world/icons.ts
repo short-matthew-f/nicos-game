@@ -127,8 +127,31 @@ const ICONS: Record<string, Draw> = {
   plant: (g, k) => g.poly([-7 * k, 4 * k, 7 * k, 4 * k, 5 * k, 14 * k, -5 * k, 14 * k]).fill('#C8463D').circle(0, -6 * k, 8 * k).fill('#3E8F5A').circle(-6 * k, -1 * k, 6 * k).fill('#3E8F5A').circle(6 * k, -1 * k, 6 * k).fill('#5DB86F'),
   star: (g, k) => { const p: number[] = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? 6 : 14) * k; p.push(Math.cos(a) * r, Math.sin(a) * r); } g.poly(p).fill('#F9C846').stroke(edge); },
   heart: (g, k) => g.moveTo(0, 12 * k).bezierCurveTo(-18 * k, 0, -10 * k, -14 * k, 0, -5 * k).bezierCurveTo(10 * k, -14 * k, 18 * k, 0, 0, 12 * k).fill('#E5484D').stroke(edge),
+  // Yarosh's potato shop and Alpha's retro game store (2026-10-11)
+  potato: (g, k) => g.ellipse(0, 1 * k, 15 * k, 10 * k).fill('#C9955A').stroke(edge).circle(-6 * k, -2 * k, 1.3 * k).fill('#8A5E33').circle(4 * k, 3 * k, 1.3 * k).fill('#8A5E33').circle(8 * k, -3 * k, 1 * k).fill('#8A5E33'),
+  bakedpot: (g, k) => g.ellipse(0, 6 * k, 17 * k, 6 * k).fill('#C9D3DC').stroke(edge).ellipse(0, 0, 14 * k, 9 * k).fill('#B9824A').ellipse(0, -3 * k, 9 * k, 5 * k).fill('#FFF1C6').roundRect(-3 * k, -8 * k, 7 * k, 5 * k, 1.5 * k).fill('#F9E04A').circle(-5 * k, -2 * k, 1.2 * k).fill('#3BB273').circle(5 * k, -3 * k, 1.2 * k).fill('#3BB273'),
+  chips: (g, k) => g.roundRect(-11 * k, -14 * k, 22 * k, 28 * k, 4 * k).fill('#2F7FD8').stroke(edge).ellipse(0, 1 * k, 7 * k, 5 * k).fill('#F9C846').rect(-11 * k, -14 * k, 22 * k, 4 * k).fill('#1E5FAE'),
+  mash: (g, k) => g.poly([-14 * k, 0, 14 * k, 0, 10 * k, 10 * k, -10 * k, 10 * k]).fill('#5B8FD6').stroke(edge).ellipse(0, -1 * k, 13 * k, 7 * k).fill('#FFF6E0').ellipse(2 * k, -6 * k, 7 * k, 4 * k).fill('#FFF6E0').circle(2 * k, -8 * k, 2.4 * k).fill('#F9E04A'),
+  tots: (g, k) => { g.roundRect(-13 * k, 0, 26 * k, 10 * k, 3 * k).fill('#E5484D').stroke(edge); for (const [x, y] of [[-8, -3], [-1, -4], [6, -3], [-4, -9], [3, -9]]) g.roundRect((x - 3) * k, (y - 3) * k, 7 * k, 6 * k, 2 * k).fill('#E3A857'); },
+  sack: (g, k) => g.poly([-12 * k, -10 * k, 12 * k, -10 * k, 15 * k, 12 * k, -15 * k, 12 * k]).fill('#C9A46A').stroke(edge).rect(-12 * k, -12 * k, 24 * k, 4 * k).fill('#8A6A3E').ellipse(0, 2 * k, 6 * k, 4 * k).fill('#B9824A'),
+  cartridge: (g, k) => g.roundRect(-12 * k, -13 * k, 24 * k, 26 * k, 2 * k).fill('#8E96A3').stroke(edge).rect(-8 * k, -9 * k, 16 * k, 12 * k).fill('#E5484D').rect(-6 * k, 7 * k, 12 * k, 3 * k).fill('#5B6472'),
+  cartridge2: (g, k) => g.roundRect(-12 * k, -13 * k, 24 * k, 26 * k, 2 * k).fill('#3E4A5A').stroke(edge).rect(-8 * k, -9 * k, 16 * k, 12 * k).fill('#4FE3C1').rect(-6 * k, 7 * k, 12 * k, 3 * k).fill('#8E96A3'),
+  cartridge3: (g, k) => g.roundRect(-12 * k, -13 * k, 24 * k, 26 * k, 2 * k).fill('#C9D3DC').stroke(edge).rect(-8 * k, -9 * k, 16 * k, 12 * k).fill('#F9C846').rect(-6 * k, 7 * k, 12 * k, 3 * k).fill('#5B6472'),
+  joystick: (g, k) => g.roundRect(-14 * k, 2 * k, 28 * k, 11 * k, 4 * k).fill('#2C3440').stroke(edge).rect(-1.5 * k, -10 * k, 3 * k, 13 * k).fill('#8E96A3').circle(0, -11 * k, 5 * k).fill('#E5484D').circle(8 * k, 6 * k, 2.4 * k).fill('#F9C846'),
+  crt: (g, k) => g.roundRect(-16 * k, -13 * k, 32 * k, 26 * k, 5 * k).fill('#C9B48A').stroke(edge).roundRect(-12 * k, -10 * k, 20 * k, 17 * k, 4 * k).fill('#1E2733').rect(-9 * k, -4 * k, 4 * k, 4 * k).fill('#4FE3C1').rect(-3 * k, -4 * k, 4 * k, 4 * k).fill('#4FE3C1').rect(3 * k, -4 * k, 4 * k, 4 * k).fill('#E5484D').circle(12 * k, -6 * k, 1.6 * k).fill('#5B6472').circle(12 * k, 0, 1.6 * k).fill('#5B6472'),
+  handheld: (g, k) => g.roundRect(-10 * k, -14 * k, 20 * k, 28 * k, 3 * k).fill('#C9CED6').stroke(edge).rect(-7 * k, -11 * k, 14 * k, 11 * k).fill('#8DB65A').rect(-6 * k, 5 * k, 5 * k, 1.6 * k).fill(NV).rect(-4.2 * k, 3.2 * k, 1.6 * k, 5 * k).fill(NV).circle(4 * k, 4 * k, 1.8 * k).fill('#B8325A').circle(7 * k, 2 * k, 1.8 * k).fill('#B8325A'),
   rocket: (g, k) => g.moveTo(0, -14 * k).quadraticCurveTo(8 * k, -4 * k, 5 * k, 8 * k).lineTo(-5 * k, 8 * k).quadraticCurveTo(-8 * k, -4 * k, 0, -14 * k).fill('#E9EEF3').stroke(edge).circle(0, -3 * k, 3 * k).fill('#5B8FD6').poly([-5 * k, 8 * k, 5 * k, 8 * k, 0, 14 * k]).fill('#F28C38'),
 };
+function arcadeCab(g: Graphics, k: number, glow: string, body: string) {
+  g.poly([-34 * k, -200 * k, 34 * k, -200 * k, 34 * k, 0, -34 * k, 0]).fill(body).stroke({ width: 4, color: WH });
+  g.rect(-34 * k, -200 * k, 68 * k, 26 * k).fill(glow).rect(-30 * k, -192 * k, 60 * k, 10 * k).fill({ color: WH, alpha: 0.5 });   // the marquee
+  g.roundRect(-27 * k, -166 * k, 54 * k, 48 * k, 6 * k).fill('#0E1420').roundRect(-22 * k, -161 * k, 44 * k, 38 * k, 4 * k).fill('#10261F');
+  for (let i = 0; i < 4; i++) g.rect((-12 + i * 7) * k, -144 * k, 6 * k, 6 * k).fill(glow);   // something moving on the screen
+  g.rect(9 * k, -132 * k, 6 * k, 6 * k).fill('#E5484D');
+  g.poly([-38 * k, -114 * k, 38 * k, -114 * k, 38 * k, -96 * k, -38 * k, -96 * k]).fill('#2C3440');   // the control panel
+  g.rect(-20 * k, -122 * k, 3 * k, 12 * k).fill('#8E96A3').circle(-18.5 * k, -124 * k, 5 * k).fill('#E5484D').circle(8 * k, -106 * k, 4 * k).fill('#F9C846').circle(20 * k, -106 * k, 4 * k).fill('#2F7FD8');
+  g.rect(-14 * k, -60 * k, 28 * k, 18 * k).fill('#1E2733').rect(-4 * k, -56 * k, 8 * k, 10 * k).fill('#F9C846');   // the coin door
+}
 /** Big things standing on the floor (drawn bottom-centre at 0, 0, `size` px tall). */
 const BIG: Record<string, Draw> = {
   cow: (g, k) => g.ellipse(0, -48 * k, 52 * k, 30 * k).fill('#FFFFFF').stroke({ width: 4, color: '#FFFFFF' }).ellipse(-18 * k, -54 * k, 14 * k, 10 * k).fill('#2C3440').ellipse(16 * k, -40 * k, 12 * k, 9 * k).fill('#2C3440')
@@ -144,6 +167,13 @@ const BIG: Record<string, Draw> = {
     .moveTo(-34 * k, -24 * k).lineTo(-6 * k, -60 * k).lineTo(22 * k, -60 * k).lineTo(34 * k, -24 * k).moveTo(-6 * k, -60 * k).lineTo(0, -24 * k).lineTo(-34 * k, -24 * k).stroke({ width: 5, color: '#2F7FD8' }).rect(-14 * k, -68 * k, 18 * k, 6 * k).fill('#2C3440'),
   bear: (g, k) => g.circle(-26 * k, -100 * k, 12 * k).fill('#8A5A3B').circle(26 * k, -100 * k, 12 * k).fill('#8A5A3B').ellipse(0, -36 * k, 34 * k, 36 * k).fill('#8A5A3B').circle(0, -86 * k, 28 * k).fill('#9C6A42').ellipse(0, -78 * k, 12 * k, 9 * k).fill('#D9A066')
     .circle(-9 * k, -92 * k, 3 * k).fill('#2C3440').circle(9 * k, -92 * k, 3 * k).fill('#2C3440').circle(0, -82 * k, 4 * k).fill('#2C3440'),
+  // an arcade cabinet (the screen and marquee colours vary by game: 'arcade' snake green, 'arcade2' pinball amber)
+  arcade: (g, k) => arcadeCab(g, k, '#4FE3C1', '#2B2A4A'),
+  arcade2: (g, k) => arcadeCab(g, k, '#FF9A2E', '#7A1F2B'),
+  // a big burlap sack of potatoes
+  potsack: (g, k) => { g.poly([-34 * k, -78 * k, 34 * k, -78 * k, 42 * k, 0, -42 * k, 0]).fill('#C9A46A').stroke({ width: 4, color: WH }).rect(-34 * k, -82 * k, 68 * k, 8 * k).fill('#8A6A3E');
+    for (const [x, y] of [[-20, -90], [0, -96], [20, -90], [-10, -104], [12, -104]]) g.ellipse(x * k, y * k, 13 * k, 9 * k).fill('#C9955A').stroke({ width: 2, color: '#A87A45' });
+    g.roundRect(-20 * k, -50 * k, 40 * k, 22 * k, 3 * k).fill('#F4EBD6'); },
   // a punching bag on a chain, from a stand
   bag: (g, k) => g.rect(-38 * k, -230 * k, 8 * k, 230 * k).fill('#3A3A44').rect(-38 * k, -230 * k, 60 * k, 8 * k).fill('#3A3A44').rect(14 * k, -222 * k, 3 * k, 30 * k).fill('#9AA3AE')
     .roundRect(-6 * k, -194 * k, 42 * k, 130 * k, 18 * k).fill('#C8463D').rect(-6 * k, -170 * k, 42 * k, 6 * k).fill('#2B2B30').rect(-6 * k, -96 * k, 42 * k, 6 * k).fill('#2B2B30')

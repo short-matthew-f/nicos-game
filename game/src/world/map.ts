@@ -53,6 +53,9 @@ export const BUILDINGS: Building[] = [
   house('h3', 730, 240, '#F7E3C4', '#5B78AA'),
   // north: school; north-east: hospital
   { id: 'school', label: 'SCHOOL', x: 1480, y: 380, w: 760, d: 260, h: 360, wall: '#E8C18A', roof: '#B5654F', trim: '#FFFFFF', kind: 'civic' },
+  // Nico's friends' shops, beside the school (2026-10-11): Yarosh's potato shop and Alpha's retro game store
+  { id: 'potato', label: "YAROSH'S POTATOES", x: 2290, y: 420, w: 310, d: 200, h: 250, wall: '#F2D9A0', roof: '#8A5A3B', trim: '#FFFFFF', kind: 'shop' },
+  { id: 'retro', label: "ALPHA'S RETRO GAMES", x: 2630, y: 420, w: 310, d: 200, h: 262, wall: '#3B3768', roof: '#E5484D', trim: '#4FE3C1', kind: 'shop' },
   { id: 'hospital', label: 'HOSPITAL', x: 3380, y: 430, w: 700, d: 300, h: 408, wall: '#F4F6F8', roof: '#8FB3D9', trim: '#D9534F', kind: 'civic' },
   // west: Nico's house and garage, with a back garden below
   { id: 'home', label: "NICO'S", x: 120, y: 1380, w: 330, d: 216, h: 240, wall: '#C9DDF2', roof: '#2B3F55', kind: 'house' },
@@ -120,7 +123,7 @@ export const GOAL_MOUTH = 150;   // goal width (screen y)
 
 export const TREES: [number, number][] = [
   [180, 620], [560, 650], [900, 600],                                       // north-west front yards
-  [1420, 730], [2330, 330], [2470, 650], [2760, 250], [2880, 640],         // round the school
+  [1420, 730], [2250, 700],                                                 // round the school
   [3300, 720], [4250, 180], [4560, 330], [4790, 130], [4810, 760],         // hospital
   [950, 1250], [60, 1180], [800, 2050], [980, 1960], [560, 2080],          // west
   [1400, 1230], [1905, 1330], [1480, 2060], [1800, 1960], [2900, 2080],    // middle

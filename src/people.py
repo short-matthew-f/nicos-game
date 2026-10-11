@@ -286,6 +286,51 @@ def nico_qback(h, hl):
             f'C17,-92 14,-80 15,-66 C12,-61 6,-60 0,-61 C-10,-60 -18,-59 -24,-62 C-30,-66 -33,-74 -33,-82 Z" fill="{h}"/>'
             f'<path d="M-13,-64 C-17,-50 -15,-36 -8,-24 C0,-36 2,-50 -2,-64 Z" fill="{h}"/>'
             f'<rect x="-13" y="-66" width="12" height="6" rx="3" fill="{rig.HAIR_TIE}"/>')
+# ---- Nico's friends (2026-10-11), drawn from photos the user shared (reference only)
+# Yarosh: a big tousled mop of brown curls on top, falling forward over his forehead, short at the back and sides
+def _puffs(h, hl, pts):
+    out = ''.join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{h}"/>' for x, y, r in pts)
+    return out + ''.join(f'<path d="M{x - r * .45:.1f},{y + r * .1:.1f} a{r * .45:.1f},{r * .45:.1f} 0 0 1 {r * .9:.1f},0" fill="none" stroke="{hl}" stroke-width="1.8" stroke-linecap="round"/>' for x, y, r in pts[::2])
+def _arc(cx, cy, r, a0, a1, n, size):
+    import math
+    return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / (n - 1))), cy + r * math.sin(math.radians(a0 + (a1 - a0) * i / (n - 1))), size) for i in range(n)]
+def tousle_side(h, hl):
+    return short_side(h) + _puffs(h, hl, _arc(0, -98, 25, -195, -35, 7, 9) + [(-6, -112, 9), (10, -114, 9), (24, -104, 8), (31, -97, 6.5), (27, -93, 5.5)])
+def tousle_front(h, hl):
+    return short_front(h) + _puffs(h, hl, _arc(0, -96, 27, -178, -2, 8, 8.5) + [(-8, -116, 9), (9, -117, 9), (-16, -100, 7), (-4, -101, 7.5), (9, -99, 7), (20, -96, 6)])
+def tousle_back(h, hl):
+    return short_back(h) + _puffs(h, hl, _arc(0, -96, 27, -182, 2, 8, 8.5) + [(-9, -114, 9), (9, -115, 9)])
+def tousle_qfront(h, hl):
+    return short_qfront(h) + _puffs(h, hl, _arc(-1, -96, 27, -190, -15, 8, 8.5) + [(-6, -116, 9), (10, -116, 9), (-2, -101, 7), (11, -100, 7), (22, -96, 6)])
+def tousle_qback(h, hl):
+    return short_qback(h) + _puffs(h, hl, _arc(-4, -96, 26, -185, -20, 7, 8.5) + [(-12, -114, 9), (4, -116, 9)])
+
+# Alpha: a thick dark mop: heavy bangs straight down to his eyebrows, over his ears, down to his jaw
+_TOP = -122
+def mop_side(h, hl):
+    return (f'<path d="M36,-96 C35,-116 16,{_TOP} -6,{_TOP} C-27,-120 -39,-104 -38,-86 C-38,-72 -35,-60 -29,-52 '
+            f'C-23,-54 -18,-55 -12,-56 C-8,-62 -4,-68 0,-74 C3,-79 6,-84 9,-88 C12,-90 14,-90 17,-90 '
+            f'L21,-93 L25,-89 L29,-93 L33,-90 C35,-92 36,-94 36,-96 Z" fill="{h}"/>'
+            f'<path d="M-24,-110 C-8,-118 10,-117 24,-108 M-30,-92 C-32,-78 -30,-66 -25,-58 M-14,-104 C-20,-92 -18,-80 -12,-70" fill="none" stroke="{hl}" stroke-width="3" stroke-linecap="round"/>')
+def mop_front(h, hl):
+    return (f'<path d="M0,{_TOP} C24,{_TOP} 39,-106 38,-84 C38,-72 36,-62 31,-55 C28,-57 25,-59 22,-61 '
+            f'C23,-72 23,-82 22,-90 L17,-92 L13,-89 L8,-93 L3,-90 L-2,-93 L-7,-90 L-12,-93 L-17,-90 L-22,-91 '
+            f'C-23,-82 -23,-72 -22,-61 C-25,-59 -28,-57 -31,-55 C-36,-62 -38,-72 -38,-84 C-39,-106 -24,{_TOP} 0,{_TOP} Z" fill="{h}"/>'
+            f'<path d="M-16,-114 C-4,-118 8,-117 18,-112 M-30,-86 C-31,-76 -30,-66 -27,-60 M30,-86 C31,-76 30,-66 27,-60 M-6,-108 L-8,-96 M8,-108 L9,-96" fill="none" stroke="{hl}" stroke-width="2.8" stroke-linecap="round"/>')
+def mop_back(h, hl):
+    return (f'<path d="M-37,-84 C-39,-108 -20,{_TOP} 0,{_TOP} C20,{_TOP} 39,-108 37,-84 C38,-70 35,-60 30,-52 '
+            f'C22,-56 16,-52 9,-55 C3,-51 -3,-55 -9,-51 C-16,-55 -22,-51 -30,-52 C-35,-60 -38,-70 -37,-84 Z" fill="{h}"/>'
+            f'<path d="M-18,-108 C-6,-113 8,-112 18,-106 M-20,-90 C-22,-78 -20,-66 -16,-58 M4,-96 C3,-82 4,-70 6,-60 M24,-92 C25,-80 24,-68 21,-60" fill="none" stroke="{hl}" stroke-width="2.6" stroke-linecap="round"/>')
+def mop_qfront(h, hl):
+    return (f'<path d="M30,-60 C35,-70 37,-82 36,-92 C35,-110 20,{_TOP} 2,{_TOP} C-16,{_TOP} -36,-108 -37,-86 '
+            f'C-38,-72 -34,-60 -27,-52 C-22,-55 -18,-58 -14,-62 C-15,-72 -14,-82 -11,-90 '
+            f'L-6,-92 L-1,-89 L4,-93 L9,-90 L14,-93 L19,-90 L24,-92 C25,-84 25,-72 25,-62 Z" fill="{h}"/>'
+            f'<path d="M-14,-112 C0,-118 14,-116 24,-108 M-28,-90 C-30,-78 -28,-66 -23,-58 M30,-88 C31,-78 30,-70 28,-64" fill="none" stroke="{hl}" stroke-width="2.8" stroke-linecap="round"/>')
+def mop_qback(h, hl):
+    return (f'<path d="M-37,-84 C-40,-110 -20,{_TOP} -2,{_TOP} C14,{_TOP} 28,-110 26,-96 '
+            f'C20,-90 18,-78 18,-62 C12,-54 6,-52 0,-54 C-6,-50 -12,-54 -18,-50 C-26,-53 -33,-60 -36,-68 C-38,-74 -37,-80 -37,-84 Z" fill="{h}"/>'
+            f'<path d="M-20,-108 C-8,-114 6,-112 16,-106 M-24,-90 C-26,-78 -24,-66 -19,-58 M2,-96 C1,-82 2,-70 4,-60" fill="none" stroke="{hl}" stroke-width="2.6" stroke-linecap="round"/>')
+
 # (hair that hangs behind the body: drawn before the torso)
 BEHIND = {
     'nico': {'side': lambda h: f'<path d="M-24,-71 C-36,-60 -34,-40 -27,-27 C-22,-36 -18,-52 -15,-66 Z" fill="{h}"/>',
@@ -302,6 +347,8 @@ HAIR = {
     'tail': (tail_side, tail_front, tail_back, tail_qfront, tail_qback),
     'braid': (braid_side, braid_front, braid_back, braid_qfront, braid_qback),
     'nico': (nico_side, nico_front, nico_back, nico_qfront, nico_qback),
+    'tousle': (tousle_side, tousle_front, tousle_back, tousle_qfront, tousle_qback),
+    'mop': (mop_side, mop_front, mop_back, mop_qfront, mop_qback),
 }
 def behind_of(look, view):
     f = BEHIND.get(look.style, {}).get(view)
@@ -399,7 +446,7 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None, shorts=False, socks=None, watch=None):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
         if plaid: s.shirt = s.sleeve = 'url(#eplaid2)'   # (a plaid flannel: the pattern is in defs; the game export's prefix is 'e')
@@ -527,7 +574,7 @@ class Look:
     def upper_qfront(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
         hair = s.fit(hair_of(s, 'qfront'), 2)
-        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail') else ''
+        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail', 'tousle') else ''
         return (behind_of(s, 'qfront') + s.torso_q(False, pfx) + s.skull(2) + hair + ear +
             f'<circle{f} cx="0" cy="-84" r="3.6" fill="{rig.EYE}"/><ellipse{f} cx="17" cy="-84" rx="3" ry="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M2,-72 Q9,-66 16,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
@@ -535,7 +582,7 @@ class Look:
 
     def upper_qback(s, pfx):
         hair = s.fit(hair_of(s, 'qback'), -2)
-        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail') else ''
+        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail', 'tousle') else ''
         return (s.torso_q(True, pfx) + s.skull(-2) +
                 f'<circle cx="21" cy="-76" r="3.5" fill="{rig.CHEEK}" opacity=".45"/>' + hair + ear)
 
@@ -582,10 +629,17 @@ class Look:
         return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
                 f'<rect x="-6.5" y="8" width="13" height="30" rx="6.5" fill="{hand}"/>'
                 f'<rect x="-9" y="-7" width="18" height="21" rx="8" fill="{sl}"/>'
-                f'<rect x="-9" y="8" width="18" height="3" fill="{s.trim}"/>')
+                f'<rect x="-9" y="8" width="18" height="3" fill="{s.trim}"/>'
+                + (f'<rect x="-6.8" y="30" width="13.6" height="4" rx="1.5" fill="{s.watch}"/>' if s.watch and not far else ''))
 
     def leg_art(s, far):
         fill = f'url(#{rig._PEOPLE_PFX}camo)' if s.camo else (s.pants2 if far else s.pants)
+        if s.shorts:   # bare legs below the knee, socks above the shoes
+            sk = rig.SK2 if far else rig.SK
+            leg = (f'<rect x="-7.5" y="0" width="15" height="50" rx="7" fill="{sk}"/>'
+                   + (f'<rect x="-7.5" y="36" width="15" height="12" rx="2" fill="{s.socks}"/>' if s.socks else '')
+                   + f'<rect x="-9.5" y="0" width="19" height="24" rx="6" fill="{fill}"/>')
+            return leg
         leg = f'<rect x="-8.5" y="0" width="17" height="50" rx="7" fill="{fill}"/>'
         if s.stripe: leg += f'<rect x="-1.5" y="2" width="3" height="46" fill="{s.stripe}"/>'   # track pants: a stripe down the side
         return leg
@@ -653,6 +707,15 @@ LOOKS = {
     'mrbrooks': Look('mrbrooks', skin='#7A4A2E', skin2='#673D25', hair='#1A1411', style='short', top='hoodie',
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
+    # Nico's friends (2026-10-11), drawn from photos the user shared (reference only)
+    # Yarosh: older and taller; a big mop of curly brown hair, a black tee, grey shorts, white socks, black sneakers, a black watch
+    'yarosh': Look('yarosh', skin='#EDC4A3', skin2='#DBA987', hair='#5A3B27', hl='#7C573A', style='tousle', top='tee',
+                   shirt='#222429', shirt2='#191B1F', sleeve='#222429', trim='#2C2F35', pants='#6B6B70', pants2='#5C5C61',
+                   shoe='#1F2125', shoe2='#18191C', height=1.17, shorts=True, socks='#F4F6F8', watch='#1A1B1E'),
+    # Alpha: younger and smaller; a thick dark mop with heavy bangs, a white tee, black sweatpants, black sneakers
+    'alpha': Look('alpha', skin='#EAC09E', skin2='#D8A884', hair='#2C1F19', hl='#463229', style='mop', top='tee',
+                  shirt='#F7F7F4', shirt2='#E3E3DE', sleeve='#F7F7F4', trim='#ECECE8', pants='#232428', pants2='#1B1C20',
+                  shoe='#2B2D32', shoe2='#232529', height=0.9),
     # people who work inside the other buildings, and the grown-ups at home in the houses (made up)
     # Litchfield Tang Soo Do (2026-10-11), drawn from photos the user shared: everyone in a white dobok edged
     # in black, barefoot; the masters' belts black with a red stripe down the middle
