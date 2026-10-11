@@ -61,7 +61,7 @@ export function beepGap(d: number): number | null {
   return DETECT.fastest + (DETECT.slowest - DETECT.fastest) * k;
 }
 
-function shellArt(kind: ShellKind): Graphics {
+export function shellArt(kind: ShellKind): Graphics {
   const col = SHELL_KINDS.find(k => k.id === kind)!.color, g = new Graphics(), W = '#FFFFFF';
   g.ellipse(2, 2, 13, 4).fill({ color: NAVY, alpha: 0.2 });
   switch (kind) {

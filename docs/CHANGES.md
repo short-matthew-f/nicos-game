@@ -966,3 +966,25 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - Buy outlines drop the emoji from their labels (the buttons keep theirs).
   - The big map's legend is words.
 - **Frame rate** (WebKit on the Mac, 2x): a steady 60 fps in all of these: town by day, clear and in rain; the forest at night, clear and in snow; and town on a winter night with the holiday lights. Still to check on the real iPad: `?debug` shows the fps.
+
+### Nico's sticker book (2026-10-10)
+- **Where:** a 📖 button next to the backpack opens the book.
+- **Pages** (`book.ts`), each paying a one-off reward when it's full:
+
+  | Page | Contents | Reward |
+  |---|---|---|
+  | On the beach | 6 shells and 5 dug-up treasures | $15 |
+  | Animal photos | 7 animals, with their stars | $20 |
+  | Storage treasures | 15 finds | $30 |
+  | Made by Nico | toys, jewelry, bakes | $25 |
+  | With the family | Nonna's pasta, pizzelle, the birdhouse, the sign, the star, a painting | $20 |
+  | Karate belts | 8 belts | $40 |
+  | Around town | the dog, pinball, a goal, a fire put out, rain, snow, the shop, the bakery | $20 |
+
+  64 stickers in all.
+- **Stickers** are the game's own drawings, extracted to images once each (`stickerArt`): icons, the animals, the beach shells, a tied belt. Empty slots are dashed outlines, and tapping one says where to look.
+- **"📖 New sticker: …!"** pops up (and the button wiggles) whenever one is earned. It waits until the current message has gone.
+- **Built on `Biz.seen`,** so things that are sold or used up still count.
+- **New records:** Nonna's pasta, a goal, a fire put out nearby, being out in rain or snow, playing pinball.
+- **New icons:** a seagull and a crab.
+- **Tests:** `test/book.test.ts` (every icon sticker has real art). E2e: open the book, collect a full page once, read a hint.

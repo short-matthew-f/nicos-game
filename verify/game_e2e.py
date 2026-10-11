@@ -808,6 +808,15 @@ with sync_playwright() as p:
     pg.evaluate('()=>{window.__game.setSeason("winter"); window.__game.setWeather("snow")}'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['season'] == 'winter' and w['snow'] > 0.8 and w['cover'] > 0.05 and w['lights'], f"winter: snow falls and settles, and the holiday lights are up ({w})")
     pg.evaluate('()=>{window.__game.setSeason("summer"); window.__game.setWeather("clear")}'); pg.wait_for_timeout(300)
+    # the sticker book: what he's collected, a hint for what's missing, a full page pays out once
+    pg.evaluate("()=>window.__game.setBiz({found: ['scallop','spiral','clam','cowrie','starfish','sanddollar'], seen: {'find:bottle':1,'find:oldkey':1,'find:watch':1,'find:piratecoin':1,'find:ring':1}})"); pg.wait_for_timeout(300)
+    m0 = G()['money']; pg.click('#book-btn'); pg.wait_for_timeout(400)
+    check(pg.locator('#book').is_visible() and pg.locator('#book .sticker.has').count() >= 11, f"the sticker book opens on the full beach page ({pg.locator('#book .sticker.has').count()} stickers)")
+    pg.click('#book [data-claim=beach]'); pg.wait_for_timeout(300)
+    check(G()['money'] == m0 + 15 and pg.locator('#book [data-claim]').count() == 0, f"a full page: collect $15, once ({m0} -> {G()['money']})")
+    pg.click('#book .book-tab[data-page=treasures]'); pg.wait_for_timeout(200); pg.click('#book .sticker.empty >> nth=0'); pg.wait_for_timeout(150)
+    check('storage unit' in pg.locator('#book .book-hint').inner_text(), 'an empty slot says where to look')
+    pg.click('#book .close'); pg.wait_for_timeout(200)
     # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
     ws = [t['who'] for t in G()['townsfolk']]

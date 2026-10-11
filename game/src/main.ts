@@ -7,7 +7,7 @@ import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
 import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
 import { Dust } from './world/dust';
-import { icon, itemIcon } from './world/icons';
+import { icon, itemIcon, bigThing } from './world/icons';
 import { yiayiaPainting } from './world/paintings';
 import { Night, DAY, inForest, darkness, light } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
@@ -45,6 +45,9 @@ import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
 import { BELTS, nextBelt, isBlack } from './karate';
+import { BookView } from './bookView';
+import { PAGES, type Art } from './book';
+import { shellArt } from './world/beach';
 import { Weather, seasonOf, SEASON, SEASONS, puddleAt, umbrellaArt, type Sky, type Season } from './world/weather';
 import { DOG, freshDog, stepDog, fetch as dogFetch, mouthOf, type DogState } from './dog';
 import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
@@ -584,7 +587,7 @@ async function main() {
   const GRAN: Record<string, () => void> = {
     nonna: () => showCard('nonna', '👵 Nonna', `Nonna: “${pick(['Ciao, Nico! You look hungry. Sit, sit!', 'Mangia! You\'re a growing boy.', 'I made too much pasta again. Help me eat it!'])}”`, [
       { label: '🍝 A big bowl of pasta', sub: pastaIn > 0 ? 'still full!' : 'free', id: 'pasta', disabled: pastaIn > 0, onClick: () => {
-        pastaIn = 180; const t = INTERIORS.nonna.things.find(q => q.kind === 'block' && q.use?.sit && q.use.label.includes('table'));
+        pastaIn = 180; see(biz, 'family', 'pasta'); const t = INTERIORS.nonna.things.find(q => q.kind === 'block' && q.use?.sit && q.use.label.includes('table'));
         if (t && t.kind === 'block') { nico.x = t.x + t.w / 2; nico.y = t.y + t.d + 50; sitOnBench(t.x + t.w / 2, t.y + t.d + 6); }
         boost = Math.min(BOOST.max, boost + 60); sfx.coin(); toast('🍝 Nonna brings a huge bowl of pasta. Mangia! You feel super speedy! ⚡');
       } },
@@ -1213,6 +1216,44 @@ async function main() {
     showCard('bag', '🎒 Your backpack', `🐚 Shells (${kinds.length} of ${SHELL_KINDS.length} kinds): ${shellLine}.  📷 Photos (${pics.length} of ${Object.keys(ANIMAL_KINDS).length} animals): ${photoLine}.  🏠 On your shelf: ${shelf}.  🧰 Tools: ${tools}.`, [], 'Close');
   }
   document.getElementById('bag')!.addEventListener('click', showBag);
+  // ---- the sticker book (book.ts): every sticker drawn from the game's own art, once
+  const artCache = new Map<string, string>();
+  function stickerArt(a: Art): string {
+    const key = a.join(':'), hit = artCache.get(key); if (hit) return hit;
+    let c: Container;
+    if (a[0] === 'icon') c = icon(a[1], 64);
+    else if (a[0] === 'big') c = bigThing(a[1], 60);
+    else if (a[0] === 'shell') { c = shellArt(a[1] as Parameters<typeof shellArt>[0]); c.scale.set(2.6); }
+    else {   // a karate belt, tied
+      const g = new Graphics(), col = a[1];
+      g.roundRect(-30, -8, 60, 14, 4).fill('#FFFFFF').roundRect(-28, -6, 56, 10, 3).fill(col);
+      g.poly([-4, 2, -16, 26, -8, 28, 1, 4]).fill(col).stroke({ width: 1.5, color: '#00000033' }).poly([4, 2, 16, 26, 8, 28, -1, 4]).fill(col).stroke({ width: 1.5, color: '#00000033' });
+      g.roundRect(-7, -9, 14, 16, 4).fill(col).stroke({ width: 1.5, color: '#00000033' });
+      c = g; c.scale.set(1.3);
+    }
+    const wrap = new Container(); wrap.addChild(c);
+    const url = (app.renderer.extract.canvas({ target: wrap, resolution: 2 }) as HTMLCanvasElement).toDataURL();
+    wrap.destroy({ children: true }); artCache.set(key, url);
+    return url;
+  }
+  const book = new BookView({
+    biz, art: stickerArt, save: () => persist(),
+    pay: n => { state.money += n; showMoney(); sfx.cash(5); toast(`📖 A full page! +$${n}`); },
+    opened: on => { cardOpen = on ? 'book' : null; },
+  });
+  const bookBtn = document.getElementById('book-btn')!;
+  bookBtn.addEventListener('click', () => { bookBtn.classList.remove('new'); book.open(); });
+  // a new sticker: say so, and wiggle the book's button
+  let stickers: Set<string> | null = null, stickerCheck = 0;
+  function checkStickers() {
+    if (stickers && toastEl.classList.contains('on')) return;   // (wait for the last message to go first)
+    const now = new Set(PAGES.flatMap(p => p.entries.filter(e => e.has(biz) > 0).map(e => `${p.id}:${e.id}`)));
+    if (stickers) for (const k of now) if (!stickers.has(k)) {
+      const [pid, eid] = k.split(':'), e = PAGES.find(p => p.id === pid)!.entries.find(q => q.id === eid)!;
+      toast(`📖 New sticker: ${e.label}!`); bookBtn.classList.remove('new'); void bookBtn.offsetWidth; bookBtn.classList.add('new'); sfx.sparkle(); break;
+    }
+    stickers = now;
+  }
   const detectorEl = document.getElementById('detector')!;
 
   const digSpot: Spot = { id: 'dig', x: 0, y: 0, r: DETECT.dig, priority: 0.8, label: '⛏️ Dig!', run: startDig,
@@ -1447,6 +1488,7 @@ async function main() {
     pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
+    bookOpen: (p?: string) => book.open(p),
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
@@ -1680,7 +1722,7 @@ async function main() {
       const g = roll(ball, dt, SOLIDS, WORLD);
       if (g) {
         if (g < 0) score.right++; else score.left++;
-        toast(`⚽ GOAL! ${score.left} – ${score.right}`); sfx.goal();
+        toast(`⚽ GOAL! ${score.left} – ${score.right}`); sfx.goal(); if (!biz.seen['town:goal']) see(biz, 'town', 'goal');
         goalReset = 1.6;
       }
     }
@@ -1705,6 +1747,8 @@ async function main() {
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     { const was = clock; clock = (clock + dt / DAY.length) % 1; if (clock < was) newDay(); }
     weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
+    if (!room && mode !== 'drive') { if (weather.rain > 0.6 && !biz.seen['sky:rain']) see(biz, 'sky', 'rain'); if (weather.snow > 0.6 && !biz.seen['sky:snow']) see(biz, 'sky', 'snow'); }
+    if ((stickerCheck -= dt) <= 0) { stickerCheck = 1.5; checkStickers(); }
     umbrellaUp([...locals.filter(l => !gone(l)).map(l => ({ key: l as object, x: l.w.x, y: l.w.y, h: l.view.height })), ...(mode === 'walk' && !room ? [{ key: nico as object, x: nico.x, y: nico.y, h: nico.view.height }] : [])]);
     dust.update(dt); snackIn -= dt; pastaIn -= dt; for (const k in treatIn) treatIn[k] -= dt; eggs = Math.min(HENS.max, eggs + dt / HENS.lay);
     if (room?.kind === 'home') {   // the fish swim round their tank (faster when they've just been fed)
@@ -1778,7 +1822,7 @@ async function main() {
     // the fire: water from the truck while it's parked there spraying
     const spraying = truck.out && truck.stopAt !== null && truck.speed === 0 && truck.spraying > 0;
     fireScene.update(dt, spraying ? [truck.pos[0], truck.pos[1] - 70] : null);
-    if (wasBurning && !fireScene.burning) toast('🔥 The fire is out! Hooray for the firefighters!');
+    if (wasBurning && !fireScene.burning) { toast('🔥 The fire is out! Hooray for the firefighters!'); const [mx, my] = here(); if (fireScene.building && Math.hypot(mx - (fireScene.building.x + fireScene.building.w / 2), my - fireScene.building.y) < 1200) see(biz, 'town', 'fire'); }
     wasBurning = fireScene.burning;
 
     // action button

@@ -88,7 +88,40 @@ html, body {
 #detector i { display: inline-block; width: 6px; border-radius: 2px; background: #C9D3DC; }
 #detector i.on { background: #3BB273; }
 #detector[hidden] { display: none; }
-#bag, #who { font-size: 22px; min-width: 48px; }
+#bag, #who, #book-btn { font-size: 22px; min-width: 48px; }
+#more, #fewer { white-space: nowrap; }
+#book-btn.new { animation: bookpop .6s ease-in-out 3; }
+@keyframes bookpop { 50% { transform: scale(1.25) rotate(-8deg); } }
+
+/* ---- the sticker book (bookView.ts) */
+.book .book-panel {
+  background: #FFF8EC; border-radius: 22px; padding: 14px 18px 16px; width: min(940px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto;
+  box-shadow: 0 10px 0 #C9A04A, 0 0 0 6px #fff; border-left: 14px solid #C8463D;
+}
+.book-top { display: flex; align-items: center; gap: 12px; }
+.book-top h2 { margin: 0; font-size: 26px; flex: 1; }
+.book-count { font-weight: 800; color: #8A5A3B; }
+.book-top .close { width: 44px; height: 44px; border-radius: 50%; font-size: 20px; }
+.book-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 8px; }
+.book-tab { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 12px; background: #F1E4C8; font-weight: 800; font-size: 14px; box-shadow: none; }
+.book-tab small { font-size: 12px; opacity: .7; }
+.book-tab.on { background: #F9C846; }
+.book-tab.full small { color: #2E7D4F; opacity: 1; }
+.book-page h3 { margin: 4px 0 8px; font-size: 22px; }
+.book-page h3 small { font-size: 15px; color: #8A5A3B; }
+.book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.sticker { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 116px; padding: 6px; border-radius: 16px; box-shadow: none; }
+.sticker.has { background: #fff; box-shadow: 0 4px 0 rgba(43,63,85,.18), 0 0 0 3px #fff; transform: rotate(-1.5deg); }
+.sticker.has:nth-child(2n) { transform: rotate(1.5deg); }
+.sticker.empty { background: transparent; border: 3px dashed #D7C49C; color: #C2AE84; }
+.sticker img { width: 64px; height: 64px; object-fit: contain; }
+.sticker .q { font-size: 34px; font-weight: 900; }
+.sticker .name { font-size: 13px; font-weight: 800; text-align: center; line-height: 1.1; }
+.sticker .stars { color: #F9A826; font-size: 13px; letter-spacing: 1px; }
+.book-hint { min-height: 22px; margin: 10px 0 6px; font-weight: 700; color: #6B4E3A; text-align: center; }
+.book-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.book-reward { font-weight: 800; color: #8A5A3B; }
+.book-nav { width: 52px; height: 44px; border-radius: 12px; font-size: 18px; }
 
 /* ---- the workshop screens (auction, unit, build, ramp) */
 .work .panel {
