@@ -42,6 +42,8 @@ import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, e
 import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
+import { DogView, drawDog, doghouseArt } from './world/dog';
+import { DOG, freshDog, stepDog, fetch as dogFetch, mouthOf, type DogState } from './dog';
 import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
 import { Workshop, PLANS } from './workshop';
@@ -637,9 +639,11 @@ async function main() {
   let snackIn = 0;   // s till the fridge has another snack
   let eggs: number = HENS.max;   // eggs waiting at the farm (the hens lay more as time goes by)
   function enterHome(at: [number, number] = [HOME_EXIT[0], HOME_EXIT[1] - 70]) {
+    const f0 = HOME_FURNITURE;
     const { view, layer: rl, windows } = drawHomeRoom(WALLPAPERS[biz.home.wall], RUGS[biz.home.rug]), { bed, blanket } = bedArt(), stand = nightstandArt();
     const lamp = light(stand.bulb[0], stand.bulb[1], 110, 90, 0xFFD98A, 0.8); lamp.zIndex = 9999;
     rl.addChild(bed, blanket, stand.view, couchArt(), kitchenArt(), lamp);
+    if (dog) { const g = new Graphics(); drawDog(g, 'sleep'); g.position.set(f0.bed.x + f0.bed.w / 2 - 10, f0.bed.y + f0.bed.d + 44); g.scale.set(1.25); g.zIndex = f0.bed.y + f0.bed.d + 40; rl.addChild(g); }   // (Biscuit, asleep at the foot of the bed)
     paintWindows(windows, darkness(clock));
     const f = HOME_FURNITURE, outlines: Record<string, Container> = {};
     // decorations: the ones he's bought, and outlines (with prices) for the rest
@@ -696,6 +700,7 @@ async function main() {
       if (!owned && !canUnlock(biz, u.id)) continue;
       if (u.id === 'tv' && owned && isUnlocked(biz, 'beanbag')) continue;   // (the beanbag spot plays the games)
       if (u.id === 'beanbag' && !owned && isUnlocked(biz, 'tv')) { /* buy it from its own outline */ }
+      if (!spotAt[u.id]) continue;   // (the carved sign and the metal star just hang on the wall: nothing to walk up to)
       const [x, y] = spotAt[u.id];
       const use: Record<string, () => void> = {
         posters: () => toast('🖼️ Your posters: a soccer star and a rocket to the moon.'),
@@ -896,6 +901,32 @@ async function main() {
         if (!freeAt(nico.x, nico.y, SOLIDS, WORLD)) { nico.x = BAKERY_DOOR[0]; nico.y = BAKERY_DOOR[1] + 20; }
       });
     } };
+  // ---- Biscuit, Nico's dog: buy the doghouse in his yard and a dog comes with it (dog.ts)
+  const DOGHOUSE: [number, number] = [660, 1895];
+  const dogBox = { x: DOGHOUSE[0] - 80, y: DOGHOUSE[1] - 145, w: 160, h: 160 }, dogRect = { x: DOGHOUSE[0] - 58, y: DOGHOUSE[1] - 40, w: 116, d: 42 };
+  let dogOutline: Container | null = null, dog: DogState | null = null, dogView: DogView | null = null, dogTrick = 0;
+  function placeDog(slap: boolean) {
+    dogOutline?.destroy({ children: true }); dogOutline = null;
+    const v = doghouseArt(DOGHOUSE[0], DOGHOUSE[1], DOG.name); layer.addChild(v);
+    if (!SOLIDS.includes(dogRect)) SOLIDS.push(dogRect);
+    if (slap) slapIn(v, DOGHOUSE[0], DOGHOUSE[1], dogBox);
+    const [mx, my] = here();
+    dog = freshDog(slap ? DOGHOUSE[0] : mx - 60, slap ? DOGHOUSE[1] + 40 : my + 10);
+    dogView = new DogView(); layer.addChild(dogView.view);
+  }
+  if (isUnlocked(biz, 'doghouse')) placeDog(false);
+  else { dogOutline = outlineArt(dogBox.x, dogBox.y, dogBox.w, dogBox.h, '🐶 A dog', unlockOf('doghouse').price); dogOutline.zIndex = dogBox.y; layer.addChild(dogOutline); }
+  const dogSpot: Spot = { id: 'doghouse', x: DOGHOUSE[0], y: DOGHOUSE[1] + 40, r: 110, when: () => !isUnlocked(biz, 'doghouse'),
+    label: () => `✨ A dog · $${unlockOf('doghouse').price}`,
+    run: () => unlockCard('doghouse', () => {
+      placeDog(true); sfx.bark();
+      if (!freeAt(nico.x, nico.y, SOLIDS, WORLD)) { nico.y = DOGHOUSE[1] + 50; }
+      toast(`🐶 Meet ${DOG.name}! He'll follow you everywhere. Kick the ball near him and he'll fetch it.`);
+    }) };
+  // pet him: a happy wiggle, a woof, and a little energy
+  const petSpot: Spot = { id: 'dog', x: -1e5, y: 0, r: 80, priority: -0.2, when: () => !!dog && !room && mode === 'walk',
+    label: () => `🐶 Pet ${DOG.name}`,
+    run: () => { if (!dog) return; sfx.bark(); dogTrick = 1.2; dust.puff(dog.x, dog.y - 60, '#F06A8A', 6, 80, 10); boost = Math.min(BOOST.max, boost + 3); toast(pick([`${DOG.name} wags his whole body!`, `${DOG.name} rolls over for a tummy rub.`, `Good boy, ${DOG.name}!`])); } };
   function caseArtNow(): Container {
     const c = new Container();
     biz.bakery.rack.forEach((p, i) => { const g = bakedArt(p.id); g.position.set(...CASE_SPOTS[i]); g.scale.set(1.2); c.addChild(g); });
@@ -1250,6 +1281,7 @@ async function main() {
     },
   };
   spots.push(jobSpot, digSpot, cameraSpot, shedSpot, shopSpot, bakerySpot,
+    dogSpot, petSpot,
     { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
@@ -1582,7 +1614,7 @@ async function main() {
     // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
     if (goalReset > 0) { goalReset -= dt; if (goalReset <= 0) Object.assign(ball, kickoff()); }
     else {
-      if (mode === 'walk' && !room && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
+      if (mode === 'walk' && !room && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) { sfx.kick(); if (dog && dogFetch(dog, ball)) sfx.bark(); }
       if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) { sfx.kick(); break; }
       for (const l of locals) if (!gone(l)) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
       // traffic nudges it off the road to the side, rather than driving over and hiding it
@@ -1594,6 +1626,22 @@ async function main() {
         toast(`⚽ GOAL! ${score.left} – ${score.right}`); sfx.goal();
         goalReset = 1.6;
       }
+    }
+    // Biscuit: heels, sits, lies down, fetches; waits by the door while Nico's in somewhere, rides along in the car
+    if (dog && dogView) {
+      const hidden = !!room || mode === 'drive';
+      if (hidden) { const [hx, hy] = mode === 'drive' ? [car.x, car.y] : room!.outside; Object.assign(dog, { x: hx - 50, y: hy + 20, vx: 0, vy: 0, mode: 'follow', still: 0 }); }
+      else {
+        const moving = mode === 'walk' && Math.hypot(input.vx, input.vy) > 0.05;
+        const ev = stepDog(dog, dt, nico, moving, ball, (x, y, dx, dy) => moveCircle(x, y, dx, dy, SOLIDS, WORLD, 14));
+        if (ev === 'got') sfx.bark();
+        if (dog.mode === 'bring' || ev === 'drop') { const [bx, by] = mouthOf(dog); Object.assign(ball, { x: bx, y: by, vx: 0, vy: 0, z: ev === 'drop' ? 0 : 30, vz: 0 }); }
+        if (ev === 'drop') { dogTrick = 0.6; toast(`🐶 ${DOG.name} drops the ball at your feet. Again!`); }
+        if (dogTrick > 0) { dogTrick -= dt; dog.face = Math.sin(dogTrick * 16) > 0 ? 1 : -1; }   // (a happy spin)
+        dogView.update(dog, dt);
+      }
+      dogView.view.visible = !hidden;
+      petSpot.x = hidden ? -1e5 : dog.x; petSpot.y = dog.y;
     }
     ballView.draw(ball, dt);
     ducks.update(dt);
@@ -1618,6 +1666,7 @@ async function main() {
     animals.update(dt, [mode === 'drive' ? [car.x, car.y] : here()]);
     clouds.update(dt);
     const movers: [number, number][] = [mode === 'drive' ? [car.x, car.y] : here(), ...locals.map(l => [l.w.x, l.w.y] as [number, number]), ...cars.map(c => c.pos as [number, number])];
+    if (dog && dogView?.view.visible) movers.push([dog.x, dog.y]);
     pigeons.update(dt, movers);
     const got = coins.update(dt, mode === 'drive' ? circles(car.x, car.y, car.h).map(([x, y]) => [x, y] as [number, number]) : room ? [] : [[nico.x, nico.y]]);
     // the beach: shells underfoot, the detector's beeps, old holes filling in
@@ -1655,6 +1704,7 @@ async function main() {
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
     if (mode !== 'drive' && !room) mine.push([nico.x, nico.y, 'nico']);
     for (const l of locals) if (!gone(l)) mine.push([l.w.x, l.w.y]);
+    if (dog && dogView?.view.visible) mine.push([dog.x, dog.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     // (and Poppop in his Fiat, who gives way to everyone not already waiting for him)
     const fiatPts: [number, number, string][] = fiat.out ? fiat.points().map(([x, y]) => [x, y, 'fiat']) : [];
@@ -1752,6 +1802,8 @@ async function main() {
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
+      kickBall: (vx: number, vy: number) => { Object.assign(ball, { vx, vy }); if (dog) dogFetch(dog, ball); },
+      dog: dog ? { x: dog.x, y: dog.y, mode: dog.mode, visible: !!dogView?.view.visible } : null,
       bigMap: bigMap.visible, minimapAt: (() => { const b = minimap.view.getBounds(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })(),
       low, goLow: () => goLow(),
       biz: JSON.parse(JSON.stringify(biz)), work: { screen: work.screen, filled: [...work.filled], lastRun: work.lastRun }, goal,

@@ -876,3 +876,17 @@ Nico's grandparents, from family photos (reference only, not in the repo).
 - **Debug and tests:**
   - New debug hooks: `homeAll`, `yiayiaOut`, and `fiatGo(near?)`.
   - The e2e sends everyone home before the grandparent and bakery checks, so a pizzelle drop-off can't change the cookie counts. It adds checks for the pizzelle drop-off and Yia-Yia's note.
+
+### Biscuit the dog (2026-10-10)
+- **Adopting him:** a new world unlock, 'doghouse' ($30). It's a dashed outline in Nico's yard until bought; then a red doghouse with BISCUIT over the door slaps down and the dog comes with it.
+- **How he behaves** (brain in `src/dog.ts`, pure and unit tested; art in `world/dog.ts`, a golden dog from the side with a red collar):
+  - He heels beside Nico, sits when Nico stops, and lies down after 10 s.
+  - He dashes to catch up, and pops back beside Nico if he's left far behind.
+  - Kick the ball near him and he fetches it, carries it back in his mouth and drops it at Nico's feet. Then he does a happy spin.
+  - "Pet Biscuit" makes him wag and woof, and gives Nico a little energy.
+  - He waits out of sight while Nico is inside somewhere or driving.
+  - Inside the house he's asleep at the foot of the bed.
+  - Traffic stops for him and pigeons scatter.
+  - The bark is synthesised (`sfx.bark`).
+- **Fixed:** the house crashed when Nico walked in after earning Poppop's carved sign or metal star (`decorSpots` looked up a walk-up spot those wall pieces don't have). The new e2e caught it.
+- **Debug:** `kickBall(vx, vy)`; `__game.dog`.

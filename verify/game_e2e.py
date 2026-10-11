@@ -744,6 +744,23 @@ with sync_playwright() as p:
     door('yiayia'); pg.wait_for_timeout(300)
     check('Gone to paint the sea' in pg.locator('#toast').inner_text(), f"her studio has a note: gone painting ({pg.locator('#toast').inner_text()})")
     pg.evaluate("()=>{window.__game.exitRooms(); window.__game.homeAll()}")
+    # Biscuit the dog: buy the doghouse in the yard; he follows, fetches a kicked ball and brings it back
+    pg.evaluate("()=>{window.__game.exitRooms(); window.__game.setMoney(40)}")
+    at('doghouse'); pg.wait_for_timeout(150); lab = pg.locator('#action').inner_text()
+    check(G()['action'] == 'doghouse' and '$30' in lab and G()['dog'] is None, f"the doghouse outline in the yard, with a price ({lab})")
+    pg.click('#action'); pg.wait_for_timeout(150); pg.click('#place-menu button[data-item=unlock]'); pg.wait_for_timeout(1400)
+    check('doghouse' in G()['unlocked'] and G()['money'] == 10 and G()['dog'] and G()['dog']['visible'], f"adopted Biscuit ($30) ({G()['dog']})")
+    nx, ny = at('home', 700, 300); pg.wait_for_timeout(2500)
+    d = G()['dog']; check(math.hypot(d['x'] - nx, d['y'] - ny) < 200, f"Biscuit follows Nico across the yard ({d}, Nico at {nx},{ny})")
+    pg.evaluate(f"()=>window.__game.placeBall({nx + 60}, {ny})"); pg.evaluate("()=>window.__game.kickBall(450, 0)"); pg.wait_for_timeout(300)
+    check(G()['dog']['mode'] == 'fetch', f"kick the ball near him and he's off after it ({G()['dog']})")
+    try:
+        pg.wait_for_function("()=>window.__game.dog.mode !== 'fetch' && window.__game.dog.mode !== 'bring'", timeout=15000); back = True
+    except Exception: back = False
+    b = G()['ball']; check(back and math.hypot(b['x'] - nx, b['y'] - ny) < 140, f"he brings the ball back and drops it at Nico's feet ({b}, {G()['dog']})")
+    door('home'); pg.wait_for_timeout(300)
+    check(not G()['dog']['visible'], 'he waits outside while Nico goes in (asleep at the foot of the bed in the house)')
+    pg.screenshot(path='/tmp/dog_home.png'); pg.evaluate("()=>window.__game.exitRooms()")
     # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
     ws = [t['who'] for t in G()['townsfolk']]

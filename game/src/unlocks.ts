@@ -17,6 +17,7 @@ export const UNLOCKS: Unlock[] = [
   { id: 'bins', label: '🧰 Parts bins', price: 15, room: 'shed', after: 'workbench', text: 'Order parts right here in your shed: no trip to Parts & Tools.' },
   { id: 'shop', label: '🐚 Bibs and Bobs', price: 25, room: 'world', text: 'Your own little shop on the beach. String shells into bracelets, necklaces and wind chimes, put them on the shelves, and visitors will buy them (even while you\'re away). Collect the money from the till.' },
   { id: 'bakery', label: '🧁 Nico\'s Bakery', price: 40, room: 'world', text: 'Your own bakery! Bake cookies, cupcakes and bread (golden ones sell for more), fill the display case, and people will pop in to buy them. Eggs are free at the farm\'s hen house.' },
+  { id: 'doghouse', label: '🐶 A dog', price: 30, room: 'world', text: 'A doghouse in your yard, and a dog to live in it: Biscuit! He follows you everywhere, fetches the soccer ball when you kick it, and sleeps at the foot of your bed.' },
   // decorating Nico's house (Nico, 2026-10-10: "he wants to be able to decorate his house")
   { id: 'plant', label: '🪴 Big plant', price: 5, room: 'home', text: 'A big leafy plant in a pot. Very fancy.' },
   { id: 'posters', label: '🖼️ Posters', price: 3, room: 'home', text: 'Posters for your wall: a soccer star and a rocket.' },

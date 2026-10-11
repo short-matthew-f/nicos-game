@@ -107,6 +107,7 @@ const effects = {
   quack: () => { audio.tone('sawtooth', 520, 260, 0.13, 0.05); audio.tone('sawtooth', 480, 240, 0.12, 0.04, 0.16); },
   honk: () => { for (const d of [0, 0.26]) horn(d); },   // a polite double toot
   tap: () => audio.tone('sine', 660, 880, 0.06, 0.06),
+  bark: () => { audio.tone('sawtooth', 380, 240, 0.09, 0.07); audio.noise(0.07, 0.12, 1400); audio.tone('sawtooth', 420, 260, 0.1, 0.07, 0.16); },   // the dog: woof woof
   purr: () => { audio.noise(0.9, 0.12, 200); audio.tone('sine', 55, 50, 0.9, 0.05); },   // the cat
   thud: () => { audio.noise(0.22, 0.35, 260); audio.tone('sine', 110, 50, 0.22, 0.2); },   // something heavy lands
   splash: () => audio.noise(0.3, 0.25, 2400),
