@@ -1,19 +1,22 @@
-// Poppop's Fiat 500 (Nico, 2026-10-10: "Poppop should drive a fiat 500"): it lives on the
-// driveway in front of his red barn, and every few minutes he pops out for a drive, down the
-// road into town, a lap of the ring road with the traffic, and home again. Small, round and
-// slow; you can see the top of his head through the open canvas roof.
+// Poppop's Fiat 500 (2026-10-10: "Poppop should drive a fiat 500"; "white with maroon seats"): it
+// lives on the driveway in front of his red barn, and every few minutes he and Nonna pop out for a
+// drive: into town, round the ring road with the traffic, a stop at Parts & Tools (and at Nico's
+// bakery, once he has one, where Nonna drops off pizzelle) and home again. Small, round and slow;
+// you can see the tops of their heads through the open canvas roof.
 import { Container, Graphics } from 'pixi.js';
 import { Loop, roundCorners } from './path';
-import { poppopRoute } from './map';
+import { poppopRoute, POPPOP_STOPS } from './map';
 import { NAVY, BAND as B } from './draw';
 import { SQUEEZE } from './cars';
 import { CAR_SCALE } from '../drive';
 
 const S = CAR_SCALE, L = 80, W = 52;   // base art (a little stubby egg next to the other cars' 112 x 56)
 /** Poppop drives a bit under the speed of traffic, and goes out every couple of minutes. */
-export const FIAT = { max: 210, acc: 220, brake: 720, len: L * S, wid: W * S, color: '#F7F6F2', seats: '#7A1F2B', firstRun: 45, every: [100, 200] as [number, number] };
+export const FIAT = { max: 210, acc: 220, brake: 720, len: L * S, wid: W * S, color: '#F7F6F2', seats: '#7A1F2B', firstRun: 45, every: [100, 200] as [number, number],
+  dwell: { parts: 7, bakery: 5 } as Record<Stop, number> };
+export type Stop = keyof typeof POPPOP_STOPS;
 
-function fiatArt(color: string): { body: Container; poppop: Container } {
+function fiatArt(color: string): { body: Container; poppop: Container; nonna: Container } {
   const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 24 * S + B).fill('#FFFFFF');
   const g = new Graphics();
   // wheels peeking out at the corners, then the round body
@@ -37,9 +40,13 @@ function fiatArt(color: string): { body: Container; poppop: Container } {
     .ellipse(-4, -2, 6.5, 6).fill('#F0C4A8')
     .ellipse(-3, -3.5, 2.5, 1.8).fill({ color: '#FFFFFF', alpha: 0.45 });
   poppop.position.set(0, -8);   // the driver's seat (on the left)
-  const art = new Container(); art.addChild(g, poppop); art.scale.set(S);
+  // Nonna beside him: a smaller head of short, wavy grey curls
+  const nonna = new Graphics().ellipse(-5, 0, 7.5, 7).fill('#B9BCC2');
+  for (const [cx, cy] of [[-10, -4], [-11, 2], [-7, 5], [-2, 5], [-4, -5], [0, -2]]) nonna.circle(cx, cy, 2.6).fill('#A7ABB2');
+  nonna.position.set(0, 7);     // the passenger seat
+  const art = new Container(); art.addChild(g, nonna, poppop); art.scale.set(S);
   const body = new Container(); body.addChild(band, art);
-  return { body, poppop };
+  return { body, poppop, nonna };
 }
 
 export class Fiat {
@@ -50,10 +57,19 @@ export class Fiat {
   wait = FIAT.firstRun;            // s until he goes for a drive
   blockedBy: string | null = null; // what he's stopped for
   private stuck = 0; private squeeze = 0;
-  private body: Container; private shadow: Graphics; private poppop: Container;
+  private body: Container; private shadow: Graphics; private poppop: Container; private nonna: Container;
+  /** Where along the drive each stop is, which he's been to this time out, and how long he's been at the current one. */
+  readonly stops: Record<Stop, number>;
+  private done = new Set<Stop>();
+  at: Stop | null = null; dwell = 0;
+  /** Set by the game: whether to pull in at a stop (the bakery: only once Nico has one). */
+  wants: (stop: Stop) => boolean = stop => stop === 'parts';
+  /** Set by the game: they've finished at a stop (Nonna's dropped off the pizzelle). */
+  onStop: (stop: Stop) => void = () => {};
 
   constructor() {
-    ({ body: this.body, poppop: this.poppop } = fiatArt(FIAT.color));
+    ({ body: this.body, poppop: this.poppop, nonna: this.nonna } = fiatArt(FIAT.color));
+    this.stops = Object.fromEntries((Object.keys(POPPOP_STOPS) as Stop[]).map(k => [k, this.nearestS(...POPPOP_STOPS[k])])) as Record<Stop, number>;
     this.shadow = new Graphics().roundRect(-FIAT.len / 2, -FIAT.wid / 2, FIAT.len, FIAT.wid, 24 * S).fill({ color: NAVY, alpha: 0.18 });
     this.shadow.position.set(6, 10);
     this.view.addChild(this.shadow, this.body);
@@ -68,7 +84,14 @@ export class Fiat {
     return [-0.3, 0, 0.3].map(f => f * FIAT.len).map(a => [x + Math.cos(h) * a, y + Math.sin(h) * a]);
   }
   /** Off he goes (also used by tests). */
-  go() { if (!this.out) { this.out = true; this.s = 0; this.speed = 0; } }
+  go() { if (!this.out) { this.out = true; this.s = 0; this.speed = 0; this.done.clear(); this.at = null; } }
+  /** Straight home (tests). */
+  home() { this.out = false; this.s = 0; this.speed = 0; this.at = null; this.wait = FIAT.every[0]; this.place(); }
+  nearestS(x: number, y: number): number {
+    let best = 0, bd = Infinity;
+    for (let s = 0; s < this.loop.length; s += 5) { const [px, py] = this.loop.at(s), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = s; } }
+    return best;
+  }
 
   /** `yieldTo`: things in front to stop for (tagged, like the cars'). Returns true while out. */
   update(dt: number, yieldTo: [number, number, string?][]): boolean {
@@ -91,10 +114,20 @@ export class Fiat {
     this.stuck = this.blockedBy === 'mine' && this.speed < 5 ? this.stuck + dt : 0;
     if (this.stuck > SQUEEZE.after) { this.squeeze = SQUEEZE.for; this.stuck = 0; }
     const top = this.squeeze > 0 ? SQUEEZE.speed : FIAT.max;
-    // ease into the parking spot at the end
-    const left = this.loop.length - this.s, park = Math.max(40, Math.sqrt(2 * FIAT.brake * 0.35 * left));
-    this.speed = blocked ? Math.max(0, this.speed - FIAT.brake * dt) : Math.min(top, park, this.speed + FIAT.acc * dt);
+    // pulled in at a stop: wait there, then carry on
+    if (this.at) {
+      this.dwell += dt; this.speed = 0;
+      if (this.dwell >= FIAT.dwell[this.at]) { this.onStop(this.at); this.done.add(this.at); this.at = null; }
+      this.place(); return true;
+    }
+    // ease into the next stop, or into the parking spot at the end
+    let end = this.loop.length, next: Stop | null = null;
+    for (const k of Object.keys(this.stops) as Stop[]) if (!this.done.has(k) && this.stops[k] >= this.s - 1 && this.stops[k] < end && this.wants(k)) { end = this.stops[k]; next = k; }
+    const left = end - this.s, park = Math.max(next ? 0 : 40, Math.sqrt(2 * FIAT.brake * 0.35 * Math.max(0, left)));
+    if (next && left <= 6) { this.at = next; this.dwell = 0; this.speed = 0; this.place(); return true; }
+    this.speed = blocked ? Math.max(0, this.speed - FIAT.brake * dt) : Math.min(top, Math.max(next ? 30 : 0, park), this.speed + FIAT.acc * dt);
     this.s += this.speed * dt;
+    if (next && this.s > end) this.s = end;
     if (this.s >= this.loop.length) {
       this.out = false; this.s = 0; this.speed = 0;
       this.wait = FIAT.every[0] + Math.random() * (FIAT.every[1] - FIAT.every[0]);
@@ -108,6 +141,8 @@ export class Fiat {
     this.view.position.set(x, y);
     this.body.rotation = this.shadow.rotation = this.out ? this.heading : Math.PI / 2;   // parked straight, nose to the road
     this.view.zIndex = y + FIAT.wid * 0.4;
-    this.poppop.visible = this.out;   // parked: he's in the woodshop
+    // parked: they're at home; at Parts & Tools they've both gone in, at the bakery Nonna has
+    this.poppop.visible = this.out && this.at !== 'parts';
+    this.nonna.visible = this.out && !this.at;
   }
 }

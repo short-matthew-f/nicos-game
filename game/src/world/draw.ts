@@ -365,6 +365,16 @@ export function drawProp(p: Prop): Container {
       g.poly([x - 18, y - 122, x, y - 146, x + 18, y - 122]).fill('#FFFFFF');
       g.poly([x + 22, y - 82, x + 30, y - 60, x + 38, y - 82]).fill('#E3A857').circle(x + 30, y - 86, 9).fill('#B8F0D8');   // a cone on top
       break;
+    case 'easel':
+      // Yia-Yia's beach easel: three wooden legs, a canvas of the sea and the sky
+      sh(30, 6);
+      g.moveTo(x - 24, y).lineTo(x - 6, y - 118).moveTo(x + 24, y).lineTo(x + 6, y - 118).moveTo(x, y - 6).lineTo(x, y - 100).stroke({ width: 9, color: '#FFFFFF', cap: 'round' });
+      g.moveTo(x - 24, y).lineTo(x - 6, y - 118).moveTo(x + 24, y).lineTo(x + 6, y - 118).moveTo(x, y - 6).lineTo(x, y - 100).stroke({ width: 5, color: '#B07A4A', cap: 'round' });
+      g.roundRect(x - 40, y - 126, 80, 64, 4).fill('#FFFFFF').stroke({ width: 3, color: '#FFFFFF' });
+      g.rect(x - 36, y - 122, 72, 30).fill('#BFE3F5').rect(x - 36, y - 92, 72, 26).fill('#2F86C8')
+       .circle(x + 18, y - 110, 7).fill('#F9C846').rect(x - 36, y - 94, 72, 3).fill('#FFFFFF');
+      g.roundRect(x - 34, y - 60, 68, 7, 3).fill('#8A5A3B');   // the ledge
+      break;
     case 'cone':
       sh(14, 4);
       g.poly([x - 16, y, x, y - 40, x + 16, y]).fill('#FFFFFF').poly([x - 11, y - 3, x, y - 35, x + 11, y - 3]).fill('#F28C38')

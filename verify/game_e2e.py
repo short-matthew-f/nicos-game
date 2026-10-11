@@ -691,6 +691,7 @@ with sync_playwright() as p:
     check('bakery' in G()['unlocked'] and G()['money'] == 40, f"bought the bakery ($40) ({G()['money']})")
     door('barn'); pg.click('#place-menu button[data-item=eggs]'); pg.wait_for_timeout(150)
     check(G()['biz']['items'].get('egg', 0) >= 2, f"eggs from the farm's hens ({G()['biz']['items']})")
+    pg.evaluate("()=>window.__game.homeAll()")   # (Poppop and Nonna stay home: Nonna would drop pizzelle in the case)
     door('bakery'); pg.wait_for_timeout(300)
     check(G()['room'] == 'bakery', 'inside the bakery')
     room_at('pantry'); pg.click('#action'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="kit:cookie"]'); pg.wait_for_timeout(200)
@@ -709,10 +710,16 @@ with sync_playwright() as p:
     pg.evaluate("()=>{window.__rand = Math.random; Math.random = () => 0.01; window.__game.visitNow()}")
     pg.wait_for_function('()=>window.__game.biz.bakery.till > 0', timeout=15000); pg.evaluate("()=>{Math.random = window.__rand}")
     check(len(G()['biz']['bakery']['rack']) == 3, 'a customer walked in and bought a cookie')
+    pg.evaluate("()=>window.__game.fiatGo('bakery')")
+    try:
+        pg.wait_for_function("()=>window.__game.biz.bakery.rack.filter(p => p.id === 'pizzelle').length == 2", timeout=20000); drop = True
+    except Exception: drop = False
+    check(drop and 'Nonna dropped off' in pg.locator('#toast').inner_text(), f"Poppop pulls up in the Fiat and Nonna drops off two pizzelle ({G()['fiat']})")
+    pg.evaluate("()=>window.__game.homeAll()")
     pg.screenshot(path='/tmp/bakery_in.png')
     pg.evaluate("()=>window.__game.exitRooms()")
     # the grandparents: Nonna's pizzelle (learned for the bakery), Poppop's plasma star, a painting at Yia-Yia's
-    pg.evaluate("()=>window.__game.setBiz({learned:[], paintings:[]})"); pg.wait_for_timeout(1500)   # (their art loads in the background)
+    pg.evaluate("()=>window.__game.setBiz({learned:[], paintings:[]})"); pg.evaluate("()=>window.__game.homeAll()"); pg.wait_for_timeout(1500)   # (their art loads in the background; everyone's home)
     door('nonna'); pg.wait_for_timeout(300)
     check(pg.locator('#place-menu button[data-item=pizzelle]').count() == 1 and pg.locator('#place-menu button[data-item=pasta]').count() == 1, "Nonna offers pasta and pizzelle")
     pg.click('#place-menu button[data-item=pizzelle]'); pg.wait_for_timeout(300)
@@ -730,6 +737,13 @@ with sync_playwright() as p:
     pg.click('#work [data-hang]'); pg.wait_for_timeout(300)
     check(len(G()['biz']['paintings']) == 1 and G()['biz']['paintings'][0].startswith('data:image/jpeg'), 'painted a picture at Yia-Yia\'s: it hangs on her wall')
     pg.click('#work [data-done]'); pg.evaluate("()=>window.__game.exitRooms()")
+    # out and about: Yia-Yia paints the sea at her beach easel, and leaves a note on the studio counter
+    pg.evaluate("()=>window.__game.yiayiaOut()"); pg.wait_for_timeout(300)
+    yy = next(t for t in G()['townsfolk'] if t['who'] == 'yiayia')
+    check(not yy['gone'] and yy['y'] > 4700, f"Yia-Yia is down at the beach at her easel ({yy})")
+    door('yiayia'); pg.wait_for_timeout(300)
+    check('Gone to paint the sea' in pg.locator('#toast').inner_text(), f"her studio has a note: gone painting ({pg.locator('#toast').inner_text()})")
+    pg.evaluate("()=>{window.__game.exitRooms(); window.__game.homeAll()}")
     # play as a friend: Primo; Nico takes over Primo's routine; back to Nico
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:primo"]'); pg.wait_for_timeout(400)
     ws = [t['who'] for t in G()['townsfolk']]

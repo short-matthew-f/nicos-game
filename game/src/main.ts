@@ -46,7 +46,7 @@ import { Animals, KINDS as ANIMAL_KINDS } from './world/animals';
 import { Shells, Treasure, onBeach, beepGap, holeArt, DETECT, SHELL_KINDS } from './world/beach';
 import { Workshop, PLANS } from './workshop';
 import { ToyWindow } from './world/display';
-import { PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp, photoStars, RANGER_PAYS, DOOR_NAMES, doorUnit, doorState, buyDoor, decide, tickDoors, ensureWanted, peekOf, guess, sellPrice, unlocks, type Choice, type Skill } from './business';
+import { PARTS_FOR_SALE, PRODUCTS, item, add, has, missing, shelfValue, sellOne, priceOf, partsCost, unlockedProducts, nextGoal, goalPlace, soldAll, take, owns, TOOLS, dugUp, see, photoStars, RANGER_PAYS, DOOR_NAMES, doorUnit, doorState, buyDoor, decide, tickDoors, ensureWanted, peekOf, guess, sellPrice, unlocks, type Choice, type Skill } from './business';
 
 const VIEW_H = 920;          // world px visible top to bottom while walking (Nico ~ 1/7 of the screen)
 const VIEW_H_DRIVE = 1400;   // ...and while driving: see further ahead
@@ -124,8 +124,19 @@ async function main() {
   for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
-  const fiat = new Fiat();   // Poppop's Fiat 500, out for a drive now and then
+  const fiat = new Fiat();   // Poppop's Fiat 500, out for a drive now and then (Nonna too)
   layer.addChild(fiat.view);
+  // Nonna drops off a couple of her pizzelle at Nico's bakery on the way past, if there's room in the case
+  fiat.wants = stop => stop === 'parts' || (stop === 'bakery' && isUnlocked(biz, 'bakery') && biz.bakery.rack.length < BAKERY_RULES.rack);
+  fiat.onStop = stop => {
+    if (stop !== 'bakery') return;
+    const n = Math.min(2, BAKERY_RULES.rack - biz.bakery.rack.length);
+    for (let i = 0; i < n; i++) biz.bakery.rack.push({ id: 'pizzelle', price: recipe('pizzelle').price });
+    if (!n) return;
+    redrawCase(); persist();
+    const [mx, my] = mode === 'drive' ? [car.x, car.y] : here();
+    if (room?.kind === 'bakery' || Math.hypot(mx - fiat.pos[0], my - fiat.pos[1]) < 1200) toast('🧇 Nonna dropped off some pizzelle at your bakery!');
+  };
   // fire calls: when the alarm rings, a building near the truck's route catches fire (just
   // smoke and flames in a front window) and the truck stops there to spray it out
   const fireScene = new FireScene(); layer.addChild(fireScene.view);
@@ -527,11 +538,12 @@ async function main() {
       const v = new PersonView(r.person.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
       v.pose(r.person.x, r.person.y, neutral('front')); v.root.zIndex = r.person.y; rl.addChild(v.root); room.worker = v;
     };
-    if (r.person) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
+    const out = r.person ? away(r.person.who) : null;
+    if (r.person && !out) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
     if (id === 'fire') { const t = r.things.find(q => q.kind === 'emoji'); if (t && truck.out) rl.children.find(c => c.zIndex === (t as { y: number }).y)?.removeFromParent(); }   // (the truck's out on a call)
     if (id === 'yiayia') hangGallery(rl);
     showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
-    if (r.person) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
+    if (r.person && !out) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
     sfx.door();
   }
   /** The building's own business (its menu, buying, selling...), from the counter. */
@@ -567,7 +579,7 @@ async function main() {
     if (what === 'birdhouse' && !isUnlocked(biz, 'birdhouse')) { biz.unlocked.push('birdhouse'); placeBirdhouse(); }
     if (what === 'sign') { if (!isUnlocked(biz, 'sign')) biz.unlocked.push('sign'); if (data) biz.home.sign = data; }
     if (what === 'metalstar' && !isUnlocked(biz, 'metalstar')) biz.unlocked.push('metalstar');
-    if (what === 'painting' && data) { biz.paintings.push(data); biz.paintings.splice(0, Math.max(0, biz.paintings.length - PAINTINGS_KEPT)); if (room?.id === 'yiayia') enterInside('yiayia', [nico.x, nico.y]); }
+    if (what === 'painting' && data) { see(biz, 'art', 'painting'); biz.paintings.push(data); biz.paintings.splice(0, Math.max(0, biz.paintings.length - PAINTINGS_KEPT)); if (room?.id === 'yiayia') enterInside('yiayia', [nico.x, nico.y]); }
     persist();
   }
   /** A painting from a data URL (loaded into a sprite once the image has decoded), framed at x, y, w x h. */
@@ -593,7 +605,9 @@ async function main() {
   function insideSpots(): Spot[] {
     if (!room) return [];
     const r: Interior = INTERIORS[room.id], out: Spot[] = [];
-    if (r.person) {
+    const note = r.person && !room.worker ? away(r.person.who) : null;
+    if (note) out.push({ id: 'counter', x: r.person!.x, y: r.person!.y + 130, r: 120, label: '📝 Read the note', run: () => toast(note) });
+    else if (r.person) {
       const pr = r.person, act = pr.action, treat = pr.treat;
       out.push({ id: 'counter', x: pr.x, y: pr.y + 130, r: 120, label: act ? ({ icecream: '🍦 Order ice cream', parts: '🔧 Shop for parts', toys: '🧸 Sell your toys', barn: '🥚 Ask about eggs', cabin: '📷 Talk to the ranger' }[act] ?? `💬 Talk to ${pr.name}`) : treat ? `💬 Say hi to ${pr.name}` : `💬 Talk to ${pr.name}`,
         run: () => {
@@ -1251,6 +1265,15 @@ async function main() {
     const m = jobFor(l.t.who)?.meet; if (!m || !l.met) return [];
     return [...m.slice(0, -1).reverse(), [m[0][0], l.met[1]]];
   }
+  /** Gone in somewhere on their rounds (Yia-Yia in her studio): out of sight. */
+  const gone = (l: Local) => l.w.wait > 0 && !!l.t.route[l.w.i].inside && !l.trip.length && !l.met;
+  /** Who's out, with the note they left on the door (null: they're in). */
+  function away(who: string): string | null {
+    if ((who === 'poppop' || who === 'nonna') && fiat.out) return '📝 “Gone for a drive in the Fiat! Back soon. Love, Poppop & Nonna”';
+    const l = locals.find(q => q.orig.who === who);
+    if (l && !gone(l)) return '📝 “Gone to paint the sea at the beach! Come find me. Love, Yia-Yia”';
+    return null;
+  }
   function standFacing(l: Local, mx: number, my: number, dt: number) {
     l.w.vx = l.w.vy = 0;
     Object.assign(l.st, chooseView(mx - l.w.x, my - l.w.y, l.st));
@@ -1311,6 +1334,8 @@ async function main() {
       seats[l.seat].set(1); seatTaken[l.seat] = null; l.swingT = -1; l.seat = -1;
       Object.assign(l.st, { crouch: 0 });
     }
+    const stop = l.t.route[l.w.i];
+    if (l.w.wait > 0 && stop.face) { standFacing(l, stop.face[0], stop.face[1], dt); return; }   // (Yia-Yia at her easel)
     Object.assign(l.st, chooseView(l.w.vx, l.w.vy, l.st));
     stepGait(l.st, Math.hypot(l.w.vx, l.w.vy), l.w.vy, dt, GAIT_SCALE * l.view.height);   // (taller people take longer strides)
     l.view.pose(l.w.x, l.w.y, l.st);
@@ -1337,7 +1362,9 @@ async function main() {
     // test/inspection: show the whole town (zoom out to fit) until called again with false
     overview: (on: boolean) => { overview = on; },
     alarm: () => truck.alarm(),
-    fiatGo: () => fiat.go(),
+    fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
+    homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
+    yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };
   (window as unknown as { __game: unknown }).__game = game;
@@ -1548,7 +1575,8 @@ async function main() {
 
     for (const l of locals) {
       stepLocal(l, dt);
-      const sp = spots.find(p => p.id === l.orig.who)!; sp.x = l.w.x; sp.y = l.w.y;   // (their spot keeps its first name, whoever's walking the route)
+      const out = gone(l); l.view.root.visible = !out;   // (gone indoors: out of sight, and there's no one to say hi to)
+      const sp = spots.find(p => p.id === l.orig.who)!; sp.x = out ? -1e5 : l.w.x; sp.y = l.w.y;   // (their spot keeps its first name, whoever's walking the route)
     }
 
     // the ball: Nico kicks it walking, his car knocks it driving; goals reset it
@@ -1556,7 +1584,7 @@ async function main() {
     else {
       if (mode === 'walk' && !room && kick(ball, nico.x, nico.y, 18, Math.hypot(input.vx, input.vy) * WALK_SPEED * fast)) sfx.kick();
       if (mode === 'drive') for (const [cx, cy, r] of circles(car.x, car.y, car.h)) if (kick(ball, cx, cy, r, Math.abs(car.speed))) { sfx.kick(); break; }
-      for (const l of locals) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
+      for (const l of locals) if (!gone(l)) kick(ball, l.w.x, l.w.y, 18, l.t.speed);
       // traffic nudges it off the road to the side, rather than driving over and hiding it
       for (const c of cars) if (c.speed > 5) { const h = c.loop.heading(c.s); for (const [cx, cy, r] of circles(c.pos[0], c.pos[1], h)) if (nudge(ball, cx, cy, r, h)) break; }
       if (truck.out) for (const [cx, cy] of truck.points()) if (nudge(ball, cx, cy, TRUCK.wid * 0.45, truck.heading)) break;
@@ -1626,7 +1654,7 @@ async function main() {
     // (and for the fire truck, which goes first: it yields only to cars not waiting for it)
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
     if (mode !== 'drive' && !room) mine.push([nico.x, nico.y, 'nico']);
-    for (const l of locals) mine.push([l.w.x, l.w.y]);
+    for (const l of locals) if (!gone(l)) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     // (and Poppop in his Fiat, who gives way to everyone not already waiting for him)
     const fiatPts: [number, number, string][] = fiat.out ? fiat.points().map(([x, y]) => [x, y, 'fiat']) : [];
@@ -1705,7 +1733,7 @@ async function main() {
     minimap.view.position.set(mr.left + 6, mr.bottom + 16);
     const flash = Math.floor(performance.now() / 250) % 2 === 0;
     const mapDots = ([
-      ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
+      ...locals.filter(l => !gone(l)).map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
       ...(fiat.out ? [{ x: fiat.pos[0], y: fiat.pos[1], color: FIAT.seats, r: 3.5 }] : []),
       ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
@@ -1720,7 +1748,7 @@ async function main() {
 
     const nb = nico.view.root.getBounds();
     Object.assign(game, {
-      townsfolk: locals.map(l => ({ who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, climbing: !!l.climb, art: l.view.artLoaded() })),
+      townsfolk: locals.map(l => ({ gone: gone(l), who: l.t.who, x: l.w.x, y: l.w.y, swinging: l.swingT >= 0, climbing: !!l.climb, art: l.view.artLoaded() })),
       spots: Object.fromEntries(spots.map(p => [p.id, { x: p.x, y: p.y }])), parked: PARKED_CAR,
       ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy }, score: { ...score }, coins: coins.available,
       placeBall: (x: number, y: number) => { Object.assign(ball, { x, y, vx: 0, vy: 0, z: 0, vz: 0 }); },
@@ -1741,7 +1769,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
-      fiat: { out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
+      fiat: { at: fiat.at, out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },

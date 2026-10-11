@@ -860,8 +860,19 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - **Portrait:** the girl sits in a wide white gown, sleeves folded in her lap, with straight fair hair past her chin, a full fringe and big blue-green eyes, and a soft reflection on the teal floor.
 
 ### Poppop's Fiat 500 (2026-10-10)
-- Nico: "Poppop should drive a fiat 500". `world/fiat.ts`: a round white Fiat 500 with maroon seats (Nico's dad: "His fiat was white with maroon seats"; light grey roof, canvas sunroof rolled back, round headlights, chrome bumpers) parked straight on a new driveway in front of the red barn (`DRIVEWAYS` id 'poppop', so the street lamp there is dropped).
+- The user: "Poppop should drive a fiat 500". `world/fiat.ts`: a round white Fiat 500 with maroon seats (the user: "His fiat was white with maroon seats"; light grey roof, canvas sunroof rolled back, round headlights, chrome bumpers) parked straight on a new driveway in front of the red barn (`DRIVEWAYS` id 'poppop', so the street lamp there is dropped).
 - Every 100-200 s (first after 45 s) Poppop drives `poppopRoute()`: down the drive, west along the road into town, a lap of the outer ring road with the traffic, back east, and round in front of the barn to park nose-out. You can see the top of his head through the roof while he's out; a minimap dot and headlights at night.
 - Traffic brakes for him and he gives way to anyone not already waiting for him (same rule as the fire truck); Nico's car bumps into it. Speed 210 (traffic 250).
 - `roundCorners` now clamps each corner's reach to half the shorter neighbouring run, so the tight turn-round in front of the barn doesn't fold over (the town loops' runs are all long, so they're unchanged).
 - Tests: `test/fiat.test.ts` (stays on road/driveway, a full lap home, no stall in traffic); e2e: drives out into town.
+
+### The grandparents out and about (2026-10-10)
+- **Poppop and Nonna** go out together in the Fiat; Nonna rides in the passenger seat (grey curls through the roof).
+  - The drive (`poppopRoute`) now also goes down the west road past the ring: it pulls in by Nico's bakery, turns round, then pulls in by Parts & Tools. Both stops are in `POPPOP_STOPS`; the dwell times are in `FIAT.dwell`.
+  - At Parts & Tools they both go in, so their heads disappear. At the bakery Nonna gets out and drops off up to 2 pizzelle at $3 each, if there's room in the case. That's about $1.50 a minute at most, well under the income caps. The bakery stop only happens once Nico owns the bakery (`fiat.wants`).
+- **Yia-Yia** is now a townie with her own routine. She paints in her studio for 80 s, out of sight (a new `inside` stop). Then she walks down the sidewalk to the beach and paints the sea for 45 s at a new easel prop (`face`: side-on to it), then walks back.
+- **While they're out**, their room has a note on the counter instead of them, e.g. "Gone for a drive in the Fiat!" or "Gone to paint the sea at the beach!" (`away()` in `main.ts`).
+- **New "ever seen" record:** `Biz.seen` (`page:id` -> count) remembers every storage/beach find, jewelry design made, recipe baked and painting painted. Those otherwise get sold or used up; the sticker book will read it.
+- **Debug and tests:**
+  - New debug hooks: `homeAll`, `yiayiaOut`, and `fiatGo(near?)`.
+  - The e2e sends everyone home before the grandparent and bakery checks, so a pizzelle drop-off can't change the cookie counts. It adds checks for the pizzelle drop-off and Yia-Yia's note.

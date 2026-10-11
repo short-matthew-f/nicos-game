@@ -92,6 +92,7 @@ export const ZONE_PROPS: ZoneProp[] = [
   { kind: 'palm', x: 2100, y: 4790 }, { kind: 'palm', x: 3830, y: 4540 }, { kind: 'palm', x: 5000, y: 4310 }, { kind: 'palm', x: 5850, y: 3950 },
   { kind: 'umbrella', x: 5450, y: 4220, color: '#2F7FD8' }, { kind: 'sandcastle', x: 6300, y: 3730 },
   { kind: 'lighthouse', x: 7230, y: 2700 },
+  { kind: 'easel', x: 2980, y: 4800 },   // Yia-Yia comes down to paint the sea here (townsfolk.ts)
   // the pool park
   { kind: 'waterslide', x: WSLIDE.x, y: WSLIDE.y },
   { kind: 'lounge', x: 2000, y: 4320 }, { kind: 'lounge', x: 2160, y: 4320 }, { kind: 'lounge', x: 2320, y: 4320 },

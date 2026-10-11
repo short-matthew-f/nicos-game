@@ -2,7 +2,7 @@
 // finds onto hemp twine (from Parts & Tools) to make bracelets, necklaces and wind chimes, hangs them on
 // the shop's shelves, and visitors drop in, browse, and now and then buy one. The money waits in the
 // till until he comes to empty it: passive income. Data first; main.ts and workshop.ts call these.
-import type { Biz } from './business';
+import { see, type Biz } from './business';
 import * as store from './store';
 
 /** What each kind of shell adds to a piece's price (the rare ones are worth more). */
@@ -57,7 +57,7 @@ export function make(b: Biz, id: string, shells: string[]): Piece | null {
   for (const [s, n] of Object.entries(need)) { b.shells[s] -= n; if (b.shells[s] <= 0) delete b.shells[s]; }
   b.items[SHOP.twine] -= 1; if (b.items[SHOP.twine] <= 0) delete b.items[SHOP.twine];
   const p: Piece = { id, shells: [...shells], price: pieceValue(d, shells) };
-  b.shop.rack.push(p);
+  b.shop.rack.push(p); see(b, 'jewelry', id);
   return p;
 }
 export const visit = (b: Biz, r: () => number = Math.random, at?: number) => store.visit(b.shop, SHOP, r, at) as Piece | null;

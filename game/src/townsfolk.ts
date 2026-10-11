@@ -3,13 +3,13 @@
 import { ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, BUILDINGS, SWINGS, SLIDE, doorOf } from './world/map';
 import type { Who } from './rig/person';
 
-export interface Stop { x: number; y: number; wait?: number; swing?: number; climb?: string }   // swing: seat index to swing on; climb: a building to climb up onto (and wave from the roof)
+export interface Stop { x: number; y: number; wait?: number; swing?: number; climb?: string; inside?: string; face?: [number, number] }   // swing: seat index to swing on; climb: a building to climb up onto (and wave from the roof); inside: gone in there while waiting (out of sight); face: look that way while waiting
 export interface Townie { who: Who; name: string; speed: number; route: Stop[]; lines: string[] }
 
 const SW = ROAD_W / 2 + SIDEWALK / 2;   // sidewalk centre, from a road's centre line
 const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
 const door = (id: string) => doorOf(BUILDINGS.find(b => b.id === id)!);
-const burger = door('burger');
+const burger = door('burger'), studio = door('yiayia');
 
 export const TOWNSFOLK: Townie[] = [
   {
@@ -44,6 +44,17 @@ export const TOWNSFOLK: Townie[] = [
       { x: 2880, y: 1770 }, { x: 2880, y: 1610 }, { x: SWINGS.x + SWINGS.w + 40, y: 1610 },
     ],
     lines: ['Nico! Come swing with me!', 'I can go SO high.', "Bet you can't catch me!", 'Can we get ice cream?', 'There are ducks in the pond!'],
+  },
+  {
+    // Yia-Yia paints in her studio, and now and then walks down to the beach to paint the sea at her easel
+    who: 'yiayia', name: 'Yia-Yia', speed: 115,
+    route: [
+      { x: studio[0], y: studio[1], wait: 80, inside: 'yiayia' },
+      { x: studio[0], y: studio[1] + 30 }, { x: x1 - SW, y: studio[1] + 30 }, { x: x1 - SW, y: 4380 },
+      { x: 2895, y: 4806, wait: 45, face: [2990, 4806] },                         // (painting the sea)
+      { x: x1 - SW, y: 4380 }, { x: x1 - SW, y: studio[1] + 30 }, { x: studio[0], y: studio[1] + 30 },
+    ],
+    lines: ['Hello, my darling!', 'Look at the colours of the sea today!', 'Come paint with me at the studio.', 'Every painting needs a little yellow.', 'Agapi mou! Give Yia-Yia a hug.'],
   },
 ];
 

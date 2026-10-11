@@ -29,6 +29,18 @@ describe("Poppop's Fiat 500", () => {
     expect(west).toBeLessThan(1300);   // all the way round the ring road
     expect(f.wait).toBeGreaterThanOrEqual(FIAT.every[0]);
   });
+  it('pulls in at Parts & Tools, and at the bakery only when asked to (Nonna drops off pizzelle)', () => {
+    for (const bakery of [false, true]) {
+      const f = new Fiat(), stopped = new Set<string>(), done: string[] = [];
+      f.wants = k => k === 'parts' || bakery;
+      f.onStop = k => done.push(k);
+      f.go();
+      for (let t = 0; t < 200 && f.out; t += 0.05) { f.update(0.05, []); if (f.at) { stopped.add(f.at); expect(f.speed).toBe(0); } }
+      expect(f.out).toBe(false);
+      expect([...stopped].sort()).toEqual(bakery ? ['bakery', 'parts'] : ['parts']);
+      expect(done).toEqual(bakery ? ['bakery', 'parts'] : ['parts']);
+    }
+  });
   it('gets round with the traffic without anyone getting stuck for good', () => {
     const f = new Fiat(), cars = makeTraffic(3), lead = leaders(cars), dt = 1 / 30;
     f.go();

@@ -3,7 +3,7 @@
 // just the right moment), and they go in the display case. Visitors pop in and buy (store.ts): food
 // sells faster than jewelry, but for less. Ingredients come from the pantry shelf in the bakery; eggs
 // are free from the hen house at the farm. Data first; main.ts and workshop.ts call these.
-import type { Biz } from './business';
+import { see, type Biz } from './business';
 import * as store from './store';
 
 /** Ingredients (they're items in the bag: business.ts), and what the pantry shelf charges. */
@@ -54,7 +54,7 @@ export function bake(b: Biz, id: string, d: Doneness): store.Piece[] | null {
   if (!r || cantBake(b, id)) return null;
   for (const [k, n] of Object.entries(r.needs)) { b.items[k] -= n; if (b.items[k] <= 0) delete b.items[k]; }
   const out = Array.from({ length: Math.min(r.makes, BAKERY.rack - b.bakery.rack.length) }, () => ({ id, price: priceFor(r, d) }));
-  b.bakery.rack.push(...out);
+  b.bakery.rack.push(...out); see(b, 'bake', id);
   return out;
 }
 export const visit = (b: Biz, r: () => number = Math.random, at?: number) => store.visit(b.bakery, BAKERY, r, at);

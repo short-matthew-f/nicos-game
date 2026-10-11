@@ -133,7 +133,7 @@ export const BUS_STOPS: [number, number][] = [[1800, ROADS_Y[1] - LANE], [2600, 
 
 /** Street furniture and bits of life, as data. Solid ones are added to SOLIDS. */
 export type PropKind = 'busstop' | 'lamp' | 'bench' | 'hydrant' | 'bush' | 'flowers' | 'mailbox' | 'table' | 'fountain' | 'cart' | 'parked' | 'cone'
-  | 'umbrella' | 'towel' | 'sandcastle' | 'lifeguard' | 'palm' | 'lighthouse' | 'waterslide' | 'lounge' | 'hay' | 'fence' | 'fencev' | 'tent' | 'campfire' | 'log' | 'rock';
+  | 'umbrella' | 'towel' | 'sandcastle' | 'lifeguard' | 'palm' | 'lighthouse' | 'waterslide' | 'lounge' | 'hay' | 'fence' | 'fencev' | 'tent' | 'campfire' | 'log' | 'rock' | 'easel';
 export interface Prop { kind: PropKind; x: number; y: number; color?: string; h?: number; stripe?: string; len?: number }
 export const PROPS: Prop[] = [
   // park: fountain, benches round the pond, flower beds, the ice cream cart
@@ -200,15 +200,21 @@ export const DRIVEWAYS = [
 /** Where Nico's car waits at the start: on the home driveway, nose to the road. */
 export const PARKED_CAR = { x: GARAGE.x + GARAGE.w / 2, y: DRIVEWAYS[0].y + DRIVEWAYS[0].d / 2, h: 0 };
 
-/** Poppop's drive in his Fiat 500: down his driveway, west along the road into town, a lap
- * of the outer ring road with the traffic (counter-clockwise), back east and up the drive,
- * turning round in front of the barn so he's parked nose-out again. Starts and ends at
- * the parked spot (the loop's s = 0). */
+/** Poppop's drive in his Fiat 500 (Nonna rides along): down his driveway, west along the road
+ * into town, round the outer ring road with the traffic (counter-clockwise), but down the west
+ * road past it: pulling in by Nico's bakery (Nonna drops off pizzelle), turning round, and
+ * pulling in by Parts & Tools. Then back east and up the drive, turning round in front of the
+ * barn so he's parked nose-out again. Starts and ends at the parked spot (the loop's s = 0). */
+const DOWN = ROADS_Y[1] + 900;   // how far down the west road he goes before turning round
+export const POPPOP_STOPS: Record<'bakery' | 'parts', [number, number]> = {
+  bakery: [ROADS_X[0] - LANE, BAKERY.y + BAKERY.d - 60],   // (heading south, the kerb on the bakery's side)
+  parts: [ROADS_X[0] + LANE, BAKERY.y + BAKERY.d - 120],   // (heading back north, on the Parts & Tools side)
+};
 export function poppopRoute(): [number, number][] {
   const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
   const mid = WOODSHOP.x + WOODSHOP.w / 2, out = mid - 60, back = mid + 60, top = WOODSHOP.y + WOODSHOP.d + 50;
   return [[out, top + 120], [out, y1 - LANE], [x1 + LANE, y1 - LANE], [x1 + LANE, y0 - LANE], [x0 - LANE, y0 - LANE],
-          [x0 - LANE, y1 + LANE], [back, y1 + LANE], [back, top], [out, top]];
+          [x0 - LANE, DOWN], [x0 + LANE, DOWN], [x0 + LANE, y1 + LANE], [back, y1 + LANE], [back, top], [out, top]];
 }
 
 /** The spot in front of a building's door, where its action button appears. */
@@ -240,6 +246,7 @@ export function propSolid(p: Prop): Rect | null {
     case 'table': return { x: p.x - 30, y: p.y - 14, w: 60, d: 16 };
     case 'fountain': return { x: p.x - 70, y: p.y - 34, w: 140, d: 46 };
     case 'cart': return { x: p.x - 50, y: p.y - 20, w: 100, d: 22 };
+    case 'easel': return { x: p.x - 26, y: p.y - 12, w: 52, d: 14 };
     case 'busstop': return { x: p.x - 60, y: p.y - 18, w: 120, d: 20 };
     case 'umbrella': return { x: p.x - 6, y: p.y - 8, w: 12, d: 10 };
     case 'lifeguard': return { x: p.x - 40, y: p.y - 20, w: 80, d: 22 };

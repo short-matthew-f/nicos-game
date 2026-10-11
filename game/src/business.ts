@@ -194,6 +194,7 @@ export function decide(b: Biz, slot: number, choice: Choice): { money: number; d
   const u = b.unit; if (!u) return { money: 0, done: false };
   const k = u.items.findIndex(it => it.slot === slot); if (k < 0) return { money: 0, done: false };
   const it = u.items.splice(k, 1)[0];
+  if (item(it.id).kind !== 'part') see(b, 'find', it.id);
   let money = 0;
   if (choice === 'sell') { money = sellPrice(it.value, b.skills.includes('appraiser')); u.got += money; }
   if (choice === 'keep') { if (item(it.id).kind === 'part') add(b, it.id); else b.finds.push({ id: it.id, value: it.value }); }
@@ -232,7 +233,7 @@ export const RANGER_PAYS = 3;   // $ for each animal's photo, the first time you
 /** A beach find dug up: its value, rolled now. */
 export function dugUp(b: Biz, id: string, r: () => number = Math.random): number {
   const [lo, hi] = item(id).value, value = lo + Math.floor(r() * (hi - lo + 1));
-  b.finds.push({ id, value }); return value;
+  b.finds.push({ id, value }); see(b, 'find', id); return value;
 }
 
 /** Hand over one of these (the cheapest one, if there are several kept): false if Nico has none. */
@@ -281,8 +282,12 @@ export interface Biz {
   home: { wall: string; rug: string; sign?: string };   // how his house is decorated (the colours: decor.ts; sign: the CNC sign's design)
   paintings: string[];             // pictures painted at Yia-Yia's (small JPEG data URLs, newest last)
   learned: string[];               // recipes the grandparents taught him ('pizzelle')
+  seen: Record<string, number>;    // everything ever found or made, as 'page:id' -> how many (the sticker book: book.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [] });   // (keys of WALLPAPERS / RUGS: decor.ts)
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [], seen: {} });   // (keys of WALLPAPERS / RUGS: decor.ts)
+
+/** Note something found or made, for the sticker book (things get sold or used up; this remembers). */
+export function see(b: Biz, page: string, id: string, n = 1) { const k = `${page}:${id}`; b.seen[k] = (b.seen[k] ?? 0) + n; }
 
 export const has = (b: Biz, recipe: Record<string, number>) => Object.entries(recipe).every(([id, n]) => (b.items[id] ?? 0) >= n);
 export const missing = (b: Biz, recipe: Record<string, number>) =>
