@@ -11,14 +11,14 @@ import { CAR_SCALE } from '../drive';
 
 const S = CAR_SCALE, L = 80, W = 52;   // base art (a little stubby egg next to the other cars' 112 x 56)
 /** Poppop drives a bit under the speed of traffic, and goes out every couple of minutes. */
-export const FIAT = { max: 210, acc: 220, brake: 720, len: L * S, wid: W * S, color: '#9ED6CF', firstRun: 45, every: [100, 200] as [number, number] };
+export const FIAT = { max: 210, acc: 220, brake: 720, len: L * S, wid: W * S, color: '#F7F6F2', seats: '#7A1F2B', firstRun: 45, every: [100, 200] as [number, number] };
 
 function fiatArt(color: string): { body: Container; poppop: Container } {
   const band = new Graphics().roundRect(-L * S / 2 - B, -W * S / 2 - B, L * S + 2 * B, W * S + 2 * B, 24 * S + B).fill('#FFFFFF');
   const g = new Graphics();
   // wheels peeking out at the corners, then the round body
   for (const [x, y] of [[-24, -W / 2 - 2], [20, -W / 2 - 2], [-24, W / 2 - 6], [20, W / 2 - 6]]) g.roundRect(x - 8, y, 16, 8, 4).fill('#2C3E52');
-  g.roundRect(-L / 2, -W / 2, L, W, 24).fill(color);
+  g.roundRect(-L / 2, -W / 2, L, W, 24).fill(color).stroke({ width: 1.2, color: '#C9CDD2' });
   g.roundRect(-L / 2 - 2, -W / 2 + 10, 4, W - 20, 2).fill('#D9DEE3')                // chrome bumpers
     .roundRect(L / 2 - 2, -W / 2 + 10, 4, W - 20, 2).fill('#D9DEE3');
   g.ellipse(L / 2 - 9, -W / 2 + 9, 6, 5).fill('#FFF4C2').stroke({ width: 1.5, color: '#D9DEE3' })   // round headlights
@@ -26,8 +26,10 @@ function fiatArt(color: string): { body: Container; poppop: Container } {
   g.moveTo(L / 2 - 4, -6).lineTo(L / 2 - 4, 6).stroke({ width: 2, color: '#D9DEE3' });   // the little chrome moustache on the nose
   g.roundRect(-L / 2 + 3, -10, 7, 20, 2).fill({ color: NAVY, alpha: 0.18 });             // engine louvres at the back
   g.roundRect(4, -W / 2 + 6, 13, W - 12, 6).fill('#2B3F55');                              // windscreen
-  g.roundRect(-24, -W / 2 + 7, 30, W - 14, 9).fill('#F4F1EA');                            // the roof (cream)
-  g.roundRect(-20, -W / 2 + 12, 24, W - 24, 6).fill('#3A4A5C');                           // the canvas roof, rolled back open
+  g.roundRect(-24, -W / 2 + 7, 30, W - 14, 9).fill('#E6E9EC');                            // the roof
+  g.roundRect(-20, -W / 2 + 12, 24, W - 24, 6).fill('#3A2A2E');                           // the canvas roof, rolled back open...
+  g.roundRect(-9, -12, 9, 10, 3).fill(FIAT.seats).roundRect(-9, 2, 9, 10, 3).fill(FIAT.seats)   // ...onto his maroon seats
+    .roundRect(-19, -12, 7, 24, 3).fill(FIAT.seats);
   g.roundRect(-24, -W / 2 + 12, 6, W - 24, 3).fill('#8A9099');                            // (the folded canvas)
   // Poppop, from above: a bald crown with his fluffy white hair round the back and sides
   const poppop = new Graphics()

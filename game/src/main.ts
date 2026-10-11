@@ -1707,7 +1707,7 @@ async function main() {
     const mapDots = ([
       ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
-      ...(fiat.out ? [{ x: fiat.pos[0], y: fiat.pos[1], color: FIAT.color, r: 3.5 }] : []),
+      ...(fiat.out ? [{ x: fiat.pos[0], y: fiat.pos[1], color: FIAT.seats, r: 3.5 }] : []),
       ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
       ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
       ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
