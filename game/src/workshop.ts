@@ -527,10 +527,10 @@ export class Workshop {
     this.sub.textContent = msg; this.actions.replaceChildren();
     this.button('Done', () => this.close(), 'primary').dataset.done = '1';
   }
-  /** Karate class with Sensei: watch the combination, then do it back. Three clean ones earn the next belt. */
+  /** Karate class with Mr. Master Krantz: watch the combination, then do it back. Three clean ones earn the next belt. */
   karate() {
     const b = this.host.biz, toward = nextBelt(b.belt), belt = BELTS[toward], first = b.belt < 0;
-    this.show('karate', 'Karate class', first ? 'Sensei: "Welcome! Bow in. Watch me, then copy me, in the same order."' : `Sensei: "Three clean combinations, and you earn your ${belt.name} belt!"`);
+    this.show('karate', 'Tang Soo Do class', first ? 'Mr. Master Krantz: "Welcome! Bow in. Watch me, then copy me, in the same order."' : `Mr. Master Krantz: "Three clean combinations, and you earn your ${belt.name} belt!"`);
     const svg = s('svg', { viewBox: '0 0 600 250', class: 'blueprint' }) as SVGSVGElement;
     svg.append(s('rect', { x: 0, y: 0, width: 600, height: 250, rx: 18, fill: '#E9DDB8' }));
     for (let x = 0; x < 600; x += 100) svg.append(s('rect', { x: x + 2, y: 2, width: 96, height: 246, rx: 6, fill: 'none', stroke: '#CDBF93', 'stroke-width': 3 }));   // tatami mats
@@ -566,8 +566,8 @@ export class Workshop {
     let slow = false;
     const demo = () => {
       turn = false; done = []; showSlots(); setButtons(false);
-      strip.textContent = `Watch Sensei... (${round + 1}/${CLASS.rounds})`;
-      const t = callTime(toward) * 1000 * (slow ? 1.35 : 1);   // (after a miss, Sensei shows it again more slowly)
+      strip.textContent = `Watch Mr. Master Krantz... (${round + 1}/${CLASS.rounds})`;
+      const t = callTime(toward) * 1000 * (slow ? 1.35 : 1);   // (after a miss, Mr. Master Krantz shows it again more slowly)
       want.forEach((m, i) => later(500 + i * t, () => {
         big.replaceChildren(icon(m)); call(m); strip.textContent = MOVES.find(q => q.id === m)!.call;
         later(t * 0.7, () => big.replaceChildren());
@@ -586,17 +586,17 @@ export class Workshop {
       done.push(m); call(m); big.replaceChildren(icon(m, 0.8)); showSlots();
       const r = check(want, done);
       if (r === 'miss') {
-        turn = false; setButtons(false); sfx.boing(); slow = true; strip.textContent = 'Sensei: "Not quite. Watch again, slowly!"';
+        turn = false; setButtons(false); sfx.boing(); slow = true; strip.textContent = 'Mr. Master Krantz: "Not quite. Watch again, slowly!"';
         later(1100, demo);
       } else if (r === 'done') {
-        turn = false; setButtons(false); round++; sfx.sparkle(); strip.textContent = `Sensei: "Good!" (${round}/${CLASS.rounds})`;
-        if (round >= CLASS.rounds) { later(600, () => this.finish2('belt', `Sensei ties on your ${belt.name} belt. ${first ? 'Welcome to the dojo! ' : ''}You bow. Osu! 🥋`, belt.id)); return; }
+        turn = false; setButtons(false); round++; sfx.sparkle(); strip.textContent = `Mr. Master Krantz: "Good!" (${round}/${CLASS.rounds})`;
+        if (round >= CLASS.rounds) { later(600, () => this.finish2('belt', `Mr. Master Krantz ties on your ${belt.name} belt. ${first ? 'Welcome to the dojo! ' : ''}You bow. Kamsahamnida! 🥋`, belt.id)); return; }
         later(1100, start);
       }
     };
-    const btns = MOVES.map(m => { const bt = this.button(m.id === 'kiai' ? 'Kiai!' : m.name, () => press(m.id)); bt.dataset.move = m.id; bt.style.background = m.color; bt.style.color = '#fff'; return bt; });
+    const btns = MOVES.map(m => { const bt = this.button(m.id === 'kiai' ? 'Kihap!' : m.name, () => press(m.id)); bt.dataset.move = m.id; bt.style.background = m.color; bt.style.color = '#fff'; return bt; });
     const setButtons = (on: boolean) => { for (const bt of btns) bt.disabled = !on; };
-    setButtons(false);   // (until Sensei has shown the first combination)
+    setButtons(false);   // (until Mr. Master Krantz has shown the first combination)
     // (the low belts don't use the kiai yet)
     if (toward < 2) btns[3].hidden = true;
     later(600, start);

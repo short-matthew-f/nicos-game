@@ -46,6 +46,7 @@ import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Pinball } from './pinball/view';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
+import { emblem } from './world/emblem';
 import { PAGES, type Art } from './book';
 import { shellArt } from './world/beach';
 import { Weather, seasonOf, SEASON, SEASONS, puddleAt, umbrellaArt, type Sky, type Season } from './world/weather';
@@ -225,11 +226,19 @@ async function main() {
   /** Nico's karate belt, round his waist (only Nico wears it: friends he plays as don't). */
   // (only in the dojo: the user, "The belt should only be on in the dojo"; the loop keeps it right)
   let beltShown: string | null = null;
+  let doboking = false;   // (his dobok's art is loading)
   function wearBelt(inDojo: boolean) {
-    const want = inDojo && nico.view.who === 'nico' && saved.biz.belt >= 0 ? `${saved.biz.belt}` : null;
+    // in the dojo, Nico changes into his whites (the dobok: art/nicodobok); out again when he leaves
+    const who = nico.view.who;
+    if (inDojo && who === 'nico' && !doboking) {
+      if (hasArt('nicodobok')) relook(nico, 'nicodobok'); else { doboking = true; void loadArt(['nicodobok']).then(() => { doboking = false; }); }
+    }
+    if (!inDojo && who === 'nicodobok') relook(nico, 'nico');
+    const rank = Math.max(0, saved.biz.belt);   // (a beginner wears a white belt)
+    const want = inDojo && nico.view.who === 'nicodobok' ? `${saved.biz.belt}` : null;
     if (want === beltShown) return;
     beltShown = want;
-    nico.view.setBelt(want === null ? null : BELTS[saved.biz.belt].color, saved.biz.belt === BELTS.length - 1 ? '#FFFFFF44' : '#00000033');
+    nico.view.setBelt(want === null ? null : BELTS[rank].color, rank === BELTS.length - 1 ? '#FFFFFF44' : '#00000033');
   }
   if (saved.nico && freeAt(saved.nico.x, saved.nico.y, SOLIDS, WORLD)) { nico.x = saved.nico.x; nico.y = saved.nico.y; }
   layer.addChild(nico.view.root);
@@ -578,6 +587,16 @@ async function main() {
     if (r.person && !out) solids.push({ x: r.person.x - 22, y: r.person.y - 16, w: 44, d: 18 });
     if (id === 'fire') { const t = r.things.find(q => q.kind === 'emoji'); if (t && truck.out) rl.children.find(c => c.zIndex === (t as { y: number }).y)?.removeFromParent(); }   // (the truck's out on a call)
     if (id === 'yiayia') hangGallery(rl);
+    if (id === 'dojo') { const e = emblem(92); e.position.set(r.w / 2, 128); e.zIndex = 1; rl.addChild(e); }   // the school's emblem, big on the back wall
+    // everyone else there (the dojo's instructors), each turned their own way
+    for (const p of r.crew ?? []) {
+      const add = () => {
+        if (room?.id !== id) return;
+        const v = new PersonView(p.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
+        v.pose(p.x, p.y, { ...neutral(p.face ?? 'front'), face: p.flip ? -1 : 1 }); v.root.zIndex = p.y; rl.addChild(v.root);
+      };
+      if (hasArt(p.who)) add(); else void loadArt([p.who]).then(add);
+    }
     showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
     if (r.person && !out) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
     sfx.door();
@@ -611,9 +630,9 @@ async function main() {
     // the dojo: Sensei's class (karate.ts); playing as a friend, they just say hi
     dojo: () => {
       const has = biz.belt >= 0, next = BELTS[nextBelt(biz.belt)], black = isBlack(biz.belt);
-      showCard('dojo', '🥋 Sensei', `Sensei: “${has ? pick([`Osu, Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to the dojo! Would you like to try a class?'}”`, [
-        { label: black ? '🥋 Train with Sensei' : has ? `🥋 Class: earn your ${next.name} belt` : '🥋 Your first class', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
-      ], 'Osu!');
+      showCard('dojo', '🥋 Mr. Master Krantz', `Mr. Master Krantz: “${has ? pick([`Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to Litchfield Tang Soo Do! Would you like to try a class?'}”`, [
+        { label: black ? '🥋 Train with Mr. Master Krantz' : has ? `🥋 Class: earn your ${next.name} belt` : '🥋 Your first class', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
+      ], 'Kamsahamnida!');
     },
   };
   /** Something made with a grandparent: it goes where it belongs (the bakery's recipes, Nico's house and garden, the gallery). */
@@ -675,6 +694,7 @@ async function main() {
         if (u.lines) toast(pick(u.lines));
       } });
     });
+    (r.crew ?? []).forEach((p, i) => out.push({ id: `crew${i}`, x: p.x, y: p.y + 110, r: 100, label: `💬 Talk to ${p.name}`, run: () => toast(`${p.name}: “${pick(p.lines)}”`) }));
     out.push({ id: 'leave', x: r.w / 2, y: r.h - 30, r: 120, label: '🚪 Leave', run: leaveRoom });
     return out;
   }
@@ -1291,7 +1311,7 @@ async function main() {
     v.setZoom(zoom, resolution); if (low) v.setLow(true);
     v.root.visible = old.root.visible; v.root.zIndex = old.root.zIndex; v.root.position.copyFrom(old.root.position);
     if (o.bubble) { const b = o.bubble as unknown as Container; b.removeFromParent(); v.root.addChild(b); }
-    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; if (o === nico) beltShown = '?';   // (a new look: the loop puts the belt back if it should be on)
+    parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; if ((o as unknown) === nico) beltShown = '?';   // (a new look: the loop puts the belt back if it should be on)
   }
   function playAs(who: string) {
     for (const l of locals) {
@@ -1570,7 +1590,7 @@ async function main() {
 
   if (player !== 'nico') playAs(player);   // (playing as a friend, from the save: once everything's set up)
   // the people inside buildings: their art loads in the background once the town is up (so the game starts as fast as before)
-  setTimeout(() => { void loadArt([...new Set(Object.values(INTERIORS).map(r => r.person?.who).filter((w): w is string => !!w && !hasArt(w)))]); }, 1500);
+  setTimeout(() => { void loadArt([...new Set(Object.values(INTERIORS).flatMap(r => [r.person?.who, ...(r.crew ?? []).map(p => p.who)]).filter((w): w is string => !!w && !hasArt(w)))]); }, 1500);
   app.ticker.add(t => {
     const dt = Math.min(t.deltaMS / 1000, 0.05);
     fpsAcc += t.deltaMS; fpsN++;
@@ -1932,7 +1952,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
-      beltShown,
+      beltShown, nicoLook: nico.view.who,
       weather: { kind: weather.kind, rain: weather.rain, snow: weather.snow, wet: weather.wet, cover: weather.cover, season: seasonOf(day), day, lights: weather.decor[0]?.visible ?? false },
       fiat: { at: fiat.at, out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },

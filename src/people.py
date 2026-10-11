@@ -142,19 +142,205 @@ def curly_back(h, hl): return short_back(h) + _curls(h, hl, 0, -90, -170, -10, 6
 def curly_qfront(h, hl): return short_qfront(h) + _curls(h, hl, -2, -90, -175, -25, 5, 26)
 def curly_qback(h, hl): return short_qback(h) + _curls(h, hl, -4, -90, -180, -20, 6, 26)
 
+# ---- the dojo (Litchfield Tang Soo Do, 2026-10-11): drawn from photos the user shared (reference only)
+# Mr. Master Krantz: salt-and-pepper hair swept back, receding high at the temples, fuller and wavy over the ears
+_LIGHT = 'stroke="#FFFFFF" stroke-opacity=".38" fill="none" stroke-linecap="round"'
+def _streaks(d, hl, w=2): return f'<path d="{d}" stroke="{hl}" stroke-width="{w}" fill="none" stroke-linecap="round"/>'
+def neat_side(h, hl):
+    return (_ear(-1, -82) +
+        f'<path d="M20,-108 C14,-118 0,-121 -12,-119 C-26,-116 -34,-104 -34,-92 C-35,-80 -31,-70 -25,-65 C-21,-63 -16,-64 -13,-67 '
+        f'C-11,-72 -9,-76 -8,-82 C-9,-88 -5,-92 1,-92 C5,-92 8,-95 10,-99 C13,-103 16,-106 20,-108 Z" fill="{h}"/>'
+        f'<path d="M-8,-88 C-4,-92 2,-92 6,-89 L4,-86 C0,-88 -4,-88 -7,-86 Z" fill="{h}"/>'
+        + _streaks('M10,-113 C0,-116 -12,-113 -22,-104 M4,-106 C-6,-108 -16,-102 -22,-92 M-28,-92 C-31,-84 -30,-76 -26,-70', hl)
+        + f'<path d="M14,-111 C6,-114 -2,-114 -10,-111" {_LIGHT} stroke-width="2"/>')
+def neat_front(h, hl):
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M-30,-95 C-32,-112 -17,-121 0,-121 C17,-121 32,-112 30,-95 C29,-90 31,-84 33,-80 C34,-74 31,-70 28,-71 '
+        f'C28,-76 27,-81 26,-86 C26,-92 25,-96 22,-100 C19,-104 14,-108 9,-109 C5,-107 2,-106 0,-107 C-2,-106 -5,-107 -9,-109 '
+        f'C-14,-108 -19,-104 -22,-100 C-25,-96 -26,-92 -26,-86 C-27,-81 -28,-76 -28,-71 C-31,-70 -34,-74 -33,-80 C-31,-84 -29,-90 -30,-95 Z" fill="{h}"/>'
+        + _streaks('M-5,-111 C-9,-116 -16,-117 -23,-112 M5,-111 C9,-116 16,-117 23,-112 M-28,-93 C-31,-87 -31,-80 -30,-75 M28,-93 C31,-87 31,-80 30,-75', hl)
+        + f'<path d="M-3,-116 C3,-119 10,-119 17,-115 M-27,-100 C-29,-96 -30,-92 -30,-88" {_LIGHT} stroke-width="2"/>')
+def neat_back(h, hl):
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M-31,-90 C-33,-110 -16,-121 0,-121 C16,-121 33,-110 31,-90 C32,-82 30,-74 25,-69 C20,-66 15,-67 12,-65 '
+        f'C6,-63 -6,-63 -12,-65 C-15,-67 -20,-66 -25,-69 C-30,-74 -32,-82 -31,-90 Z" fill="{h}"/>'
+        + _streaks('M-20,-110 C-10,-105 -6,-96 -8,-84 M20,-110 C10,-105 6,-96 8,-84 M0,-119 C2,-108 0,-96 -2,-80', hl)
+        + f'<path d="M-14,-114 C-6,-117 6,-117 14,-114 M-27,-92 C-26,-84 -22,-76 -16,-71" {_LIGHT} stroke-width="2"/>')
+def neat_qfront(h, hl):
+    return (f'<path d="M24,-104 C16,-116 4,-121 -8,-120 C-22,-117 -32,-106 -33,-94 C-34,-84 -32,-74 -27,-68 C-23,-66 -20,-68 -19,-72 '
+            f'C-21,-78 -21,-84 -18,-89 C-14,-94 -8,-97 -2,-99 C2,-103 6,-106 10,-107 C14,-106 18,-106 22,-103 Z" fill="{h}"/>'
+            f'<path d="M29,-98 C31,-91 31,-85 30,-80 L27,-82 C27,-88 27,-93 26,-97 Z" fill="{h}"/>'
+            + _streaks('M6,-113 C-4,-115 -14,-112 -22,-104 M-2,-106 C-10,-104 -16,-98 -20,-90 M-29,-90 C-31,-84 -30,-76 -27,-70', hl)
+            + f'<path d="M14,-112 C6,-116 -4,-117 -12,-114" {_LIGHT} stroke-width="2"/>')
+def neat_qback(h, hl):
+    return (f'<path d="M-2,-121 C12,-121 24,-113 25,-102 C26,-96 24,-90 21,-86 C20,-80 20,-75 17,-70 C12,-66 4,-65 -6,-65 '
+            f'C-16,-65 -26,-69 -31,-77 C-35,-86 -35,-100 -29,-110 C-23,-118 -12,-121 -2,-121 Z" fill="{h}"/>'
+            + _streaks('M-22,-108 C-12,-104 -8,-96 -10,-84 M12,-112 C6,-104 4,-94 6,-82', hl)
+            + f'<path d="M-16,-115 C-8,-118 4,-118 12,-114" {_LIGHT} stroke-width="2"/>')
+
+# Master Schindewolf: shaved on top, a short grey band low round the sides and back
+_FRINGE = 'opacity=".55"'
+def shaved_side(h): return (f'<path d="M-20,-100 C-17,-94 -13,-88 -10,-78 C-11,-74 -14,-70 -17,-69 C-23,-76 -24,-90 -20,-100 Z" fill="{h}" {_FRINGE}/>'
+                            + _ear(-1, -82) + f'<ellipse cx="-2" cy="-108" rx="11" ry="5" fill="#FFFFFF" opacity=".28"/>')
+def shaved_front(h): return (f'<path d="M-29,-97 C-26,-90 -25,-82 -25,-74 L-28,-72 C-30,-80 -30,-90 -29,-97 Z M29,-97 C26,-90 25,-82 25,-74 L28,-72 C30,-80 30,-90 29,-97 Z" fill="{h}" {_FRINGE}/>'
+                             + _ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) + f'<ellipse cx="-6" cy="-108" rx="12" ry="5" fill="#FFFFFF" opacity=".28"/>')
+def shaved_back(h): return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+                            f'<path d="M-28,-90 C-27,-78 -19,-70 0,-68 C19,-70 27,-78 28,-90 C25,-83 16,-77 0,-76 C-16,-77 -25,-83 -28,-90 Z" fill="{h}" opacity=".4"/>'
+                            f'<ellipse cx="0" cy="-108" rx="12" ry="5" fill="#FFFFFF" opacity=".22"/>')
+def shaved_qfront(h): return (f'<path d="M-24,-96 C-21,-88 -20,-80 -19,-73 L-22,-71 C-25,-79 -26,-89 -24,-96 Z" fill="{h}" {_FRINGE}/>'
+                              f'<ellipse cx="-2" cy="-108" rx="12" ry="5" fill="#FFFFFF" opacity=".28"/>')
+def shaved_qback(h): return f'<path d="M-31,-94 C-30,-80 -21,-70 -4,-68 C7,-68 14,-71 18,-77 C12,-76 4,-77 -4,-78 C-18,-79 -27,-86 -31,-94 Z" fill="{h}" {_FRINGE}/>'
+
+# Erin: dark-blonde, darker at the roots, parted on her right, pulled back smooth into a ponytail, a loose wisp at the temple
+def tail_side(h, hl):
+    return (f'<path d="M-22,-98 C-38,-94 -40,-72 -35,-54 C-32,-46 -27,-42 -25,-48 C-29,-60 -27,-78 -17,-92 Z" fill="{h}"/>'
+            f'<path d="M-30,-86 C-33,-74 -32,-62 -29,-54" stroke="{hl}" stroke-width="2" fill="none" stroke-linecap="round"/>'
+            f'<path d="M26,-102 C20,-122 -22,-124 -32,-98 C-35,-90 -33,-84 -30,-80 L-22,-86 C-18,-94 -10,-100 0,-102 C10,-104 18,-104 26,-102 Z" fill="{h}"/>'
+            f'<path d="M14,-112 C0,-116 -14,-112 -24,-100 M8,-106 C-2,-108 -12,-104 -19,-96" stroke="{hl}" stroke-width="2" fill="none" stroke-linecap="round"/>'
+            f'<rect x="-33" y="-98" width="10" height="5" rx="2.5" fill="#3A2E2A" transform="rotate(-60 -28 -95)"/>' + _ear(-3, -82))
+def tail_front(h, hl):
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M-7,-121 C12,-123 31,-112 31,-94 C31,-89 30,-86 29,-84 L26,-86 C25,-96 20,-104 8,-107 C2,-108 -4,-106 -7,-104 '
+        f'C-14,-104 -22,-99 -26,-90 L-29,-84 C-31,-88 -31,-92 -31,-96 C-31,-110 -22,-120 -7,-121 Z" fill="{h}"/>'
+        f'<path d="M-7,-121 L-7,-105" stroke="#000" stroke-opacity=".25" stroke-width="1.6"/>'
+        f'<path d="M-2,-116 C8,-117 18,-112 24,-103 M-12,-115 C-18,-112 -23,-106 -26,-98" stroke="{hl}" stroke-width="2.2" fill="none" stroke-linecap="round"/>'
+        f'<path d="M-25,-95 C-28,-89 -28,-83 -26,-77" stroke="{h}" stroke-width="2.2" fill="none" stroke-linecap="round"/>')
+def tail_back(h, hl):
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7) +
+        f'<path d="M-31,-90 C-33,-110 -16,-119 0,-119 C16,-119 33,-110 31,-90 C30,-80 24,-73 14,-70 C6,-69 -6,-69 -14,-70 C-24,-73 -30,-80 -31,-90 Z" fill="{h}"/>'
+        f'<path d="M-24,-104 C-16,-96 -8,-90 -2,-86 M24,-104 C16,-96 8,-90 2,-86 M0,-118 L0,-88" stroke="{hl}" stroke-width="2" fill="none" stroke-linecap="round"/>'
+        f'<path d="M-6,-86 C-11,-66 -9,-46 0,-34 C9,-46 11,-66 6,-86 Z" fill="{h}"/>'
+        f'<path d="M-2,-78 C-4,-62 -3,-50 0,-42 M3,-76 C4,-64 3,-54 1,-46" fill="none" stroke="{hl}" stroke-width="1.8" stroke-linecap="round"/>'
+        f'<rect x="-5" y="-89" width="10" height="7" rx="3" fill="#3A2E2A"/>')
+def tail_qfront(h, hl):
+    return (f'<path d="M-4,-121 C15,-122 32,-110 32,-94 C32,-90 31,-88 30,-86 L27,-88 C25,-97 18,-104 6,-106 '
+            f'C-8,-104 -14,-98 -17,-90 L-20,-84 C-24,-84 -28,-82 -31,-80 C-34,-86 -34,-96 -30,-104 C-25,-113 -16,-120 -4,-121 Z" fill="{h}"/>'
+            f'<path d="M-30,-92 C-38,-80 -37,-62 -32,-50 C-28,-46 -26,-52 -27,-60 C-28,-72 -26,-82 -22,-90 Z" fill="{h}"/>'
+            f'<path d="M-4,-121 L-3,-106" stroke="#000" stroke-opacity=".25" stroke-width="1.6"/>'
+            f'<path d="M4,-116 C14,-115 22,-109 27,-100 M-8,-114 C-14,-110 -18,-104 -20,-96" fill="none" stroke="{hl}" stroke-width="2.2" stroke-linecap="round"/>')
+def tail_qback(h, hl):
+    return (f'<path d="M-2,-119 C14,-119 26,-110 24,-98 C22,-92 18,-86 17,-80 C14,-72 6,-70 -4,-70 C-16,-70 -28,-74 -32,-84 C-35,-104 -18,-119 -2,-119 Z" fill="{h}"/>'
+            f'<path d="M-24,-104 C-16,-96 -10,-90 -6,-86 M14,-108 C8,-98 2,-92 -4,-88" stroke="{hl}" stroke-width="2" fill="none" stroke-linecap="round"/>'
+            f'<path d="M-12,-86 C-17,-66 -15,-46 -6,-36 C3,-46 5,-66 0,-86 Z" fill="{h}"/>'
+            f'<rect x="-11" y="-89" width="10" height="7" rx="3" fill="#3A2E2A"/>')
+
+# Mrs. Master Krantz: long honey-blonde hair from a centre part, falling to cover the tops of her ears, gathered into a
+# long braid over her shoulder
+def _braid(x0, y0, x1, y1, h, hl, w=8, n=7):
+    out = f'<path d="M{x0},{y0} L{x1},{y1}" stroke="{h}" stroke-width="{w * 1.6}" stroke-linecap="round"/>'
+    for i in range(n):
+        t = (i + 0.5) / n; x = x0 + (x1 - x0) * t; y = y0 + (y1 - y0) * t
+        out += (f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="{w * 0.85:.1f}" ry="{w * 0.62:.1f}" fill="{h}" stroke="{hl}" stroke-width="1.3"/>'
+                f'<path d="M{x - w * 0.4:.1f},{y - w * 0.2:.1f} q{w * 0.4:.1f},-{w * 0.3:.1f} {w * 0.8:.1f},0" {_LIGHT} stroke-width="1.4"/>')
+    return (out + f'<rect x="{x1 - 4}" y="{y1 - 1}" width="8" height="4" rx="2" fill="#2B2B30"/>'
+            f'<path d="M{x1 - 4},{y1 + 3} C{x1 - 6},{y1 + 9} {x1 - 3},{y1 + 13} {x1},{y1 + 14} C{x1 + 3},{y1 + 13} {x1 + 6},{y1 + 9} {x1 + 4},{y1 + 3} Z" fill="{h}"/>')
+def braid_side(h, hl):
+    return (f'<path d="M26,-102 C20,-123 -22,-125 -32,-98 C-37,-86 -34,-74 -26,-66 L-18,-70 C-20,-80 -16,-92 -6,-99 '
+            f'C6,-105 16,-104 26,-102 Z" fill="{h}"/>'
+            f'<path d="M12,-113 C-2,-117 -16,-112 -26,-98 M2,-106 C-10,-104 -18,-96 -22,-84" fill="none" stroke="{hl}" stroke-width="2" stroke-linecap="round"/>'
+            f'<path d="M8,-116 C-4,-118 -14,-114 -20,-108" {_LIGHT} stroke-width="2.2"/>'
+            + _braid(-24, -68, -28, -12, h, hl, 7, 6))
+def braid_front(h, hl):
+    return (f'<path d="M0,-121 C20,-121 33,-109 33,-92 C33,-82 31,-74 27,-70 L24,-73 C25,-84 24,-94 18,-101 '
+            f'C13,-106 6,-108 0,-108 C-6,-108 -13,-106 -18,-101 C-24,-94 -25,-84 -24,-73 L-27,-70 C-31,-74 -33,-82 -33,-92 C-33,-109 -20,-121 0,-121 Z" fill="{h}"/>'
+            f'<path d="M0,-121 L0,-108" stroke="{hl}" stroke-width="1.8"/>'
+            f'<path d="M-4,-113 C-14,-111 -22,-104 -26,-94 M4,-113 C14,-111 22,-104 26,-94" fill="none" stroke="{hl}" stroke-width="2" stroke-linecap="round"/>'
+            f'<path d="M-8,-118 C-18,-116 -26,-108 -29,-98 M8,-118 C18,-116 26,-108 29,-98" {_LIGHT} stroke-width="2.2"/>'
+            + _braid(-25, -72, -20, -6, h, hl, 7, 7))
+def braid_back(h, hl):
+    return (f'<path d="M-31,-88 C-34,-110 -16,-119 0,-119 C16,-119 34,-110 31,-88 C30,-76 24,-68 12,-66 C4,-65 -4,-65 -12,-66 C-24,-68 -30,-76 -31,-88 Z" fill="{h}"/>'
+            f'<path d="M-24,-106 C-14,-98 -4,-86 4,-72 M24,-106 C18,-96 10,-84 6,-72 M0,-118 C2,-100 4,-86 5,-72" fill="none" stroke="{hl}" stroke-width="2" stroke-linecap="round"/>'
+            f'<path d="M-16,-112 C-6,-104 0,-94 2,-84" {_LIGHT} stroke-width="2.2"/>'
+            + _braid(4, -70, 22, -30, h, hl, 7, 5))
+def braid_qfront(h, hl):
+    return (f'<path d="M2,-121 C20,-121 33,-108 33,-92 C33,-84 31,-77 28,-72 L24,-75 C25,-88 20,-101 8,-106 '
+            f'C-8,-103 -15,-94 -17,-84 L-20,-80 C-24,-80 -28,-78 -31,-75 C-34,-82 -34,-94 -30,-104 C-25,-113 -12,-121 2,-121 Z" fill="{h}"/>'
+            f'<path d="M6,-120 L7,-106" stroke="{hl}" stroke-width="1.8"/>'
+            f'<path d="M4,-114 C-6,-111 -13,-104 -17,-94 M10,-114 C18,-110 25,-102 28,-92" fill="none" stroke="{hl}" stroke-width="2" stroke-linecap="round"/>'
+            f'<path d="M0,-118 C-10,-116 -18,-110 -22,-102" {_LIGHT} stroke-width="2.2"/>'
+            + _braid(-22, -72, -14, -6, h, hl, 7, 7))
+def braid_qback(h, hl):
+    return (f'<path d="M-2,-119 C14,-119 26,-110 24,-98 C22,-90 18,-84 17,-78 C14,-70 6,-67 -4,-67 C-16,-67 -28,-72 -32,-84 C-35,-104 -18,-119 -2,-119 Z" fill="{h}"/>'
+            f'<path d="M-24,-104 C-16,-96 -8,-84 -4,-72 M14,-110 C8,-98 2,-86 -2,-72" fill="none" stroke="{hl}" stroke-width="2" stroke-linecap="round"/>'
+            + _braid(-6, -70, 8, -28, h, hl, 7, 5))
+
+# Nico himself, for his dojo whites (the dobok): his own hair, copied from rig.py
+def nico_side(h, hl):
+    return (f'<path d="M27,-103 C20,-123 -22,-125 -31,-98 C-36,-84 -31,-71 -21,-64 L-13,-68 '
+            f'C-16,-78 -13,-90 -3,-98 C7,-104 17,-103 27,-103 Z" fill="{h}"/>'
+            f'<rect x="-28" y="-73" width="11" height="6" rx="3" fill="{rig.HAIR_TIE}" transform="rotate(-20 -22 -70)"/>')
+def nico_front(h, hl):
+    return (f'<path d="M0,{T} C20,{T} 35,-104 32,-84 C32,-74 31,-65 27,-59 L21,-63 '
+            f'C22,-80 18,-96 0,-106 C-18,-96 -22,-80 -21,-63 L-27,-59 C-31,-65 -32,-74 -32,-84 '
+            f'C-35,-104 -20,{T} 0,{T} Z" fill="{h}"/>')
+def nico_back(h, hl):
+    return (f'<path d="M-31,-82 C-34,-108 -18,{T} 0,{T} C18,{T} 34,-108 31,-82 '
+            f'C31,-72 26,-63 14,-60 C5,-63 -5,-63 -14,-60 C-26,-63 -31,-72 -31,-82 Z" fill="{h}"/>'
+            f'<path d="M-6,-64 C-10,-50 -8,-36 0,-24 C8,-36 10,-50 6,-64 Z" fill="{h}"/>'
+            f'<rect x="-6" y="-66" width="12" height="6" rx="3" fill="{rig.HAIR_TIE}"/>')
+def nico_qfront(h, hl):
+    return (f'<path d="M28,-61 C32,-70 34,-80 33,-90 C32,-108 18,{T} 2,{T} C-14,{T} -30,-108 -33,-90 '
+            f'C-34,-80 -31,-70 -24,-62 L-22,-60 L-16,-63 C-17,-80 -12,-96 8,-106 C17,-98 23,-84 24,-62 Z" fill="{h}"/>')
+def nico_qback(h, hl):
+    return (f'<path d="M-33,-82 C-36,-108 -20,{T} -2,{T} C12,{T} 24,-110 22,-98 '
+            f'C17,-92 14,-80 15,-66 C12,-61 6,-60 0,-61 C-10,-60 -18,-59 -24,-62 C-30,-66 -33,-74 -33,-82 Z" fill="{h}"/>'
+            f'<path d="M-13,-64 C-17,-50 -15,-36 -8,-24 C0,-36 2,-50 -2,-64 Z" fill="{h}"/>'
+            f'<rect x="-13" y="-66" width="12" height="6" rx="3" fill="{rig.HAIR_TIE}"/>')
+# (hair that hangs behind the body: drawn before the torso)
+BEHIND = {
+    'nico': {'side': lambda h: f'<path d="M-24,-71 C-36,-60 -34,-40 -27,-27 C-22,-36 -18,-52 -15,-66 Z" fill="{h}"/>',
+             'qfront': lambda h: f'<path d="M-11,-72 C-15,-62 -14,-50 -10,-42 C-6,-50 -4,-60 -3,-68 Z" fill="{h}"/>'},
+}
+
 HAIR = {
     'short': (short_side, short_front, short_back, short_qfront, short_qback),
     'shaggy': (shaggy_side, shaggy_front, shaggy_back, shaggy_qfront, shaggy_qback),
     'bald': (bald_side, bald_front, bald_back, bald_qfront, bald_qback),
     'curly': (curly_side, curly_front, curly_back, curly_qfront, curly_qback),
+    'neat': (neat_side, neat_front, neat_back, neat_qfront, neat_qback),
+    'shaved': (shaved_side, shaved_front, shaved_back, shaved_qfront, shaved_qback),
+    'tail': (tail_side, tail_front, tail_back, tail_qfront, tail_qback),
+    'braid': (braid_side, braid_front, braid_back, braid_qfront, braid_qback),
+    'nico': (nico_side, nico_front, nico_back, nico_qfront, nico_qback),
 }
+def behind_of(look, view):
+    f = BEHIND.get(look.style, {}).get(view)
+    return f(look.hair) if f else ''
 def hair_of(look, view):
     fn = HAIR[look.style][('side', 'front', 'back', 'qfront', 'qback').index(view)]
-    return fn(look.hair) if look.style in ('short', 'bald') else fn(look.hair, look.hl)
+    return fn(look.hair) if look.style in ('short', 'bald', 'shaved') else fn(look.hair, look.hl)
+
+def _beard(look, view):
+    kind, c, hl = look.beard
+    mouth = rig.MOUTH
+    if kind == 'goatee':   # Mr. Master Krantz: a white mustache and a short beard round the chin
+        if view == 'front':
+            return (f'<path d="M-13,-71 Q-12,-79 0,-77 Q12,-79 13,-71 Q14,-62 9,-58 Q0,-53 -9,-58 Q-14,-62 -13,-71 Z M-7,-70 Q0,-65 7,-70 Q6,-63 0,-62 Q-6,-63 -7,-70 Z" fill="{c}" fill-rule="evenodd"/>'
+                    f'<path d="M-6,-70 Q0,-66 6,-70" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+        if view == 'qfront':
+            return (f'<path d="M-3,-71 Q-2,-79 9,-77 Q20,-79 21,-71 Q21,-62 17,-58 Q9,-53 1,-58 Q-3,-62 -3,-71 Z M3,-70 Q9,-65 15,-70 Q14,-63 9,-62 Q4,-63 3,-70 Z" fill="{c}" fill-rule="evenodd"/>'
+                    f'<path d="M4,-70 Q9,-66 14,-70" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+        if view == 'side':
+            return (f'<path d="M12,-75 Q22,-81 31,-74 Q32,-64 27,-59 Q18,-55 12,-61 Q16,-64 22,-66 Q16,-69 12,-75 Z" fill="{c}"/>'
+                    f'<path d="M17,-69 Q23,-66 28,-69" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+        return ''
+    if kind == 'full':     # Master Schindewolf: a short full beard and mustache, grey through the brown
+        if view == 'front':
+            return (f'<path d="M-27,-82 C-27,-70 -21,-60 -11,-56 Q0,-52 11,-56 C21,-60 27,-70 27,-82 C24,-77 19,-73 13,-72 Q11,-78 0,-76.5 Q-11,-78 -13,-72 C-19,-73 -24,-77 -27,-82 Z" fill="{c}"/>'
+                    f'<path d="M-6,-70 Q0,-66 6,-70" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>'
+                    f'<path d="M-18,-66 Q-14,-62 -10,-64 M10,-64 Q14,-62 18,-66 M-4,-58 Q0,-56 4,-58" fill="none" stroke="{hl}" stroke-width="1.6" stroke-linecap="round"/>')
+        if view == 'qfront':
+            return (f'<path d="M-23,-79 C-21,-67 -14,-59 -4,-55 Q8,-52 18,-56 C25,-61 28,-70 29,-80 C26,-76 22,-73 19,-72 Q18,-78 9,-76.5 Q0,-78 -2,-72 C-9,-72 -17,-74 -23,-79 Z" fill="{c}"/>'
+                    f'<path d="M3,-70 Q9,-66 15,-70" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+        if view == 'side':
+            return (f'<path d="M-4,-84 C-6,-70 0,-58 10,-54 Q20,-51 28,-56 C32,-61 33,-68 31,-74 Q22,-80 12,-74 C6,-72 0,-76 -4,-84 Z" fill="{c}"/>'
+                    f'<path d="M18,-69 Q24,-66 29,-69" fill="none" stroke="{mouth}" stroke-width="2.4" stroke-linecap="round"/>')
+        return ''
+    return ''
 
 # glasses and a mustache, over the face (eye positions: side (17,-85); front (+-9.5,-84); 3/4 (0,-84), (17,-84))
 def face_extras(look, view):
-    out = ''
+    out = _beard(look, view) if look.beard else ''
     if look.mustache:
         m = look.mustache
         if view == 'side':
@@ -165,9 +351,29 @@ def face_extras(look, view):
             out += f'<path d="M-6,-70 Q-1,-81 9,-77 Q19,-81 24,-70 Q19,-64 14,-69 Q9,-67 3,-69 Q-2,-64 -6,-70 Z" fill="{m}"/>'
     if look.glasses:
         frame, lens = look.glasses[:2]
-        st = f'fill="{lens}" stroke="{frame}" stroke-width="2.6"'
+        if frame == 'tortoise': frame = f'url(#{rig._PEOPLE_PFX}tort)'
+        # (the lenses are just a hint of tint, so the eyes show through: the user, 2026-10-11)
+        st = f'fill="{lens}" fill-opacity=".22" stroke="{frame}" stroke-width="2.6"'
+        if len(look.glasses) > 2 and look.glasses[2] == 'wire':   # thin round wire rims (Master Schindewolf)
+            st = f'fill="{lens}" fill-opacity=".15" stroke="{frame}" stroke-width="1.7"'
+            if view == 'side': return out + f'<circle cx="18" cy="-85" r="7.5" {st}/><path d="M11,-86 L-6,-84" stroke="{frame}" stroke-width="1.5"/>'
+            if view == 'front': return out + f'<circle cx="-10" cy="-84" r="8" {st}/><circle cx="10" cy="-84" r="8" {st}/><path d="M-2,-85 Q0,-87 2,-85" fill="none" stroke="{frame}" stroke-width="1.5"/>'
+            if view == 'qfront': return out + f'<circle cx="0" cy="-84" r="7.5" {st}/><ellipse cx="17" cy="-84" rx="6" ry="7.5" {st}/><path d="M7,-85 L11,-85" stroke="{frame}" stroke-width="1.5"/>'
+            return out
+        if len(look.glasses) > 2 and look.glasses[2] == 'bold':   # thick black rectangles (Mr. Master Krantz)
+            st = f'fill="{lens}" fill-opacity=".15" stroke="{frame}" stroke-width="2.8"'
+            if view == 'side': return out + f'<rect x="11" y="-90" width="14" height="10" rx="2" {st}/><path d="M11,-86 L-6,-84" stroke="{frame}" stroke-width="2.4"/>'
+            if view == 'front': return out + f'<rect x="-19" y="-90" width="16" height="11" rx="2" {st}/><rect x="3" y="-90" width="16" height="11" rx="2" {st}/><path d="M-3,-86 L3,-86" stroke="{frame}" stroke-width="2.4"/>'
+            if view == 'qfront': return out + f'<rect x="-8" y="-90" width="15" height="11" rx="2" {st}/><rect x="11" y="-90" width="11" height="11" rx="2" {st}/><path d="M7,-86 L11,-86" stroke="{frame}" stroke-width="2.4"/>'
+            return out
+        if len(look.glasses) > 2 and look.glasses[2] == 'soft':   # rounded rectangles, thinner (Erin)
+            st = f'fill="{lens}" fill-opacity=".15" stroke="{frame}" stroke-width="3.2"'
+            if view == 'side': return out + f'<rect x="11" y="-90" width="14" height="10" rx="4" {st}/><path d="M11,-86 L-4,-84" stroke="{frame}" stroke-width="1.8"/>'
+            if view == 'front': return out + f'<rect x="-18" y="-90" width="15" height="11" rx="4.5" {st}/><rect x="3" y="-90" width="15" height="11" rx="4.5" {st}/><path d="M-3,-86 Q0,-88 3,-86" fill="none" stroke="{frame}" stroke-width="1.8"/>'
+            if view == 'qfront': return out + f'<rect x="-7" y="-90" width="14" height="11" rx="4.5" {st}/><rect x="11" y="-90" width="11" height="11" rx="4" {st}/><path d="M7,-86 L11,-86" stroke="{frame}" stroke-width="1.8"/>'
+            return out
         if len(look.glasses) > 2 and look.glasses[2] == 'rect':   # rectangular frames (Yia-Yia)
-            st = f'fill="{lens}" stroke="{frame}" stroke-width="3.4"'
+            st = f'fill="{lens}" fill-opacity=".22" stroke="{frame}" stroke-width="3.4"'
             if view == 'side': return out + f'<rect x="10" y="-91" width="17" height="11" rx="3" {st}/><path d="M10,-86 L-6,-84" stroke="{frame}" stroke-width="2.6"/>'
             if view == 'front': return out + f'<rect x="-19" y="-90" width="17" height="11" rx="3" {st}/><rect x="2" y="-90" width="17" height="11" rx="3" {st}/><path d="M-2,-86 L2,-86" stroke="{frame}" stroke-width="2.6"/>'
             if view == 'qfront': return out + f'<rect x="-8" y="-90" width="15" height="11" rx="3" {st}/><rect x="11" y="-90" width="12" height="11" rx="3" {st}/><path d="M7,-86 L11,-86" stroke="{frame}" stroke-width="2.4"/>'
@@ -192,7 +398,7 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
         if plaid: s.shirt = s.sleeve = 'url(#eplaid2)'   # (a plaid flannel: the pattern is in defs; the game export's prefix is 'e')
@@ -213,6 +419,16 @@ class Look:
         elif s.top == 'cardigan':   # an open cardigan over a collared shirt (shirt2 shows down the front)
             if not back: t += (f'<path d="M-9,-52 L9,-52 L7,0 L-7,0 Z" fill="{s.shirt2}"/>'
                                f'<path d="M-10,-54 L0,-44 L-4,-56 Z M10,-54 L0,-44 L4,-56 Z" fill="{s.trim}"/>')
+        elif s.top == 'dobok':   # a Tang Soo Do dobok: white, black edging down the lapels and round the hem; the school patch and Korean lettering
+            if not back:
+                t += ((f'<path d="M-9,-53 L0,-36 L9,-53 Z" fill="{s.under}"/>' if s.under else '') +
+                      f'<path d="M-15,-52 L4,-14 L10,-14 L-8,-52 Z" fill="{s.shirt2}"/><path d="M-12,-53 L6,-15" stroke="#1F1F24" stroke-width="7"/>'
+                      f'<path d="M12,-53 L3,-35" stroke="#1F1F24" stroke-width="7"/>'
+                      f'<circle cx="12" cy="-36" r="4.6" fill="#24357A" stroke="#C8282D" stroke-width="1.2"/><path d="M9.5,-36 a2.5,2.5 0 0 1 5,0" fill="#C8282D"/>'
+                      f'<path d="M-15,-42 h4 M-13,-44 v4 M-15,-37 h5 M-14,-35 v3" stroke="#1F1F24" stroke-width="1.2"/>')
+            else:
+                t += f'<path d="M-12,-53 Q0,-47 12,-53" fill="none" stroke="#1F1F24" stroke-width="4"/>'
+            if s.belt: t += s.belt_svg(-22, 44, back, 0)
         elif s.top == 'gi':      # a karate gi: the jacket's lapels crossing over, and the belt (trim) tied at the front
             if not back: t += (f'<path d="M-12,-53 L9,-13 L15,-13 L-4,-53 Z" fill="{s.shirt2}"/>'
                                f'<path d="M12,-53 L4,-38 L1,-44 L5,-53 Z" fill="{s.shirt2}"/>')
@@ -234,11 +450,15 @@ class Look:
 
     def upper_side(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = hair_of(s, 'side')
+        hair = s.fit(hair_of(s, 'side'), 4)
         shirt = (f'<rect x="-5" y="-62" width="15" height="16" rx="5" fill="{rig.SK2}"/>'
                  f'<rect x="-20" y="-52" width="38" height="54" rx="15" fill="{s.shirt}"/>')
         if s.top == 'hoodie':
             shirt += f'<path d="M-18,-56 C-26,-50 -26,-36 -18,-30 C-14,-40 -12,-48 -10,-56 Z" fill="{s.shirt2}"/>'
+        elif s.top == 'dobok':
+            shirt += (f'<path d="M-2,-53 L14,-18" stroke="#1F1F24" stroke-width="7"/>'
+                      )
+            if s.belt: shirt += s.belt_svg(-20, 38, False, 14)
         elif s.top == 'gi':
             shirt += (f'<path d="M-2,-53 L14,-20 L18,-24 L6,-53 Z" fill="{s.shirt2}"/>'
                       f'<rect x="-20" y="-13" width="38" height="8" rx="2" fill="{s.trim}"/>'
@@ -248,23 +468,23 @@ class Look:
                       f'<rect x="15" y="-48" width="3" height="48" fill="{s.trim}"/>')
         else:
             shirt += f'<rect x="-19" y="-40" width="3" height="40" fill="{s.trim}"/>'
-        return (shirt +
-            f'<circle cx="4" cy="-86" r="29" fill="{rig.SK}"/><circle cx="31" cy="-81" r="4" fill="{rig.SK}"/>' + hair +
+        return (behind_of(s, 'side') + shirt +
+            s.skull(4) + f'<circle cx="31" cy="-81" r="4" fill="{rig.SK}"/>' + hair +
             f'<circle{f} cx="17" cy="-85" r="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M10,-71 Q18,-64 27,-71" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
             f'<circle{f} cx="9" cy="-74" r="5" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'side'))
 
     def upper_front(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = hair_of(s, 'front')
-        return (s.torso(False, pfx) + f'<circle cx="0" cy="-86" r="29" fill="{rig.SK}"/>' + hair +
+        hair = s.fit(hair_of(s, 'front'), 0)
+        return (s.torso(False, pfx) + s.skull(0) + hair +
             f'<circle{f} cx="-9.5" cy="-84" r="3.6" fill="{rig.EYE}"/><circle{f} cx="9.5" cy="-84" r="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M-7,-72 Q0,-66 7,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
             f'<circle{f} cx="-14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="14" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'front'))
 
     def upper_back(s, pfx):
-        hair = hair_of(s, 'back')
-        return s.torso(True, pfx) + f'<circle cx="0" cy="-86" r="29" fill="{rig.SK}"/>' + hair
+        hair = s.fit(hair_of(s, 'back'), 0)
+        return s.torso(True, pfx) + s.skull(0) + hair
 
     def torso_q(s, back, pfx):
         pants = f'url(#{pfx}camo)' if s.camo else s.pants
@@ -281,6 +501,13 @@ class Look:
                 t += (f'<path d="M-9,-55 C-8,-46 0,-42 6,-42 C12,-42 18,-46 19,-55 L14,-57 C12,-50 -2,-50 -4,-57 Z" fill="{s.shirt2}"/>'
                       f'<rect x="1" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/><rect x="10" y="-46" width="2" height="12" rx="1" fill="{s.trim}"/>'
                       f'<path d="M-8,-18 L18,-18 L20,-4 L-11,-4 Z" fill="{s.shirt2}"/>')
+        elif s.top == 'dobok':
+            if not back:
+                t += ((f'<path d="M-1,-53 L7,-37 L15,-53 Z" fill="{s.under}"/>' if s.under else '') +
+                      f'<path d="M-5,-53 L12,-15" stroke="#1F1F24" stroke-width="7"/><path d="M18,-52 L10,-36" stroke="#1F1F24" stroke-width="7"/>'
+                      f'<circle cx="16" cy="-35" r="4" fill="#24357A" stroke="#C8282D" stroke-width="1.1"/>'
+                      f'<path d="M-9,-42 h4 M-7,-44 v4 M-9,-37 h4" stroke="#1F1F24" stroke-width="1.1"/>')
+            if s.belt: t += s.belt_svg(-20, 40, back, 9)
         elif s.top == 'gi':
             if not back: t += f'<path d="M-6,-53 L13,-13 L19,-13 L3,-53 Z" fill="{s.shirt2}"/>'
             t += f'<rect x="-20" y="-13" width="40" height="8" rx="2" fill="{s.trim}"/>'
@@ -298,21 +525,48 @@ class Look:
 
     def upper_qfront(s, pfx, face_cls=''):
         f = rig.fc(face_cls)
-        hair = hair_of(s, 'qfront')
-        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly') else ''
-        return (s.torso_q(False, pfx) + f'<circle cx="2" cy="-86" r="29" fill="{rig.SK}"/>' + hair + ear +
+        hair = s.fit(hair_of(s, 'qfront'), 2)
+        ear = f'<ellipse cx="-18" cy="-80" rx="4" ry="5.5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail') else ''
+        return (behind_of(s, 'qfront') + s.torso_q(False, pfx) + s.skull(2) + hair + ear +
             f'<circle{f} cx="0" cy="-84" r="3.6" fill="{rig.EYE}"/><ellipse{f} cx="17" cy="-84" rx="3" ry="3.6" fill="{rig.EYE}"/>'
             f'<path{f} d="M2,-72 Q9,-66 16,-72" fill="none" stroke="{rig.MOUTH}" stroke-width="2.8" stroke-linecap="round"/>'
             f'<circle{f} cx="-5" cy="-75" r="5" fill="{rig.CHEEK}" opacity=".45"/><circle{f} cx="19" cy="-75" r="4.2" fill="{rig.CHEEK}" opacity=".45"/>' + face_extras(s, 'qfront'))
 
     def upper_qback(s, pfx):
-        hair = hair_of(s, 'qback')
-        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly') else ''
-        return (s.torso_q(True, pfx) + f'<circle cx="-2" cy="-86" r="29" fill="{rig.SK}"/>'
+        hair = s.fit(hair_of(s, 'qback'), -2)
+        ear = f'<ellipse cx="18" cy="-80" rx="3.5" ry="5" fill="{rig.SK2}"/>' if s.style in ('short', 'bald', 'curly', 'neat', 'shaved', 'tail') else ''
+        return (s.torso_q(True, pfx) + s.skull(-2) +
                 f'<circle cx="21" cy="-76" r="3.5" fill="{rig.CHEEK}" opacity=".45"/>' + hair + ear)
+
+    def skull(s, cx):
+        """The head: round, or (head=(rx, ry)) a longer, narrower oval (Erin, 2026-10-11)."""
+        if not s.head: return f'<circle cx="{cx}" cy="-86" r="29" fill="{rig.SK}"/>'
+        rx, ry = s.head
+        return f'<ellipse cx="{cx}" cy="{-86 + (ry - 29) * 0.6:.1f}" rx="{rx}" ry="{ry}" fill="{rig.SK}"/>'
+    def fit(s, svg, cx):
+        """Hair (and ears) drawn for the round head, squeezed to fit an oval one."""
+        if not s.head or not svg: return svg
+        rx, ry = s.head
+        return f'<g transform="translate({cx},-86) scale({rx / 29:.3f},{ry / 29:.3f}) translate({-cx},86)">{svg}</g>'
+
+    def belt_svg(s, x, w, back, knot):
+        """The belt round the waist: its colour, a stripe down the middle (masters: red), the knot and tails at the front."""
+        col, stripe = s.belt
+        t = f'<rect x="{x}" y="-13" width="{w}" height="8" rx="2" fill="{col}"/>'
+        if stripe: t += f'<rect x="{x}" y="-10.5" width="{w}" height="3" fill="{stripe}"/>'
+        if not back:
+            k = knot
+            t += (f'<path d="M{k - 3},-6 L{k - 8},10 L{k - 3},11 L{k},-5 Z M{k + 3},-6 L{k + 8},10 L{k + 3},11 L{k},-5 Z" fill="{col}"/>'
+                  f'<rect x="{k - 5}" y="-15" width="10" height="11" rx="3" fill="{col}"/>')
+            if stripe: t += f'<path d="M{k - 5.5},2 L{k - 4},-4 M{k + 5.5},2 L{k + 4},-4" stroke="{stripe}" stroke-width="2"/>'
+        return t
 
     def arm_art(s, far, pfx):
         hand = rig.SK2 if far else rig.SK
+        if s.top == 'dobok':    # long white sleeve, black edging at the cuff
+            return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
+                    f'<rect x="-9" y="-7" width="18" height="41" rx="8.5" fill="{s.sleeve if not far else s.shirt2}"/>'
+                    f'<rect x="-9" y="28" width="18" height="6" rx="2.5" fill="#1F1F24"/>')
         sl = s.sleeve if not far else s.shirt2 if s.top == 'hoodie' else s.sleeve
         if s.top == 'track':    # long sleeve, a white stripe down it, a ribbed cuff
             return (f'<circle cx="0" cy="39" r="8" fill="{hand}"/>'
@@ -337,6 +591,10 @@ class Look:
 
     def defs(s, pfx):
         out = camo_defs(pfx, s.camo) if s.camo else ''
+        if s.glasses and s.glasses[0] == 'tortoise':   # tortoiseshell frames: amber and brown, mottled dark (Erin)
+            out += (f'<pattern id="{pfx}tort" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="#8A5428"/>'
+                    f'<circle cx="2" cy="2" r="2.2" fill="#3A2210"/><circle cx="6.5" cy="5.5" r="1.8" fill="#2E1A0C"/><circle cx="7" cy="1" r="1.2" fill="#C98A3E"/>'
+                    f'<circle cx="2.5" cy="7" r="1.4" fill="#C98A3E"/><circle cx="4.5" cy="3.5" r="1" fill="#5A3416"/></pattern>')
         if s.plaid:
             base, band, line = s.plaid
             out += (f'<pattern id="{pfx}plaid2" width="26" height="26" patternUnits="userSpaceOnUse"><rect width="26" height="26" fill="{base}"/>'
@@ -395,6 +653,27 @@ LOOKS = {
                      shirt='#C7443B', shirt2='#A93830', sleeve='#C7443B', trim='#F4F6F8',
                      pants='#34466B', pants2='#2A3957', shoe='#2F343C', shoe2='#272B32', height=1.24),
     # people who work inside the other buildings, and the grown-ups at home in the houses (made up)
+    # Litchfield Tang Soo Do (2026-10-11), drawn from photos the user shared: everyone in a white dobok edged
+    # in black, barefoot; the masters' belts black with a red stripe down the middle
+    # Mr. Master Krantz: short grey hair combed back and receding, thick black rectangular glasses, a white goatee
+    'krantz': Look('krantz', skin='#F2C3A6', skin2='#DFA88C', hair='#B5B2AC', style='neat', top='dobok',
+                   shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F2C3A6', shoe2='#DFA88C', height=1.3,
+                   glasses=('#1A1A1E', '#DCEAF5', 'bold'), beard=('goatee', '#ECEAE4', '#C9C6BE'), belt=('#1F1F24', '#C8282D')),
+    # Mrs. Master Krantz: long strawberry-blonde hair pulled back into a long braid over her shoulder
+    'mrskrantz': Look('mrskrantz', skin='#F3C9AE', skin2='#E2AE92', hair='#C99862', hl='#A97A45', style='braid', top='dobok',
+                      shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F3C9AE', shoe2='#E2AE92', height=1.16,
+                      belt=('#1F1F24', '#C8282D')),
+    # Master Schindewolf: shaved head, round wire glasses, a short grey-brown beard
+    'schindewolf': Look('schindewolf', skin='#F0C2A4', skin2='#DDA587', hair='#9B8F84', style='shaved', top='dobok',
+                        shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F0C2A4', shoe2='#DDA587', height=1.24,
+                        glasses=('#8C8A86', '#DCEAF5', 'wire'), beard=('full', '#9C9084', '#C4BCB2'), belt=('#1F1F24', '#C8282D')),
+    # Erin: dark-blonde hair pulled back in a ponytail, glasses, a black belt
+    'erin': Look('erin', skin='#F2C8AC', skin2='#E0AD90', hair='#A88456', hl='#C7A472', style='tail', top='dobok',
+                 shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F2C8AC', shoe2='#E0AD90', height=1.18,
+                 glasses=('tortoise', '#DCEAF5', 'soft'), belt=('#1F1F24', None), under='#26346A', head=(25, 32)),
+    # Nico in his whites, for the dojo (his own hair and face; his belt is drawn over it in the game)
+    'nicodobok': Look('nicodobok', skin=rig.SK, skin2=rig.SK2, hair=rig.HAIR, style='nico', top='dobok',
+                      shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe=rig.SK, shoe2=rig.SK2, height=1.0),
     # Sensei at the dojo: a white gi and a black belt, grey hair, barefoot on the mats
     'sensei': Look('sensei', skin='#E3B48C', skin2='#CF9F78', hair='#9AA0A6', hl='#B8BDC2', style='short', top='gi',
                    shirt='#FAFAF7', shirt2='#DCDCD3', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#E3B48C', shoe2='#CF9F78', height=1.2),

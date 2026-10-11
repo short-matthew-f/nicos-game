@@ -1,6 +1,7 @@
 // Static world art in the sticker style: flat fills, a white outline band and a soft
 // navy shadow offset down-right. Static things draw the band as geometry (cheap);
 // only characters use the live outline filter.
+import { emblem } from './emblem';
 import { Container, Graphics, Text } from 'pixi.js';
 import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, ROAD_SEGS, roadRect, PINES, LAKE, POOL, PIER, type Building } from './map';
 import { sandPolygon, waterPolygon, SHORE, shoreY } from './zones';
@@ -142,11 +143,13 @@ export function drawBuilding(b: Building): Container {
   if (b.label) {
     const t = new Text({ text: b.label, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 30, fill: '#2B3F55', letterSpacing: 1.5 } });
     t.anchor.set(0.5);
+    if (t.width > b.w - 40) t.scale.set((b.w - 40) / t.width);   // (a long name squeezes onto its sign)
     const sign = new Graphics().roundRect(-t.width / 2 - 16, -22, t.width + 32, 44, 10).fill(b.trim ?? '#FFFFFF');
     sign.position.set(b.x + b.w / 2, front - 6);
     t.position.copyFrom(sign.position);
     c.addChild(sign, t);
   }
+  if (b.id === 'dojo') { const e = emblem(40); e.position.set(b.x + b.w / 2, b.y + b.d - b.h + 74); c.addChild(e); }   // the school's emblem over the door
   c.zIndex = b.y + b.d;
   return c;
 }

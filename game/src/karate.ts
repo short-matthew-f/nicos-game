@@ -1,5 +1,5 @@
 // Karate at the dojo (Nico does karate: the user, 2026-10-09, "a karate class in the game... belts as
-// earned outfits"). Sensei calls a combination of moves; watch, then do it back in order. Three clean
+// earned outfits"). Mr. Master Krantz calls a combination of moves; watch, then do it back in order. Three clean
 // combinations in a class earns the next belt, and the belt shows on Nico's outfit (rig/person.ts
 // setBelt). Each belt's combinations are a move longer and called a little faster. Data first.
 
@@ -15,14 +15,14 @@ export const MOVES: { id: Move; name: string; call: string; color: string }[] = 
   { id: 'punch', name: 'Punch', call: 'Punch!', color: '#E5484D' },
   { id: 'kick', name: 'Kick', call: 'Kick!', color: '#2F6FD0' },
   { id: 'block', name: 'Block', call: 'Block!', color: '#3BB273' },
-  { id: 'kiai', name: 'Kiai!', call: 'KIAI!', color: '#F9A826' },
+  { id: 'kiai', name: 'Kihap!', call: 'KIHAP!', color: '#F9A826' },   // (Tang Soo Do's shout)
 ];
 export const CLASS = { rounds: 3 };
 
 /** The belt he'd be working toward (index into BELTS): his first class earns the white belt. */
 export const nextBelt = (belt: number) => Math.min(BELTS.length - 1, belt + 1);
 export const isBlack = (belt: number) => belt >= BELTS.length - 1;
-/** How many moves in a combination, and how long Sensei shows each (s), for a class toward belt `toward`. */
+/** How many moves in a combination, and how long he shows each (s), for a class toward belt `toward`. */
 // (Nico, 2026-10-11: "a little too hard", stuck around brown belt: was 3 + belt moves, down to 0.42 s each;
 // now a move longer every other belt, 6 at most, and never quicker than 0.62 s)
 export const comboLength = (toward: number) => 3 + Math.floor(toward / 2);

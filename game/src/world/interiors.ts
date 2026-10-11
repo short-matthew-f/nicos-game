@@ -20,6 +20,7 @@ export interface Interior {
   w: number; h: number; wall: number;
   colors: { wall: string; stripe?: string; trim: string; floor: [string, string]; tiles?: boolean };
   person?: { who: string; name: string; x: number; y: number; lines: string[]; action?: string; treat?: { label: string; boost: number } };
+  crew?: { who: string; name: string; x: number; y: number; lines: string[]; face?: 'front' | 'side' | 'qfront'; flip?: boolean }[];   // others there (the dojo's instructors)
   things: Thing[];
 }
 const W = 1200, H = 820, WALL = 250;
@@ -130,13 +131,19 @@ export const INTERIORS: Record<string, Interior> = {
     block(880, 560, 240, 70, 60, '#F9C846', '#E3A92A', undefined, sitHere('🪑 Sit and admire the art')),
     big(1130, 380, 'plant', 70, undefined, [50, 30]),
   ], { who: 'yiayia', name: 'Yia-Yia', x: 760, y: 420, lines: ['Hello, my darling! Shall we paint?', 'Every painting is a good painting.', 'Look at those colours! You\'re an artist.'], action: 'yiayia' }),
-  dojo: room('dojo', 'Karate Dojo', { wall: '#F4EFE4', stripe: '#E4DCC8', trim: '#3A3A44', floor: ['#E2D3A4', '#D6C592'] }, [
-    rug(260, 440, 680, 300, '#B8382F', '#E9DDB8'),                                   // the training mat
-    onWall(130, 40, 90, 170, '#F4F1EA', '空手'),                                      // a scroll: "karate"
-    onWall(980, 50, 170, 110, '#2B2B30', 'BELTS', undefined, { label: 'canvas Look at the belts', lines: ['White, yellow, orange, green, blue, purple, brown... and black!', 'Every black belt started as a white belt.'] }),
-    big(1060, 520, 'bag', 120, { label: '👊 Hit the punching bag', lines: ['THWACK! The bag swings.', 'Hi-YAH! Great punch!', 'Pow! Pow! Pow!'] }, [40, 30]),
+  // Litchfield Tang Soo Do (2026-10-11): Nico's real school and its instructors, drawn from the user's photos
+  dojo: { ...room('dojo', 'Litchfield Tang Soo Do', { wall: '#F4F2EC', stripe: '#E6E9F2', trim: '#24357A', floor: ['#3E6FD8', '#3567CF'] }, [
+    rug(260, 440, 680, 300, '#E2524E', '#3E6FD8'),                                   // the sparring ring on the blue mats
+    onWall(120, 40, 90, 170, '#F4F1EA', '당수도'),                                     // a scroll: "Tang Soo Do"
+    onWall(980, 50, 170, 110, '#1E2733', 'BELTS', undefined, { label: 'canvas Look at the belts', lines: ['White, yellow, orange, green, blue, purple, brown... and black!', 'Every black belt started as a white belt.'] }),
+    big(1060, 520, 'bag', 120, { label: '👊 Hit the punching bag', lines: ['THWACK! The bag swings.', 'Kihap! Great punch!', 'Pow! Pow! Pow!'] }, [40, 30]),
     block(120, 600, 200, 60, 50, '#B9895A', '#8A5A3B', undefined, sitHere('🪑 Sit and watch')),
-  ], { who: 'sensei', name: 'Sensei', x: 600, y: 400, lines: ['Osu! Ready to train?', 'A black belt is a white belt who never gave up.', 'Bow when you step on the mat.'], action: 'dojo' }),
+  ], { who: 'krantz', name: 'Mr. Master Krantz', x: 600, y: 400, lines: ['Welcome to Litchfield Tang Soo Do!', 'Focus first. Then strike.', 'A black belt is a white belt who never quit.'], action: 'dojo' }),
+  crew: [
+    { who: 'mrskrantz', name: 'Mrs. Master Krantz', x: 470, y: 420, lines: ['Hi Nico! Ready for class?', 'Remember to bow when you step on the mat.', 'Great kicks today!', 'Stand tall, eyes forward.'] },
+    { who: 'schindewolf', name: 'Master Schindewolf', x: 960, y: 560, face: 'qfront', flip: true, lines: ['Chamber that kick, Nico!', 'Keep your guard up.', 'Kihap! Let me hear it!', 'Again. Sharper this time.'] },
+    { who: 'erin', name: 'Erin', x: 230, y: 500, face: 'qfront', lines: ['Hi Nico! Want to practice your form?', 'Nice stance!', 'Stretch first, then kick high.', 'You\'re getting faster!'] },
+  ] },
   h1: house('h1', "Maya's house", '#FBE3C7', '#F28C38', 'mom', "Maya's mom", ['Hi Nico! Maya\'s out playing.', 'Would you like some lemonade?'], { label: '🍋 Lemonade', boost: 20 }),
   h2: house('h2', "Leo's house", '#D6EEE9', '#3E8F8A', 'dad', "Leo's dad", ['Leo? He\'s at the ice cream shop, as usual.', 'Want a granola bar?'], { label: '🥜 Granola bar', boost: 20 }),
   h3: house('h3', "Sam's house", '#F7E9C8', '#5B78AA', 'grandma', "Sam's grandma", ['Oh, hello dear! Sam\'s at the toy shop.', 'Have a cookie, fresh out of the oven.'], { label: '🍪 A warm cookie', boost: 25 }),
@@ -189,7 +196,7 @@ export function thingArt(t: Thing): Container {
 }
 /** What you bump into: blocks and big emoji (their `solid` footprint), and the back wall. */
 export function interiorSolids(r: Interior): { x: number; y: number; w: number; d: number }[] {
-  const out = [{ x: 0, y: 0, w: r.w, d: r.wall + 14 }];
+  const out = [{ x: 0, y: 0, w: r.w, d: r.wall + 14 }, ...(r.crew ?? []).map(p => ({ x: p.x - 22, y: p.y - 16, w: 44, d: 18 }))];
   for (const t of r.things) {
     if (t.kind === 'block') out.push({ x: t.x, y: t.y, w: t.w, d: t.d });
     if (t.kind === 'emoji' && t.solid) out.push({ x: t.x - t.solid[0] / 2, y: t.y - t.solid[1], w: t.solid[0], d: t.solid[1] });

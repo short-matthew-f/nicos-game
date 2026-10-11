@@ -28,7 +28,7 @@ export const PLACES: Place[] = [
   { building: 'storage', title: 'Storage Units', action: 'Auction', text: 'Storage unit auctions.' },
   // Nico's grandparents
   { building: 'nonna', title: 'Poppop and Nonna', text: '' }, { building: 'woodshop', title: "Poppop's woodshop", text: '' }, { building: 'yiayia', title: "Yia-Yia's studio", text: '' },
-  { building: 'dojo', title: 'Karate Dojo', text: '' },
+  { building: 'dojo', title: 'Litchfield Tang Soo Do', text: '' },
   // the houses round town (you can go in: world/interiors.ts)
   { building: 'h1', title: "Maya's house", text: '' }, { building: 'h2', title: "Leo's house", text: '' }, { building: 'h3', title: "Sam's house", text: '' },
   { building: 'h5', title: "Ava's house", text: '' }, { building: 'h6', title: "Mrs. Kim's house", text: '' }, { building: 'h7', title: "Mr. Brooks's house", text: '' },

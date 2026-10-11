@@ -786,25 +786,26 @@ with sync_playwright() as p:
     pg.click('.pb-close'); pg.wait_for_timeout(300)
     check(not pg.evaluate('()=>window.__game.pinball().open') and G()['room'] == 'home', 'close it: back in the house')
     pg.evaluate("()=>window.__game.exitRooms()")
-    # karate at the dojo: Sensei calls a combination, Nico does it back; three clean ones earn the white belt
+    # karate at the dojo (Litchfield Tang Soo Do): Mr. Master Krantz calls a combination, Nico does it back; three clean ones earn the white belt
     pg.evaluate("()=>window.__game.setBiz({belt: -1})"); door('dojo'); pg.wait_for_timeout(300)
-    check(pg.locator('#place-menu button[data-item=karate]').count() == 1, 'Sensei offers a karate class')
+    check(pg.locator('#place-menu button[data-item=karate]').count() == 1, 'Mr. Master Krantz offers a class')
     pg.click('#place-menu button[data-item=karate]'); pg.wait_for_timeout(300)
     for r in range(3):
         pg.wait_for_function("()=>!document.querySelector('#work button[data-move=punch]').disabled", timeout=20000)
-        if r == 0:   # a wrong move first: Sensei shows it again
+        if r == 0:   # a wrong move first: he shows it again
             want = pg.evaluate('()=>window.__game.karateWant()'); wrong = 'kick' if want[0] != 'kick' else 'punch'
             pg.click(f'#work button[data-move={wrong}]'); pg.wait_for_timeout(200)
-            check(G()['biz']['belt'] == -1 and pg.locator('#work .strip').inner_text().startswith('Sensei: "Not quite'), 'a wrong move: "Not quite. Watch again!"')
+            check(G()['biz']['belt'] == -1 and pg.locator('#work .strip').inner_text().startswith('Mr. Master Krantz: "Not quite'), 'a wrong move: "Not quite. Watch again!"')
             pg.wait_for_function("()=>!document.querySelector('#work button[data-move=punch]').disabled", timeout=20000)
         for m in pg.evaluate('()=>window.__game.karateWant()'): pg.click(f'#work button[data-move={m}]'); pg.wait_for_timeout(80)
         pg.wait_for_timeout(200)
     pg.wait_for_timeout(1000)
     check(G()['biz']['belt'] == 0, f"three clean combinations: the white belt ({G()['biz']['belt']})")
     pg.click('#work [data-done]'); pg.wait_for_timeout(300)
-    check(G()['beltShown'] == '0', f"he wears his belt in the dojo ({G()['beltShown']})")
+    check(G()['beltShown'] == '0' and G()['nicoLook'] == 'nicodobok', f"in the dojo he's in his whites, with his belt ({G()['beltShown']}, {G()['nicoLook']})")
+    check(all(k in G()['roomSpots'] for k in ('crew0', 'crew1', 'crew2')), f"Mrs. Master Krantz, Master Schindewolf and Erin are there too ({list(G()['roomSpots'])})")
     pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
-    check(G()['beltShown'] is None, f"...and takes it off outside ({G()['beltShown']})")
+    check(G()['beltShown'] is None and G()['nicoLook'] == 'nico', f"...and changes back outside ({G()['beltShown']}, {G()['nicoLook']})")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

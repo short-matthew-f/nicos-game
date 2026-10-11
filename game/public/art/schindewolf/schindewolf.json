@@ -1,0 +1,296 @@
+{
+ "res": 2,
+ "height": 1.24,
+ "views": {
+  "side": [
+   {
+    "part": "ba",
+    "img": "art/schindewolf/side_ba.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "bl",
+    "img": "art/schindewolf/side_bl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "bs",
+    "img": "art/schindewolf/side_bs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "fl",
+    "img": "art/schindewolf/side_fl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "fs",
+    "img": "art/schindewolf/side_fs.png",
+    "x": -13,
+    "y": -16,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/schindewolf/side_up.png",
+    "x": -28,
+    "y": -118,
+    "w": 66,
+    "h": 132
+   },
+   {
+    "part": "fa",
+    "img": "art/schindewolf/side_fa.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "front": [
+   {
+    "part": "legl",
+    "img": "art/schindewolf/front_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/schindewolf/front_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/schindewolf/front_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/schindewolf/front_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/schindewolf/front_up.png",
+    "x": -37,
+    "y": -118,
+    "w": 74,
+    "h": 132
+   },
+   {
+    "part": "arml",
+    "img": "art/schindewolf/front_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/schindewolf/front_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "back": [
+   {
+    "part": "legl",
+    "img": "art/schindewolf/back_legl.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "legr",
+    "img": "art/schindewolf/back_legr.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shl",
+    "img": "art/schindewolf/back_shl.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "shr",
+    "img": "art/schindewolf/back_shr.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/schindewolf/back_up.png",
+    "x": -37,
+    "y": -118,
+    "w": 74,
+    "h": 129
+   },
+   {
+    "part": "arml",
+    "img": "art/schindewolf/back_arml.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "armr",
+    "img": "art/schindewolf/back_armr.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qfront": [
+   {
+    "part": "armf",
+    "img": "art/schindewolf/qfront_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/schindewolf/qfront_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/schindewolf/qfront_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/schindewolf/qfront_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/schindewolf/qfront_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 34,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/schindewolf/qfront_up.png",
+    "x": -30,
+    "y": -118,
+    "w": 64,
+    "h": 132
+   },
+   {
+    "part": "armn",
+    "img": "art/schindewolf/qfront_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ],
+  "qback": [
+   {
+    "part": "armf",
+    "img": "art/schindewolf/qback_armf.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "part": "legf",
+    "img": "art/schindewolf/qback_legf.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shf",
+    "img": "art/schindewolf/qback_shf.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "legn",
+    "img": "art/schindewolf/qback_legn.png",
+    "x": -12,
+    "y": -3,
+    "w": 24,
+    "h": 56
+   },
+   {
+    "part": "shn",
+    "img": "art/schindewolf/qback_shn.png",
+    "x": -15,
+    "y": -16,
+    "w": 30,
+    "h": 19
+   },
+   {
+    "part": "up",
+    "img": "art/schindewolf/qback_up.png",
+    "x": -34,
+    "y": -118,
+    "w": 64,
+    "h": 129
+   },
+   {
+    "part": "armn",
+    "img": "art/schindewolf/qback_armn.png",
+    "x": -12,
+    "y": -10,
+    "w": 24,
+    "h": 60
+   }
+  ]
+ }
+}

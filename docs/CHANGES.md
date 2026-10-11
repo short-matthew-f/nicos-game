@@ -993,3 +993,21 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - **Combinations:** now a move longer only every other belt: 3, 3, 4, 4, 5, 5, 6, 6 (was 3 to 10).
   - **Calling speed:** Sensei never calls faster than 0.62 s a move.
   - **After a miss:** Sensei shows the same combination again 35% slower.
+
+### Litchfield Tang Soo Do: Nico's real school and instructors (2026-10-11)
+- The user shared the school's emblem and photos of the instructors (reference only, not in the repo): "I'd like them all worked in... make sure that they look like them."
+- **The school:**
+  - The dojo is now LITCHFIELD TANG SOO DO. The building has a navy roof, a white sign and the school's emblem over the door.
+  - The emblem is redrawn as vector art (`world/emblem.ts`): a red-edged navy ring with the name and 당수도, and the red and blue swirl round a red-and-blue centre. It was compared side by side with the original until it matched.
+  - Inside: blue mats with a red sparring ring, a big emblem on the back wall, a 당수도 scroll, the belt board and the bag.
+- **The instructors** (`src/people.py`, compared with the photos in several passes):
+  - **Mr. Master Krantz** runs the class: salt-and-pepper hair swept back and receding, black rectangular glasses, a white goatee.
+  - **Mrs. Master Krantz:** honey-blonde hair from a centre part, with a long braid over her shoulder.
+  - **Master Schindewolf** (by the bag): shaved head with a short grey band round the sides, round wire glasses, a trimmed grey-brown beard.
+  - **Erin:** dark-blonde hair with a side part and streaks, a ponytail, tortoiseshell frames (the user: "turtle frames"), and a navy shirt under her dobok. Her face is longer and narrower (a new `head=(rx, ry)` oval, which squeezes hair and ears to fit).
+  - Everyone wears a Tang Soo Do dobok: white, with a wide black collar band, black cuffs, the school patch and Korean lettering, and bare feet. The masters' belts are black with a red stripe; Erin's is plain black.
+  - Each instructor has their own lines to say.
+- **Nico wears his whites in the dojo:** a new `nicodobok` look with his own hair and face copied from `rig.py`, swapped in on entering and out on leaving, with his rank's belt drawn over it (white until he earns one). His usual art is unchanged.
+- **The class:** Mr. Master Krantz teaches it (was "Sensei"). The shout is "Kihap!" (Tang Soo Do's word, not "Kiai").
+- **Glasses for everyone:** see-through lenses (the user: "I would like to be able to see eyes behind glasses"). Poppop, Nonna, Yia-Yia and the townspeople with glasses were re-exported.
+- **Still to confirm:** the belt colours are still the generic eight (white to black). If Litchfield uses different ones, it's a one-line change in `karate.ts`.
