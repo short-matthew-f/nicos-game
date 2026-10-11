@@ -75,15 +75,15 @@ class Audio {
     o.start(t); lfo.start(t); o.stop(t + len + 0.02); lfo.stop(t + len + 0.02);
   }
   /** A short burst of filtered noise (thumps, splashes). */
-  noise(len: number, vol: number, freq: number) {
+  noise(len: number, vol: number, freq: number, delay = 0, type: BiquadFilterType = 'lowpass') {
     const c = this.ctx, m = this.master; if (!c || !m || this.muted) return;
     const n = Math.floor(c.sampleRate * len), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 2;
     const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
     // fade in over 6 ms: a burst that starts at full volume clicks
-    const t = c.currentTime;
-    s.buffer = buf; f.type = 'lowpass'; f.frequency.value = freq; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.006);
-    s.connect(f); f.connect(g); g.connect(m); s.start();
+    const t = c.currentTime + delay;
+    s.buffer = buf; f.type = type; f.frequency.value = freq; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.006);
+    s.connect(f); f.connect(g); g.connect(m); s.start(t);
   }
 }
 

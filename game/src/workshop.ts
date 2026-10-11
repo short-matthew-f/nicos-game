@@ -530,7 +530,7 @@ export class Workshop {
   /** Karate class with Mr. Master Krantz: watch the combination, then do it back. Three clean ones earn the next belt. */
   karate() {
     const b = this.host.biz, toward = nextBelt(b.belt), belt = BELTS[toward], first = b.belt < 0;
-    this.show('karate', 'Tang Soo Do class', first ? 'Mr. Master Krantz: "Welcome! Bow in. Watch me, then copy me, in the same order."' : `Mr. Master Krantz: "Three clean combinations, and you earn your ${belt.name} belt!"`);
+    this.show('karate', 'Form practice', first ? 'Mr. Master Krantz: "Welcome! Bow in. Watch me, then copy me, in the same order."' : `Mr. Master Krantz: "Three clean combinations, and you earn your ${belt.name} belt!"`);
     const svg = s('svg', { viewBox: '0 0 600 250', class: 'blueprint' }) as SVGSVGElement;
     svg.append(s('rect', { x: 0, y: 0, width: 600, height: 250, rx: 18, fill: '#E9DDB8' }));
     for (let x = 0; x < 600; x += 100) svg.append(s('rect', { x: x + 2, y: 2, width: 96, height: 246, rx: 6, fill: 'none', stroke: '#CDBF93', 'stroke-width': 3 }));   // tatami mats

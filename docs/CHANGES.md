@@ -1025,3 +1025,22 @@ Nico's grandparents, from family photos (reference only, not in the repo).
   - "Kick Mrs. Master Krantz's pads", any time they aren't busy: his own short combination on her pads.
 - **Sounds:** the dobok snapping on each move, a thump on the pads, a shout for each kihap. Speech bubbles show one at a time per person.
 - **Fixed:** on a second visit (once their art had loaded), Mrs. Master Krantz, Master Schindewolf and Erin weren't drawn, because they were added before the room was shown. The e2e now runs a full form with Nico and his pad turn.
+
+### Dojo games: sparring, pad rhythm, form practice (2026-10-11)
+- **The user:** "Sparring that feels like an actual fighting game. Kick and punch practice that feels like a rhythm game." Also: "make the memory game 'form practice'." Mr. Master Krantz's card now offers Form practice (the watch-and-copy belt game, renamed), Sparring and Pad rhythm.
+- **Sparring** (`spar.ts`, drawn by `dojoGames.ts`): played on the ring, zoomed in.
+  - Nico against Erin (easy), Mrs. Master Krantz, Master Schindewolf, or Mr. Master Krantz (black belt).
+  - A bow and "FIGHT!" to start; health bars and a 60 s clock.
+  - Jab, kick and block, with startup, active and recovery frames, reach, knockback and hit stun.
+  - A lunge into each strike; hit sparks and screen shake; combo counts.
+  - A Kihap meter fills on hits; when full, a spinning kick goes through a block.
+  - Each instructor has their own reaction speed, aggression, blocking and kicking, and their own lines. They say "Good match" either way and bow at the end.
+  - The first win against each pays $10.
+  - Controls: ◀ ▶ and PUNCH, KICK, BLOCK, KIHAP buttons; keys A/D or arrows, J, K, L, space.
+- **Pad rhythm** (`rhythm.ts`): an instructor holds the pads.
+  - Punches, kicks and kihaps slide along a track to the hit line, in time with a drum beat scheduled on the audio clock: kick drum, snare, hats, a bass line, a chime on each kihap, and a bar of count-in.
+  - Timing judgments: Perfect (±75 ms), Great (±130 ms), OK (±200 ms) or Miss; stray presses cost nothing.
+  - A combo multiplier; a grade from S to D; a best score saved for each song.
+  - Three songs: Warm-Up (92 bpm, Erin holds), Hana Dul Set (110, Mrs. Master Krantz), Black Belt Beat (128, Master Schindewolf).
+- **While a game's on:** the main HUD hides, the camera comes in close, and the other instructors watch from their places.
+- **Tests:** `test/spar.test.ts` (hits, whiffs, blocks, the meter, every instructor fights back, button-mashing can beat Erin) and `test/rhythm.test.ts`. E2e: the card's three options, landing a punch on Erin, quitting, and the first rhythm notes.

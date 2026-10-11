@@ -47,7 +47,8 @@ import { Pinball } from './pinball/view';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
-import { Routine, SHOW, type Actor, type DojoEvent } from './dojo';
+import { Routine, SHOW, type Actor, type ActorPose, type DojoEvent } from './dojo';
+import { DojoGames, RIVALS, SONGS } from './dojoGames';
 import { PAGES, type Art } from './book';
 import { shellArt } from './world/beach';
 import { Weather, seasonOf, SEASON, SEASONS, puddleAt, umbrellaArt, type Sky, type Season } from './world/weather';
@@ -639,7 +640,13 @@ async function main() {
     for (const b of bubbles) { b.t += dt; b.c.y -= dt * 12; b.c.alpha = Math.max(0, 1 - Math.max(0, b.t - 1.1) / 0.4); }
     for (const b of bubbles.filter(q => q.t > 1.5)) b.c.destroy({ children: true });
     for (let i = bubbles.length - 1; i >= 0; i--) if (bubbles[i].c.destroyed) bubbles.splice(i, 1);
-    if (room?.id !== 'dojo') return;
+    if (room?.id !== 'dojo') { if (games.showing) games.stop(); return; }
+    if (games.showing) {   // sparring or pad rhythm: the two playing take the mat, the others watch from their places
+      if (dojoRoutine) { restoreCast(); dojoRoutine = null; }
+      const { poses, events } = games.frame(dt);
+      applyDojo(dt, poses, events);
+      return;
+    }
     const ready = ['krantz', 'mrskrantz', 'schindewolf', 'erin'].every(a => dojoCast.has(a as Actor));
     if (!dojoRoutine) {
       if (!ready || mode !== 'walk' || cardOpen) return;
@@ -648,6 +655,20 @@ async function main() {
       if (dojoRoutine.kind === 'pads') dojoSay([600, 300], 'Grab the pads! Partner up!');
     }
     const { poses, events } = dojoRoutine.update(dt);
+    applyDojo(dt, poses, events);
+    if (dojoRoutine.done) {
+      // back to their places, as they were
+      restoreCast();
+      if (dojoRoutine.actors.includes('nico')) { dojoWalk.delete('nico'); stopPlay(); nico.st.moves = undefined; toast(dojoRoutine.kind === 'form' ? '🥋 You did the whole form with your masters! Kamsahamnida!' : '🥋 Great kicks! Mrs. Master Krantz high-fives you.'); boost = Math.min(BOOST.max, boost + 20); }
+      dojoRoutine = null; dojoIn = SHOW.every[0] + Math.random() * (SHOW.every[1] - SHOW.every[0]);
+    }
+  }
+  function restoreCast() {
+    for (const [a, c] of dojoCast) { c.view.pose(c.home[0], c.home[1], c.st); dojoWalk.delete(a); }
+    for (const pd of dojoPads.values()) pd.destroy(); dojoPads.clear();
+  }
+  /** Stand everyone as told (a routine or a game), and show what they say and the hits. */
+  function applyDojo(dt: number, poses: Map<Actor, ActorPose>, events: DojoEvent[]) {
     for (const [a, p] of poses) {
       const isNico = a === 'nico', v = isNico ? nico.view : dojoCast.get(a)?.view; if (!v) continue;
       const st = dojoWalk.get(a) ?? { ...neutral('side') }; dojoWalk.set(a, st);
@@ -666,15 +687,27 @@ async function main() {
       const v = e.actor === 'nico' ? nico.view : dojoCast.get(e.actor)?.view, p = poses.get(e.actor);
       if (e.kind === 'hit' && e.x !== undefined) burst(e.x, e.y!);
       if ((e.kind === 'say' || e.kind === 'kihap') && p && v) dojoSay([p.x, p.y - 190 * v.height], e.text!, e.kind === 'kihap', e.actor);
-    }
-    if (dojoRoutine.done) {
-      // back to their places, as they were
-      for (const [a, c] of dojoCast) { c.view.pose(c.home[0], c.home[1], c.st); dojoWalk.delete(a); }
-      for (const pd of dojoPads.values()) pd.destroy(); dojoPads.clear();
-      if (dojoRoutine.actors.includes('nico')) { dojoWalk.delete('nico'); stopPlay(); nico.st.moves = undefined; toast(dojoRoutine.kind === 'form' ? '🥋 You did the whole form with your masters! Kamsahamnida!' : '🥋 Great kicks! Mrs. Master Krantz high-fives you.'); boost = Math.min(BOOST.max, boost + 20); }
-      dojoRoutine = null; dojoIn = SHOW.every[0] + Math.random() * (SHOW.every[1] - SHOW.every[0]);
+      else if ((e.kind === 'say' || e.kind === 'kihap') && v) { const c = dojoCast.get(e.actor); if (c) dojoSay([c.home[0], c.home[1] - 190 * v.height], e.text!, e.kind === 'kihap', e.actor); }
     }
   }
+  // sparring and pad rhythm (dojoGames.ts)
+  const games = new DojoGames({
+    opened: on => {
+      document.body.classList.toggle('dg-on', on);
+      if (on) { mode = 'play'; play = { kind: 'dojo', t: 0, from: [nico.x, nico.y], seat: 0 }; }
+      else { restoreCast(); dojoWalk.delete('nico'); nico.st.moves = undefined; if (play?.kind === 'dojo') { stopPlay(); nico.x = 600; nico.y = 700; } dojoIn = SHOW.every[0]; }
+    },
+    best: id => biz.scores[id] ?? 0,
+    setBest: (id, n) => { biz.scores[id] = n; persist(); },
+    won: (kind, id, info) => {
+      see(biz, kind, id);
+      if (kind === 'spar' && info.first) { state.money += 10; showMoney(); sfx.cash(4); toast(`🥊 You beat ${RIVALS.find(r => r.who === id)!.name} for the first time! +$10`); }
+      if (kind === 'rhythm' && (info.grade === 'S' || info.grade === 'A')) { boost = Math.min(BOOST.max, boost + 30); }
+      persist();
+    },
+    burst: (x, y, big) => { burst(x, y); if (big) { burst(x - 14, y - 10); burst(x + 14, y + 8); } },
+    shake: n => { shake = Math.max(shake, n); },
+  });
   /** Nico joins in: the form (while they're lining up), or Mrs. Master Krantz's pads. */
   function dojoJoin(kind: 'form' | 'nicopads') {
     if (kind === 'form') { if (!dojoRoutine?.join([nico.x, nico.y])) return; }
@@ -713,7 +746,13 @@ async function main() {
     dojo: () => {
       const has = biz.belt >= 0, next = BELTS[nextBelt(biz.belt)], black = isBlack(biz.belt);
       showCard('dojo', '🥋 Mr. Master Krantz', `Mr. Master Krantz: “${has ? pick([`Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to Litchfield Tang Soo Do! Would you like to try a class?'}”`, [
-        { label: black ? '🥋 Train with Mr. Master Krantz' : has ? `🥋 Class: earn your ${next.name} belt` : '🥋 Your first class', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
+        { label: black ? '🥋 Form practice' : has ? `🥋 Form practice: earn your ${next.name} belt` : '🥋 Form practice: your first belt', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
+        { label: '🥊 Sparring', sub: 'pick a partner', id: 'spar', disabled: !!dojoRoutine, onClick: () => showCard('spar', '🥊 Sparring', 'Who do you want to spar with? Erin goes easy on you; Mr. Master Krantz does not!', RIVALS.map(r => ({
+          label: r.name, sub: biz.scores[`spar:${r.who}`] ? 'beaten! ★' : ['easy', 'medium', 'hard', 'black belt'][RIVALS.indexOf(r)], id: `spar:${r.who}`, onClick: () => { closePlace(); games.startSpar(r); },
+        })), 'Not now') },
+        { label: '🎵 Pad rhythm', sub: 'punch and kick to the beat', id: 'rhythm', disabled: !!dojoRoutine, onClick: () => showCard('rhythm', '🎵 Pad rhythm', 'Hit the pads in time: PUNCH, KICK and KIHAP when each one reaches the line!', SONGS.map(sg => ({
+          label: sg.name, sub: biz.scores[`rhythm:${sg.id}`] ? `best ${biz.scores[`rhythm:${sg.id}`].toLocaleString()}` : `${sg.bpm} bpm`, id: `song:${sg.id}`, onClick: () => { closePlace(); games.startRhythm(sg); },
+        })), 'Not now') },
       ], 'Kamsahamnida!');
     },
   };
@@ -1600,6 +1639,8 @@ async function main() {
     pinballOpen: () => pinball.open(),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
+    games: () => ({ showing: games.showing, spar: games.spar ? { nico: { ...games.spar.nico }, rival: { ...games.spar.rival }, over: games.spar.over, winner: games.spar.winner, intro: games.spar.intro } : null, rhythm: games.rhythm ? { score: games.rhythm.score, combo: games.rhythm.combo, notes: games.rhythm.notes.length, judged: games.rhythm.notes.filter(n => n.judged).length } : null, last: games.last }),
+    gamesStop: () => games.stop(),
     dojoGo: (k: 'form' | 'pads') => { if (room?.id === 'dojo' && !dojoRoutine && dojoCast.size >= 4) dojoRoutine = new Routine(k, Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin']); },
     bookOpen: (p?: string) => book.open(p),
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
@@ -1632,6 +1673,7 @@ async function main() {
     world.scale.set(zoom); room?.view.scale.set(zoom);
     for (const n of [nico, ...walkers, ...locals, ...shoppers]) n.view.setZoom(zoom, resolution);
     room?.worker?.setZoom(zoom, resolution);
+    for (const c of dojoCast.values()) c.view.setZoom(zoom, resolution);
   };
   applyZoom();
   app.renderer.on('resize', applyZoom);
@@ -1951,10 +1993,10 @@ async function main() {
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 
     // camera follows Nico (or his car, looking ahead), clamped to the world; eases the zoom
-    const wantH = overview ? Math.max(WORLD.h, WORLD.w * app.screen.height / app.screen.width) : mode === 'drive' ? VIEW_H_DRIVE : play?.kind === 'camera' ? CAM.zoomH : VIEW_H;
+    const wantH = overview ? Math.max(WORLD.h, WORLD.w * app.screen.height / app.screen.width) : mode === 'drive' ? VIEW_H_DRIVE : play?.kind === 'camera' ? CAM.zoomH : games.showing ? VIEW_H * 0.72 : VIEW_H;   // (the dojo's games: in close on the mat)
     if (Math.abs(viewH - wantH) > 0.5) { viewH += (wantH - viewH) * Math.min(1, dt * 3); applyZoom(); }
-    const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[0] : nico.x;
-    const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[1] : nico.y - 40;
+    const fx = mode === 'drive' ? car.x + Math.cos(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[0] : games.spar ? (games.spar.nico.x + games.spar.rival.x) / 2 : games.showing ? 550 : nico.x;
+    const fy = mode === 'drive' ? car.y + Math.sin(car.h) * car.speed * 0.35 : play?.kind === 'camera' ? aim[1] : games.showing ? 520 : nico.y - 40;
     const vw = app.screen.width / zoom, vh = app.screen.height / zoom;
     const bw = room ? room.w : WORLD.w, bh = room ? room.h : WORLD.h;   // (inside: the room's walls; a small room just sits in the middle)
     // (it trails a moment behind, so moving feels like moving; a jump of more than a screen just cuts)

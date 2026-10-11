@@ -817,6 +817,24 @@ with sync_playwright() as p:
     room_at('pads'); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(400)
     check(G()['dojo'] and G()['dojo']['kind'] == 'nicopads', f"Nico kicks Mrs. Master Krantz's pads ({G()['dojo']})")
     pg.wait_for_function('window.__game.dojo === null', timeout=30000)
+    # the dojo's games: sparring (a fighting game) and pad rhythm
+    room_at('counter'); pg.click('#action'); pg.wait_for_timeout(300)
+    check(all(pg.locator(f'#place-menu button[data-item={k}]').count() == 1 for k in ('karate', 'spar', 'rhythm')) and 'Form practice' in pg.locator('#place-menu button[data-item=karate]').inner_text(),
+          'Mr. Master Krantz offers form practice, sparring and pad rhythm')
+    pg.click('#place-menu button[data-item=spar]'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="spar:erin"]'); pg.wait_for_timeout(2600)
+    g = pg.evaluate('()=>window.__game.games()'); check(g['showing'] and g['spar'] and g['spar']['intro'] <= 0 and pg.locator('.dg-btn.punch').is_visible(), f"sparring with Erin: health bars, the clock, big buttons ({g['spar'] and g['spar']['intro']})")
+    hp0 = pg.evaluate('()=>window.__game.games()')['spar']['rival']['hp']
+    for _ in range(60):
+        sp = pg.evaluate('()=>window.__game.games()')['spar']
+        if sp['rival']['hp'] < hp0 or sp['over']: break
+        if sp['rival']['x'] - sp['nico']['x'] > 110: pg.keyboard.down('ArrowRight'); pg.wait_for_timeout(120); pg.keyboard.up('ArrowRight')
+        else: pg.keyboard.press('j'); pg.wait_for_timeout(150)
+    check(pg.evaluate('()=>window.__game.games()')['spar']['rival']['hp'] < hp0, f"walk in and land a punch on Erin ({pg.evaluate('()=>window.__game.games()')['spar']['rival']['hp']})")
+    pg.click('.dg-quit'); pg.wait_for_timeout(300)
+    check(not pg.evaluate('()=>window.__game.games()')['showing'] and G()['mode'] == 'walk', 'stop sparring: back to walking round the dojo')
+    room_at('counter'); pg.click('#action'); pg.wait_for_timeout(300); pg.click('#place-menu button[data-item=rhythm]'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="song:warmup"]'); pg.wait_for_timeout(6800)
+    r = pg.evaluate('()=>window.__game.games()')['rhythm']; check(r and r['notes'] > 15 and r['judged'] >= 1, f"pad rhythm: the notes come in time to the beat ({r})")
+    pg.click('.dg-quit'); pg.wait_for_timeout(300)
     pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
     check(G()['beltShown'] is None and G()['nicoLook'] == 'nico', f"...and changes back outside ({G()['beltShown']}, {G()['nicoLook']})")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
