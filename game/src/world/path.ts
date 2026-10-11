@@ -3,11 +3,12 @@ export type P = [number, number];
 
 /** Round each corner of a closed polygon with a quadratic curve of reach R, keeping the
  * straight runs straight (cars stay in lane until the turn). */
-export function roundCorners(pts: P[], R = 90, steps = 10): P[] {
+export function roundCorners(pts: P[], R0 = 90, steps = 10): P[] {
   const out: P[] = [];
   for (let i = 0; i < pts.length; i++) {
     const q = pts[(i + pts.length - 1) % pts.length], p = pts[i], n = pts[(i + 1) % pts.length];
     const lu = Math.hypot(p[0] - q[0], p[1] - q[1]), lv = Math.hypot(n[0] - p[0], n[1] - p[1]);
+    const R = Math.min(R0, lu / 2, lv / 2);   // (a short run between two corners shares it out)
     const a: P = [p[0] - (p[0] - q[0]) / lu * R, p[1] - (p[1] - q[1]) / lu * R];
     const b: P = [p[0] + (n[0] - p[0]) / lv * R, p[1] + (n[1] - p[1]) / lv * R];
     for (let k = 0; k <= steps; k++) {

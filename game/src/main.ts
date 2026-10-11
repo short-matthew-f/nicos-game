@@ -13,6 +13,7 @@ import { Night, DAY, inForest, darkness, light } from './world/night';
 import { UNLOCKS, unlockOf, isUnlocked, canUnlock, unlock, PAINT_BONUS } from './unlocks';
 import { makeTraffic, leaders, carSprite, carCirclesOf } from './world/cars';
 import { FireTruck, TRUCK } from './world/firetruck';
+import { Fiat, FIAT } from './world/fiat';
 import { FireScene } from './world/fire';
 import { Siren, sfx, audio, played, footstep, Ambience } from './sound';
 import { surfaceAt, roomSurface } from './surface';
@@ -123,6 +124,8 @@ async function main() {
   for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
+  const fiat = new Fiat();   // Poppop's Fiat 500, out for a drive now and then
+  layer.addChild(fiat.view);
   // fire calls: when the alarm rings, a building near the truck's route catches fire (just
   // smoke and flames in a front window) and the truck stops there to spray it out
   const fireScene = new FireScene(); layer.addChild(fireScene.view);
@@ -1334,6 +1337,7 @@ async function main() {
     // test/inspection: show the whole town (zoom out to fit) until called again with false
     overview: (on: boolean) => { overview = on; },
     alarm: () => truck.alarm(),
+    fiatGo: () => fiat.go(),
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };
   (window as unknown as { __game: unknown }).__game = game;
@@ -1512,7 +1516,7 @@ async function main() {
       const prevH = car.h;
       if (frozen) steer(car, 0, 0, dt); else steer(car, input.vx, input.vy, dt);
       const truckCircles: [number, number, number][] = truck.out ? truck.points().map(([x, y]) => [x, y, TRUCK.wid * 0.45]) : [];
-      moveCar(car, prevH, dt, SOLIDS, WORLD, [...carCirclesOf(cars), ...truckCircles]);
+      moveCar(car, prevH, dt, SOLIDS, WORLD, [...carCirclesOf(cars), ...truckCircles, ...fiat.points().map(([x, y]) => [x, y, FIAT.wid * 0.48] as [number, number, number])]);
     }
     carView.position.set(car.x, car.y);
     turnCar(car.h);
@@ -1579,7 +1583,7 @@ async function main() {
     }
     around.dark = night.dark; around.inside = !!room; ambience.update(dt, around);
     night.update(clock, dt, here(), { w: app.screen.width, h: app.screen.height });
-    night.headlights([[car.x, car.y, car.h], ...cars.map(c => [c.pos[0], c.pos[1], c.loop.heading(c.s)] as [number, number, number])], CAR.len, CAR.wid);
+    night.headlights([[car.x, car.y, car.h], ...cars.map(c => [c.pos[0], c.pos[1], c.loop.heading(c.s)] as [number, number, number]), ...(fiat.out ? [[fiat.pos[0], fiat.pos[1], fiat.heading] as [number, number, number]] : [])], CAR.len, CAR.wid);
     if (room) night.moon.visible = false;
     for (const sp of splashes) { sp.t += dt; sp.g.scale.set(1 + sp.t * 2.2); sp.g.alpha = Math.max(0, 1 - sp.t / 0.8); if (sp.t > 0.8) sp.g.destroy(); }
     splashes.splice(0, splashes.length, ...splashes.filter(sp => sp.t <= 0.8));
@@ -1624,11 +1628,15 @@ async function main() {
     if (mode !== 'drive' && !room) mine.push([nico.x, nico.y, 'nico']);
     for (const l of locals) mine.push([l.w.x, l.w.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
-    for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...mine]);
-    const truckOut = truck.update(dt, [...mine, ...cars.filter(c => c.blockedBy !== 'truck').flatMap(c => {
+    // (and Poppop in his Fiat, who gives way to everyone not already waiting for him)
+    const fiatPts: [number, number, string][] = fiat.out ? fiat.points().map(([x, y]) => [x, y, 'fiat']) : [];
+    for (let i = 0; i < cars.length; i++) cars[i].update(dt, lead[i], [...truckPts, ...fiatPts, ...mine]);
+    const carPts = (not: string) => cars.filter(c => c.blockedBy !== not).flatMap(c => {
       const [x, y] = c.pos, h = c.loop.heading(c.s);
       return circles(x, y, h).map(([cx, cy]) => [cx, cy]) as [number, number][];
-    })]);
+    });
+    const truckOut = truck.update(dt, [...mine, ...carPts('truck'), ...(fiat.blockedBy !== 'truck' ? fiatPts : [])]);
+    fiat.update(dt, [...mine, ...truckPts, ...carPts('fiat')]);
     // the fire: water from the truck while it's parked there spraying
     const spraying = truck.out && truck.stopAt !== null && truck.speed === 0 && truck.spraying > 0;
     fireScene.update(dt, spraying ? [truck.pos[0], truck.pos[1] - 70] : null);
@@ -1699,6 +1707,7 @@ async function main() {
     const mapDots = ([
       ...locals.map(l => ({ x: l.w.x, y: l.w.y, color: l.t.who === 'primo' ? '#2456C8' : '#2E3A66', r: 3 })),
       ...(truck.out ? [{ x: truck.pos[0], y: truck.pos[1], color: flash ? '#FF4D4D' : '#4DA3FF', r: 4 }] : []),
+      ...(fiat.out ? [{ x: fiat.pos[0], y: fiat.pos[1], color: FIAT.color, r: 3.5 }] : []),
       ...(fireScene.burning && fireScene.building ? [{ x: fireScene.building.x + fireScene.building.w / 2, y: fireScene.building.y, color: flash ? '#F28C38' : '#FFD45C', r: 6, ring: true }] : []),
       ...(mode === 'drive' ? [] : [{ x: car.x, y: car.y, color: MY_CAR.color, r: 3.5 }]),
       ...(jobAt ? [{ x: jobAt[0], y: jobAt[1], color: '#F9C846', r: 5.5, ring: true }] : []),
@@ -1732,6 +1741,7 @@ async function main() {
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },
       fire: fireScene.burning ? fireScene.building!.id : null,
+      fiat: { out: fiat.out, s: fiat.s, len: fiat.loop.length, speed: fiat.speed, pos: fiat.pos, wait: fiat.wait, blockedBy: fiat.blockedBy },
       truck: { out: truck.out, stopAt: truck.stopAt, spraying: truck.spraying, s: truck.s, len: truck.loop.length, speed: truck.speed, pos: truck.pos, wait: truck.wait },
       nico: { art: nico.view.artLoaded(), x: nico.x, y: nico.y, view: nico.st.view, face: nico.st.face, amp: nico.st.amp,
               screen: { x: nb.x, y: nb.y, w: nb.width, h: nb.height } },

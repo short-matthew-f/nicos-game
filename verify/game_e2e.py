@@ -194,6 +194,12 @@ with sync_playwright() as p:
         pg.wait_for_function('!window.__game.truck.out', timeout=60000); back = True
     except Exception: back = False
     check(back, f"it puts out the fire, finishes its lap and goes home within a minute ({G()['truck']})")
+    # Poppop's Fiat 500: off down his driveway and along the road into town
+    pg.evaluate('()=>window.__game.fiatGo()')
+    try:
+        pg.wait_for_function('window.__game.fiat.out && window.__game.fiat.pos[0] < 4500 && window.__game.fiat.speed > 50', timeout=30000); fiat = True
+    except Exception: fiat = False
+    check(fiat, f"Poppop drives his Fiat out of his driveway and along the road into town ({G()['fiat']})")
     # James and Primo walk their routines; walk up to say hi; Primo's swing is taken
     t0 = {t['who']: t for t in G()['townsfolk']}
     check({'james', 'primo'} <= set(t0) and len(t0) >= 8 and all(t['art'] for t in t0.values()), f"James, Primo and the townspeople are in town with their own art ({list(t0)})")

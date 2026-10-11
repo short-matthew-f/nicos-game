@@ -187,16 +187,29 @@ export function carLoops(): [number, number][][] {
 
 /** Paved aprons from a building to the road (drawn on the ground, not solid). */
 export const bld = (id: string) => BUILDINGS.find(b => b.id === id)!;
-const GARAGE = bld('garage'), FIRE = bld('fire');
+const GARAGE = bld('garage'), FIRE = bld('fire'), WOODSHOP = bld('woodshop');
 export const DRIVEWAYS = [
   // from the garage door east to the road
   { id: 'home', x: GARAGE.x, y: GARAGE.y + GARAGE.d + 4, w: ROADS_X[0] - ROAD_W / 2 - SIDEWALK - GARAGE.x, d: 176 },
   // the fire station's apron, west to the road
   { id: 'fire', x: ROADS_X[1] + ROAD_W / 2 + SIDEWALK, y: FIRE.y + FIRE.d + 4, w: FIRE.x + FIRE.w - (ROADS_X[1] + ROAD_W / 2 + SIDEWALK), d: 176 },
+  // from Poppop's barn doors south to the road, where his Fiat 500 lives
+  { id: 'poppop', x: WOODSHOP.x + 20, y: WOODSHOP.y + WOODSHOP.d + 4, w: WOODSHOP.w - 40, d: ROADS_Y[1] - ROAD_W / 2 - SIDEWALK - (WOODSHOP.y + WOODSHOP.d + 4) },
 ];
 
 /** Where Nico's car waits at the start: on the home driveway, nose to the road. */
 export const PARKED_CAR = { x: GARAGE.x + GARAGE.w / 2, y: DRIVEWAYS[0].y + DRIVEWAYS[0].d / 2, h: 0 };
+
+/** Poppop's drive in his Fiat 500: down his driveway, west along the road into town, a lap
+ * of the outer ring road with the traffic (counter-clockwise), back east and up the drive,
+ * turning round in front of the barn so he's parked nose-out again. Starts and ends at
+ * the parked spot (the loop's s = 0). */
+export function poppopRoute(): [number, number][] {
+  const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
+  const mid = WOODSHOP.x + WOODSHOP.w / 2, out = mid - 60, back = mid + 60, top = WOODSHOP.y + WOODSHOP.d + 50;
+  return [[out, top + 120], [out, y1 - LANE], [x1 + LANE, y1 - LANE], [x1 + LANE, y0 - LANE], [x0 - LANE, y0 - LANE],
+          [x0 - LANE, y1 + LANE], [back, y1 + LANE], [back, top], [out, top]];
+}
 
 /** The spot in front of a building's door, where its action button appears. */
 export function doorOf(b: Building): [number, number] {
