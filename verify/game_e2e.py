@@ -1064,6 +1064,32 @@ with sync_playwright() as p:
     drag(80, 0, 600); check(G()['nico']['amp'] < 0.3 and not errs, 'Primo walks fine')
     pg.click('#who'); pg.wait_for_timeout(200); pg.click('#place-menu button[data-item="who:nico"]'); pg.wait_for_timeout(300)
     check(G()['player'] == 'nico' and 'primo' in [t['who'] for t in G()['townsfolk']], 'back to Nico')
+    # orders (orders.ts): once he's sold something, people order from him; take it, make them, deliver them. Due days are
+    # soft: a late order waits, and still pays in full
+    pg.evaluate("()=>{window.__game.exitRooms(); window.__game.setBiz({designs: ['car', 'robot'], sold: {car: 1}, stock: {}, orders: {list: [], delivered: 0, nextId: 1}}); window.__game.offerOrder()}"); pg.wait_for_timeout(600)
+    o = G()['orderOffer']
+    check(o and pg.locator('#orders-btn').is_visible() and '❗' in pg.locator('#orders-btn').inner_text(), f"an order comes in: the 📒 button says so ({o})")
+    pg.click('#orders-btn'); pg.wait_for_timeout(300); pg.click('#place-menu [data-item=take]'); pg.wait_for_timeout(300)
+    ol = G()['orders']['list']
+    check(len(ol) == 1 and ol[0]['who'] == o['who'] and not G()['orderOffer'], f"take it: it's on the list ({ol})")
+    check(o['n'] > 0 and 'Make' in G()['goal'], f"the goal chip says what to make ({G()['goal']})")
+    pg.evaluate(f"()=>window.__game.setDay({o['due'] + 5})"); pg.wait_for_timeout(200)
+    check(len(G()['orders']['list']) == 1, 'past its due day, the order is still there (no hard deadlines)')
+    pg.evaluate(f"()=>window.__game.setStock('{o['what']}', {o['n']})"); pg.wait_for_timeout(200)
+    check('Deliver' in G()['goal'], f"with enough made, the chip says deliver ({G()['goal']})")
+    m0 = G()['money']
+    if o['who'] in [t['who'] for t in G()['townsfolk']]:
+        t = next(t for t in G()['townsfolk'] if t['who'] == o['who']); pg.evaluate(f"()=>window.__game.place({t['x']},{t['y'] + 40})")
+    else:
+        s0 = G()['spots'][o['who']]; pg.evaluate(f"()=>{{window.__game.place({s0['x']},{s0['y']}); window.__game.use('{o['who']}')}}"); pg.wait_for_timeout(900)
+        d = G()['roomSpots'].get('deliver'); check(d is not None, f"inside {o['who']}: a Deliver spot at the counter ({list(G()['roomSpots'])})")
+        if d: pg.evaluate(f"()=>window.__game.place({d['x']},{d['y']})")
+    pg.wait_for_timeout(300)
+    check('Deliver' in pg.locator('#action').inner_text(), f"the button says Deliver ({pg.locator('#action').inner_text()})")
+    pg.evaluate('()=>window.__game.act()'); pg.wait_for_timeout(400)
+    g = G()
+    check(g['money'] == m0 + o['pay'] and not g['orders']['list'] and g['orders']['delivered'] == 1, f"delivered late: paid in full, no tip, off the list ({m0} -> {g['money']}, pay {o['pay']})")
+    pg.evaluate('()=>window.__game.exitRooms()'); pg.wait_for_timeout(300)
     # lite mode (what a slow device switches to by itself): still runs, outlines kept
     pg.evaluate('()=>window.__game.goLow()'); pg.wait_for_timeout(800)
     check(G()['low'] and G()['fps'] > 0 and '(lite)' in pg.locator('#fps').inner_text(), 'lite mode runs and says so on the fps counter')

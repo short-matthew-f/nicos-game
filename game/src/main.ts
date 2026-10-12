@@ -46,6 +46,7 @@ import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Race, COURSES, nicoStart, type Course } from './race';
 import { HideSeek, SPOTS, HIDE, warmth, type Kind as HideKind } from './hide';
+import { ORDERS, ordersOpen, pickOrder, accept as acceptOrder, deliver as deliverOrder, deliverable, focus as orderFocus, orderGoal, customer, goodName, good, have, dueText, type Order } from './orders';
 import { makeRea, stepRea, buildFor, REA, startFollow, letGo, footstep as reaFootstep, stepFollow, seesCar, wantsToCome } from './rea';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
@@ -943,6 +944,7 @@ async function main() {
       const u = t.use, [x, y] = useSpot(t);
       out.push({ id: u.action && u.action === room!.id ? 'counter' : `thing${i}`, x, y, r: 100, label: u.label, run: () => {
         if (u.sit && t.kind === 'block') { if (u.at) sitAtChair(t); else { const st = seatOf(t); sitOn(st.x, st.hip, st.z, [x, y]); } return; }
+        if (u.sit && t.kind === 'emoji' && t.seat) { sitOn(t.x, t.y - t.seat, t.y + 1, [x, y]); return; }   // (an armchair)
         if (u.action === 'bell') { for (let k = 0; k < 3; k++) audio.tone('triangle', 1568, 1568, 0.25, 0.08, k * 0.3); toast('🔔 Ding ding ding! The firefighters come running... false alarm!'); return; }
         if (u.action) { placeAction(u.action); return; }
         if (u.lines) toast(pick(u.lines));
@@ -1309,6 +1311,11 @@ async function main() {
   }
   /** What Nico can do inside the room he's in. */
   function roomSpots(): Spot[] {
+    const out = baseRoomSpots(), od = room ? deliverable(state.biz, room.id)[0] : null;
+    const at = od && out.find(q => q.id === 'counter' || q.id === 'order');
+    return at ? [...out, { id: 'deliver', x: at.x, y: at.y, r: at.r, priority: 2, label: `📦 Deliver ${goodName(od!.what, od!.n)}`, run: () => handOver(od!) }] : out;
+  }
+  function baseRoomSpots(): Spot[] {
     if (!room) return [];
     if (room.kind === 'shed') return shedSpots();
     if (room.kind === 'shop') return shopSpots();
@@ -1598,6 +1605,39 @@ async function main() {
     if (wantOffer?.giver === who) return jobById(`want:${who}:${wantOffer.item}`);
     const j = jobFor(who); return j && !(jobWait[j.id] > 0) ? j : null;
   };
+  // ---- orders (orders.ts): once he's sold something he made, people and places order from him. An offer waits
+  // till he answers it (📒); orders he takes wait on his list till he brings the lot. Due days are soft.
+  let orderOffer: Order | null = null, orderIn: number = ORDERS.first;
+  const ordersBtn = document.getElementById('orders-btn') as HTMLButtonElement;
+  const cap = (t: string) => t[0].toUpperCase() + t.slice(1);
+  function showOrders() {
+    const b = state.biz, list = b.orders.list, full = list.length >= ORDERS.open, o = orderOffer;
+    const text = o ? `📬 ${cap(customer(o.who)!.name)}: “${o.why}”${full ? ' (Your list is full: deliver one first.)' : ''}`
+      : list.length ? `Make what's ordered, then take it to whoever ordered it. Delivered so far: ${b.orders.delivered}.` : 'No orders right now. New ones come in as you play.';
+    showCard('orders', '📒 Orders', text, [
+      ...(o ? [
+        { label: `✅ Take it: ${goodName(o.what, o.n)}`, sub: `$${o.pay} · ${dueText(o, day)}`, id: 'take', disabled: full, onClick: () => { acceptOrder(b, o); orderOffer = null; orderIn = nextOrderIn(); persist(); sfx.tap(); toast(`📒 On your list: ${goodName(o.what, o.n)} for ${customer(o.who)!.name}`); } },
+        { label: '🙅 No thanks', id: 'decline', onClick: () => { orderOffer = null; orderIn = nextOrderIn(); toast(`${cap(customer(o.who)!.name)}: “No problem! Maybe next time.”`); } },
+      ] : []),
+      ...list.map(q => ({ label: `${good(q.what).emoji} ${goodName(q.what, q.n)} → ${customer(q.who)!.name}`, sub: `$${q.pay} · ${Math.min(have(b, q.what), q.n)}/${q.n} · ${dueText(q, day)}`, id: `order${q.id}`, onClick: () => toast(orderGoal(b, q, day)) })),
+    ], 'Close');
+  }
+  /** Where the minimap star goes for an order: where to make more, or (with enough) whoever ordered. */
+  function orderTarget(o: Order): [number, number] | null {
+    const g = good(o.what);
+    if (have(state.biz, o.what) < o.n) return g.source === 'stock' ? SHED_DOOR : g.source === 'bakery' ? BAKERY_DOOR : SHOP_DOOR;
+    if (customer(o.who)!.at === 'person') { const l = locals.find(q => q.t.who === o.who); return l && !gone(l) ? [l.w.x, l.w.y] : null; }
+    const bd = BUILDINGS.find(q => q.id === o.who); return bd ? doorOf(bd) : null;
+  }
+  const nextOrderIn = () => ORDERS.every[0] + Math.random() * (ORDERS.every[1] - ORDERS.every[0]);
+  ordersBtn.addEventListener('click', showOrders);
+  /** Hand over an order he has enough for. */
+  function handOver(o: Order) {
+    const c = customer(o.who)!, r = deliverOrder(state.biz, o.id, day);
+    if (!r.pay) return;
+    state.money += r.pay + r.tip; showMoney(); persist(); sfx.coin(); sfx.sparkle();
+    toast(`📦 ${cap(c.name)}: “${pick(['Perfect, thank you!', 'These are great. Just what we needed!', 'You\'re a real businessman, Nico!', 'Wonderful work!'])}” +$${r.pay}${r.tip ? ` (+$${r.tip} tip: right on time!)` : ''}`);
+  }
   const wanted = () => { const st = job && jobStep(job); return st && st.kind === 'bring' ? st.item : null; };
   const finishing = (who: string) => {
     if (!job || job.job.giver !== who) return false;
@@ -1615,6 +1655,8 @@ async function main() {
   }
   function talkTo(l: Local) {
     if (l.climb) { toast(`${l.t.name}: “${['Look at me! I\'m on the roof!', 'You can see the whole town from up here!', 'Shh, don\'t tell anyone I\'m up here!'][l.said++ % 3]}”`); return; }
+    const od = deliverable(state.biz, l.t.who)[0];
+    if (od) { handOver(od); return; }
     if (finishing(l.t.who)) { payJob(); return; }
     const w = wanted();
     if (w && job!.job.giver === l.t.who) { toast(`${l.t.name}: “Any luck finding ${item(w).label}? The storage units might have one.”`); return; }
@@ -1629,8 +1671,8 @@ async function main() {
     spots.push({
       // someone waiting to be told a job's done beats the door they're standing at; someone with a job to
       // offer ties with it (the nearer wins); just saying hi never blocks a door
-      id: l.t.who, x: 0, y: 0, r: 90, priority: () => (finishing(l.t.who) ? 0.5 : offers(l.t.who) ? 0 : -0.1),
-      label: () => finishing(l.t.who) ? `Finish job ✔` : offers(l.t.who) ? `Talk to ${l.t.name} ❗` : `Say hi to ${l.t.name}`,
+      id: l.t.who, x: 0, y: 0, r: 90, priority: () => (deliverable(state.biz, l.t.who).length || finishing(l.t.who) ? 0.5 : offers(l.t.who) ? 0 : -0.1),
+      label: () => deliverable(state.biz, l.t.who).length ? `📦 Deliver ${goodName(deliverable(state.biz, l.t.who)[0].what, deliverable(state.biz, l.t.who)[0].n)}` : finishing(l.t.who) ? `Finish job ✔` : offers(l.t.who) ? `Talk to ${l.t.name} ❗` : `Say hi to ${l.t.name}`,
       run: () => talkTo(l),
     });
     if (jobFor(l.t.who)) { const b = drawBubble(); b.position.set(0, -172); b.scale.set(1.25); b.visible = false; l.view.root.addChild(b); l.bubble = b; }
@@ -1919,14 +1961,14 @@ async function main() {
     const c = l.climb!, b = c.b, t = (c.t += dt), back = c.dur - t, k = Math.min(t, back);
     stepRoute(l.t, l.w, dt);   // (ticks the stop's wait; it moves on when that's done)
     const wall = l.w.y - (b.y + b.d - b.h) + 6, roof = b.d * 0.45, UP = 1.8, OVER = 0.5;
-    let lift: number, view: View = 'front', amp = 0, hold = 0;
+    let lift: number, view: View = 'front', amp = 0, hold = 0, wave: number | undefined;
     if (k < UP) { lift = wall * smoothstep(k / UP); view = 'back'; amp = 1; }                 // hand over hand up the wall
     else if (k < UP + OVER) { lift = wall + roof * (k - UP) / OVER; view = t < back ? 'back' : 'front'; amp = 0.6; }
-    else { lift = wall + roof; hold = 0.5 + 0.5 * Math.sin(t * 7); }                           // up top, waving
-    Object.assign(l.st, { view, face: 1, crouch: 0, hold, sit: 0, stride_y: 0 });
+    else { lift = wall + roof; wave = 20 * Math.sin(t * 7); }                                  // up top, waving (one arm, not a clap)
+    Object.assign(l.st, { view, face: 1, crouch: 0, hold, sit: 0, stride_y: 0, wave });
     stepGait(l.st, amp * 140, 0, dt, GAIT_SCALE * l.view.height);
     l.view.pose(l.w.x, l.w.y - lift, l.st); l.view.root.zIndex = b.y + b.d + 5;
-    if (l.w.wait <= 0 || back <= 0) { l.climb = null; Object.assign(l.st, { hold: 0 }); }
+    if (l.w.wait <= 0 || back <= 0) { l.climb = null; Object.assign(l.st, { hold: 0, wave: undefined }); }
   }
   const smoothstep = (a: number) => { a = Math.max(0, Math.min(1, a)); return a * a * (3 - 2 * a); };
   function stepLocal(l: Local, dt: number) {
@@ -2449,10 +2491,17 @@ async function main() {
       const w = pickWant(Math.random, () => false);   // (a request takes the place of their usual job for a while)
       if (w) wantOffer = { ...w, left: WANT.offerFor };
     }
-    const goal = nextGoal(biz, state.money), gp = goalPlace(biz, state.money);
+    if (!orderOffer && ordersOpen(biz) && biz.orders.list.length < ORDERS.open && (orderIn -= dt) <= 0) {
+      orderIn = nextOrderIn(); orderOffer = pickOrder(biz, day);
+      if (orderOffer) { sfx.goal(); toast(`📬 New order! ${cap(customer(orderOffer.who)!.name)} wants ${goodName(orderOffer.what, orderOffer.n)}. Tap 📒 to see it.`); }
+    }
+    ordersBtn.hidden = !ordersOpen(biz);
+    { const t = orderOffer ? '📒❗' : '📒'; if (ordersBtn.textContent !== t) ordersBtn.textContent = t; }
+    const of = orderFocus(biz);
+    const goal = of ? orderGoal(biz, of, day) : nextGoal(biz, state.money), gp = of ? null : goalPlace(biz, state.money);
     goalEl.hidden = !goal || !!job;   // one thing at a time: an odd job's chip takes the place of the goal
     if (goal && goalEl.textContent !== goal) goalEl.textContent = goal;
-    const goalAt = gp && !job ? (gp === 'shed' ? SHED_DOOR : doorOf(BUILDINGS.find(b => b.id === gp)!)) : null;
+    const goalAt = job ? null : of ? orderTarget(of) : gp ? (gp === 'shed' ? SHED_DOOR : doorOf(BUILDINGS.find(b => b.id === gp)!)) : null;
 
     // minimap: top-left, under the money
     const mr = moneyEl.getBoundingClientRect();
@@ -2493,6 +2542,9 @@ async function main() {
       room: room ? room.id : null, carrying: carrying?.label ?? null, roomSpots: Object.fromEntries(roomSpots().map(q => [q.id, { x: q.x, y: q.y }])),
       floating, inWater: play?.kind === 'swim', photos: { ...biz.photos }, aimAt: (x: number, y: number) => { aim = [x, y]; }, aim: [...aim],
       sounds: { ...played }, scatters, player, last2: work.last2, awayFor: (sec: number) => { biz.shop.last = biz.bakery.last = Date.now() - sec * 1000; catchUp(0); }, clock, dark: night.dark, setClock: (u: number) => { clock = u; }, shoppers: shoppers.map(q => ({ name: q.name, x: q.x, y: q.y, looking: q.look > 0 })), visitNow: () => { for (const k in visitIn) visitIn[k] = 0; }, baking: { ...work.baking }, strung: [...work.strung], want: wantOffer ? { ...wantOffer } : null,
+      orders: JSON.parse(JSON.stringify(biz.orders)), orderOffer: orderOffer ? { ...orderOffer } : null, day,
+      offerOrder: () => { orderOffer = null; orderIn = 0; }, showOrders, setDay: (d: number) => { day = d; },
+      setStock: (id: string, n: number) => { const g = good(id); if (g.source === 'stock') biz.stock[id] = n; else { const r = (g.source === 'bakery' ? biz.bakery : biz.shop).rack; r.splice(0, r.length, ...r.filter(p => p.id !== id)); for (let k = 0; k < n; k++) r.push({ id, price: g.price, ...(g.source === 'shop' ? { shells: [] } : {}) }); } },
       offerWant: (giver: string, it: string) => { wantOffer = { giver, item: it, left: WANT.offerFor }; },
       mode, money: state.money, boost, play: play?.kind ?? null, inside: openPlace?.building ?? cardOpen, job: job ? { id: job.job.id, step: job.step, at: jobAt } : null, jobWait: { ...jobWait }, action: action.spot ? action.spot.id : null,
       car: { x: car.x, y: car.y, h: car.h, speed: car.speed },

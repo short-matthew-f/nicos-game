@@ -4,6 +4,7 @@ import { freshBiz, freshDoors, HALL, ITEMS, type Biz } from './business';
 import { migrateUnlocks } from './unlocks';
 import { freshShop, DESIGNS, SHOP, type Shop } from './jewelry';
 import { RECIPES, BAKERY } from './bakery';
+import { GOODS, ORDERS, customer } from './orders';
 import { WALLPAPERS, RUGS, PAINTINGS_KEPT } from './decor';
 
 export const VERSION = 6;
@@ -99,6 +100,7 @@ function cleanBiz(raw: unknown): Biz {
     belt: typeof b.belt === 'number' && Number.isInteger(b.belt) && b.belt >= 0 && b.belt < 8 ? b.belt : -1,
     scores: counts(b.scores),
     seen: counts(b.seen),
+    orders: cleanOrders(b.orders),
   };
   migrateUnlocks(out);   // (a save with a workbench already has its shed)
   return out;
@@ -144,6 +146,18 @@ function cleanUnit(raw: unknown): Biz['unit'] {
   if (!items.length) return null;
   const n = (x: unknown) => (typeof x === 'number' && isFinite(x) && x >= 0 ? x : 0);
   return { door: u.door, name: typeof u.name === 'string' ? u.name : 'A', paid: n(u.paid), got: n(u.got), items };
+}
+
+function cleanOrders(raw: unknown): Biz['orders'] {
+  const f = { list: [], delivered: 0, nextId: 1 } as Biz['orders'];
+  if (!raw || typeof raw !== 'object') return f;
+  const o = raw as Partial<Biz['orders']>;
+  const int = (x: unknown, lo = 0) => (typeof x === 'number' && Number.isInteger(x) && x >= lo ? x : null);
+  const list = (Array.isArray(o.list) ? o.list : []).filter(q => q && typeof q === 'object' && int(q.id, 1) !== null && customer(q.who) && GOODS.some(g => g.id === q.what)
+    && int(q.n, 1) !== null && int(q.pay) !== null && int(q.due) !== null).slice(0, ORDERS.open)
+    .map(q => ({ id: q.id, who: q.who, what: q.what, n: q.n, pay: q.pay, due: q.due, why: typeof q.why === 'string' ? q.why : '' }));
+  const nextId = Math.max(int(o.nextId, 1) ?? 1, ...list.map(q => q.id + 1));
+  return { list, delivered: int(o.delivered) ?? 0, nextId };
 }
 
 function cleanShop(raw: unknown, ids: string[] = DESIGNS.map(d => d.id), max = SHOP.rack, shells = true): Shop {

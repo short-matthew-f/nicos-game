@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 url = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:5173/'
 OUT = (sys.argv[2] if len(sys.argv) > 2 else '/tmp/game_states').rstrip('/') + '/'
-GROUPS = sys.argv[3:] or ['walk', 'play', 'rooms', 'screens', 'sky', 'folk']
+GROUPS = sys.argv[3:] or ['walk', 'play', 'rooms', 'screens', 'sky', 'folk', 'orders']
 os.makedirs(OUT, exist_ok=True)
 UNLOCK_ALL = ['shed', 'workbench', 'shelves', 'bins', 'shop', 'bakery', 'doghouse', 'plant', 'posters', 'bookshelf', 'beanbag', 'tv', 'fishtank', 'cat', 'birdhouse', 'sign', 'metalstar', 'paint']
 ROOMS = ['burger', 'icecream', 'potato', 'retro', 'school', 'hospital', 'home', 'garage', 'fire', 'parts', 'toys', 'barn', 'poolhouse', 'cabin',
@@ -97,6 +97,21 @@ with sync_playwright() as p:
                           ('steady', 'window.__game.steadyOpen(0)'), ('xray', 'window.__game.xrayOpen()')]:
                 boot(); E(js); pg.wait_for_timeout(1500); shot('screens', f'screen_{n}', crop=False)
             boot(); m = G()['minimapAt']; pg.mouse.click(m['x'], m['y']); pg.wait_for_timeout(700); shot('screens', 'screen_bigmap', crop=False)
+        if 'orders' in GROUPS:   # an order comes in, the list, a delivery at the counter
+            boot(); E("window.__game.setBiz({designs: ['car', 'robot'], sold: {car: 1}, stock: {}, orders: {list: [], delivered: 0, nextId: 1}}); window.__game.offerOrder()"); pg.wait_for_timeout(700)
+            shot('orders', 'order_new', crop=False)
+            E('window.__game.showOrders()'); pg.wait_for_timeout(300); shot('orders', 'order_offer', crop=False)
+            pg.click('#place-menu [data-item=take]'); pg.wait_for_timeout(300)
+            E("window.__game.offerOrder()"); pg.wait_for_timeout(500); E("window.__game.showOrders()"); pg.wait_for_timeout(300)
+            if pg.locator('#place-menu [data-item=take]').count(): pg.click('#place-menu [data-item=take]'); pg.wait_for_timeout(300)
+            o = G()['orders']['list'][0]; E(f"window.__game.setStock('{o['what']}', {o['n']})"); pg.wait_for_timeout(300)
+            E('window.__game.showOrders()'); pg.wait_for_timeout(300); shot('orders', 'order_list', crop=False); pg.click('#place-close'); pg.wait_for_timeout(200)
+            if o['who'] in [t['who'] for t in G()['townsfolk']]:
+                t = next(t for t in G()['townsfolk'] if t['who'] == o['who']); E(f"window.__game.place({t['x']},{t['y'] + 40})")
+            else:
+                go(o['who']); E(f"window.__game.use('{o['who']}')"); pg.wait_for_timeout(900); d = G()['roomSpots']['deliver']; E(f"window.__game.place({d['x']},{d['y']})")
+            pg.wait_for_timeout(400); shot('orders', 'order_deliver', crop=False)
+            E('window.__game.act()'); pg.wait_for_timeout(500); shot('orders', 'order_done', crop=False)
         if 'sky' in GROUPS:
             for n, js in [('night', 'window.__game.setClock(0.85)'), ('dusk', 'window.__game.setClock(0.6)'), ('rain', 'window.__game.setWeather("rain")'),
                           ('snow', 'window.__game.setSeason("winter"); window.__game.setWeather("snow")'), ('autumn', 'window.__game.setSeason("autumn")')]:

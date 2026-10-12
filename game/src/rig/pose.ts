@@ -16,6 +16,7 @@ export interface PoseState {
   hold: number;      // 0..1 arms forward
   breath: number;    // idle chest rise (units)
   sit?: number;      // 0..1 sitting (game-only: not in the Python rig, so parity poses leave it out)
+  wave?: number;     // front/back, game-only: the right arm up overhead, waving; degrees of swing (±20 is a good wave)
   knee?: number;     // 0..1 side view: bend the knees (sitting on a stool): thigh forward, shin down (game-only too)
   /** Side view, game-only: martial arts (the dojo). Angles in degrees from hanging straight down; negative is
    * forward (fa/fl: the near arm and leg; ba/bl: the far ones). `bow`: lean the body forward (deg), `w`: how much
@@ -129,6 +130,7 @@ function fbOps(st: PoseState): Record<string, Op[]> {
   const shoe = (i: number): Op[] => { const q = side(i); return [['t', i * LX, -q.lift + q.off]]; };
   const arm = (i: number): Op[] => {
     const a = side(i).arm, h = st.hold, [hin, hshort] = HOLD[st.view === 'back' ? 'back' : 'front'];
+    if (i === 1 && st.wave !== undefined) return [['t', i * AX + sway, -100 + dd - st.breath], ['r', -i * (128 + st.wave)], ['s', 1, 1]];   // (up and waving)
     return [['t', i * AX + sway, -100 + dd - st.breath], ['r', -i * (ARM_OUT + 3.0 * Math.abs(a)) * (1 - h) + i * hin * h], ['s', 1, (1 - 0.14 * Math.abs(a)) * (1 - hshort * h)]];
   };
   const up: Op[] = [['t', sway, -58 + dd - st.breath]];

@@ -1376,3 +1376,48 @@ The user: "Nonna doesn't operate a store. She was however an Ophthalmologist. An
   - A host who leaves while Nico's inside leaves their small solid footprint behind (an invisible bump where they stood).
   - Primo's wave on the roof now shows as hands coming together (it reads as clapping).
   - Standing up from a chair puts him 26 px in front of it. The interiors test checks the use spot, not this, so a table close to a wall could put him in a solid.
+
+## Orders and customers, unique homes, Primo's wave (2026-10-12)
+The user: "We haven't made any progress on Nico's main goal. Entrepreneurship!" They chose **orders and customers first** (the workshop and the first hire come later; the first hire will be Primo). Mid-build they added: "don't have any hard deadlines. Just. Due."
+
+**Orders (`src/orders.ts`, pure, tested in `test/orders.test.ts`):**
+- **When they start:** once Nico has sold something he made (a toy, jewelry, or bakes).
+- **Who orders:** places and people. The Toy Shop, the Burger Barn, the School, the Hospital, the Fire Station and Nonna; and Mrs. Kim, Mr. Brooks, Maya and Sam in town.
+- **What they order:** only things Nico can already make. Built toys come from his stock; bakes and jewelry come off the bakery and Bibs and Bobs racks.
+- **Offers:** a new order comes in as an offer, with a 📬 toast and a ❗ on the new 📒 button. He takes it or says no thanks. An offer waits until he answers.
+- **The list:** at most 3 open orders, and one per customer.
+- **Due days are soft:** each order is due in 1–3 game days (a day is 12 minutes). On time earns a 15% tip. Late still pays in full. Nothing expires and nothing is lost.
+- **Pay:** better than selling one at a time (1.1–1.5× the item's price).
+- **Growth:** orders grow by one for every 4 delivered, up to 8.
+- **Delivering:** a 📦 Deliver spot appears at the counter of the place that ordered. For a person, it's their talk spot in town.
+- **Goal chip:** shows the order to work on (one he can deliver first, otherwise the soonest due), with the minimap star on where to make more or where to deliver. An odd job still takes precedence.
+- **Save:** `biz.orders` goes through the usual field-by-field cleanup. No version bump: older saves just get an empty book.
+- **Debug:** `offerOrder`, `showOrders`, `setStock`, `setDay`, `orders`, `orderOffer`.
+- **Checks:** the e2e plays offer → take → past due → deliver (paid in full). `verify/game_states.py` has a new `orders` group.
+- **Known:**
+  - An order for bakes or jewelry competes with the shop's own visitors for the same rack.
+  - Orders for built toys don't reserve anything; selling them at the Toy Shop still works.
+  - A waiting offer isn't saved. After a reload a new one comes after the usual gap.
+  - Delivering to a place whose host is out (Nonna away in the Fiat) still shows their thank-you.
+  - A first robot delivered by order counts as sold, so the Toy Shop's first-robot price is gone after that.
+- **Pay keeps up with paint:** with the paint station, an order's price includes the painted-toy bonus, so orders still pay more than the Toy Shop (tested).
+
+**Homes feel unique** (the user: "Homes should feel unique inside"):
+- **Nonna and Poppop's**, from the user's photos (reference only):
+  - knotty-pine walls (the new `pine` room option);
+  - the kitchen: a stainless fridge, cherry cabinets under granite, Nonna's stove, and the big digit clock;
+  - the long table with its white cloth and a panettone;
+  - the Perugia griffin banner over a sideboard with wine, a rooster and a candle;
+  - a stone fireplace with string lights, the family name board on the mantel, stockings and a snowy painting;
+  - an Eames lounge chair and ottoman, a yellow shell chair, a burgundy recliner, a leather sofa, a Mission coffee table, and an amber mica lamp.
+- **The friends' houses** no longer share one template:
+  - Maya's: bookcases, a piano, a reading nook and a homework desk.
+  - Leo's: a big TV, a console, beanbags and an ice-cream freezer.
+  - Sam's grandma's: a grandfather clock, a rocking chair, a flowery sofa and cookies.
+  - Ava's: a trophy shelf, a soccer poster and cleats by the door.
+  - Mrs. Kim's: plants, a bonsai, a scroll and a tea table.
+  - Mr. Brooks's: medical books, his desk, an X-ray poster and an aquarium.
+- **Armchairs** (a big picture with a `seat`) can be sat in, facing out.
+- **New art:** fireplace, eames, shellchair, recliner, micalamp, piano, bookcase, grandclock, aquarium, rocker, floorlamp, armchairs in four colours, plus small rooster, panettone, griffin, wine and candle icons.
+
+**Primo's roof wave** no longer reads as a clap. The rig has a new `wave` (front and back views): the right arm goes up and out and swings. Before, swinging `hold` brought both hands together. The rig sheet now has wave poses.

@@ -1,5 +1,6 @@
 import { unlockOf, PAINT_BONUS } from './unlocks';
 import { freshShop, type Shop } from './jewelry';
+import type { OrderBook } from './orders';
 
 // The business loop (v2): flip storage units for money and parts, buy a workbench, build
 // the toy car, test it, sell it. Data first, like places.ts and jobs.ts: every price and
@@ -284,9 +285,10 @@ export interface Biz {
   learned: string[];               // recipes the grandparents taught him ('pizzelle')
   belt: number;                    // karate belt earned (karate.ts BELTS index; -1: none yet)
   scores: Record<string, number>;  // best scores in the games he plays ('pinball')
+  orders: OrderBook;               // orders from customers he's said yes to (orders.ts)
   seen: Record<string, number>;    // everything ever found or made, as 'page:id' -> how many (the sticker book: book.ts)
 }
-export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [], belt: -1, scores: {}, seen: {} });   // (keys of WALLPAPERS / RUGS: decor.ts)
+export const freshBiz = (): Biz => ({ items: {}, finds: [], workbench: false, designs: [], stock: {}, sold: {}, flips: 0, skills: [], seed: 1, doors: freshDoors(1), unit: null, tools: [], shells: {}, photos: {}, shown: [], unlocked: [], found: [], shop: freshShop(), bakery: freshShop(), home: { wall: 'blue', rug: 'sunny' }, paintings: [], learned: [], belt: -1, scores: {}, seen: {}, orders: { list: [], delivered: 0, nextId: 1 } });   // (keys of WALLPAPERS / RUGS: decor.ts)
 
 /** Note something found or made, for the sticker book (things get sold or used up; this remembers). */
 export function see(b: Biz, page: string, id: string, n = 1) { const k = `${page}:${id}`; b.seen[k] = (b.seen[k] ?? 0) + n; }

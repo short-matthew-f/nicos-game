@@ -81,6 +81,10 @@ Then workers, conveyors and more hustles (handoff §12 onward).
 - Ice cream shop interior (same room system), then other insides (Toy Shop, Parts & Tools) if Nico wants them.
 - Parked: the kite, house cleaning, and hiring a worker. The worker could reuse the shop's answer to how time works: it runs while the game is open, plus a capped catch-up on load.
 
+## Done 2026-10-12: orders (entrepreneurship, step 1)
+- **Orders and customers** (`src/orders.ts`): places and people order things Nico makes. Due days are soft, with a tip for being on time; deliver at the counter or in person.
+- **Next for the business:** his own workshop and the first hire, **Primo** (the user's pick).
+
 ## Waiting on
 - Nico playing the new zones and Burger Barn; the iPad frame rate in the forest.
 - Nico playing v2. Use the playtest list at the end of `docs/UX_NOTES.md`.

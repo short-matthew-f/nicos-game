@@ -125,6 +125,13 @@ const ICONS: Record<string, Draw> = {
   cookie: (g, k) => g.circle(0, 0, 12 * k).fill('#D9A066').stroke(edge).circle(-4 * k, -3 * k, 2 * k).fill('#5A3A22').circle(4 * k, 2 * k, 2 * k).fill('#5A3A22'),
   cupcake: (g, k) => g.poly([-10 * k, 0, 10 * k, 0, 7 * k, 12 * k, -7 * k, 12 * k]).fill('#7FD1E8').circle(0, -3 * k, 10 * k).fill('#F7C8D0').circle(0, -12 * k, 3 * k).fill('#E5484D'),
   bread: (g, k) => g.roundRect(-14 * k, -7 * k, 28 * k, 14 * k, 7 * k).fill('#C9874A').stroke(edge).moveTo(-6 * k, -5 * k).lineTo(-2 * k, 2 * k).moveTo(2 * k, -5 * k).lineTo(6 * k, 2 * k).stroke({ width: 2, color: '#E8B47A' }),
+  rooster: (g, k) => g.ellipse(0, 4 * k, 12 * k, 9 * k).fill('#6B4430').stroke(edge).poly([-10 * k, 0, -20 * k, -12 * k, -14 * k, 6 * k]).fill('#2B4A3A').circle(9 * k, -8 * k, 6 * k).fill('#6B4430')
+    .poly([14 * k, -9 * k, 20 * k, -7 * k, 14 * k, -5 * k]).fill('#F2A93B').poly([6 * k, -14 * k, 9 * k, -19 * k, 12 * k, -14 * k]).fill('#E5484D').rect(-3 * k, 12 * k, 2 * k, 6 * k).fill('#F2A93B').rect(3 * k, 12 * k, 2 * k, 6 * k).fill('#F2A93B'),
+  panettone: (g, k) => g.ellipse(0, 12 * k, 17 * k, 4 * k).fill('#2F6FD0').rect(-12 * k, -2 * k, 24 * k, 13 * k).fill('#E8B866').stroke(edge).ellipse(0, -3 * k, 13 * k, 9 * k).fill('#9A5A2B').circle(-4 * k, 4 * k, 1.5 * k).fill('#5E2A24').circle(5 * k, 7 * k, 1.5 * k).fill('#5E2A24'),
+  griffin: (g, k) => g.ellipse(2 * k, 4 * k, 11 * k, 7 * k).fill('#B07A3A').poly([-2 * k, 0, -14 * k, -16 * k, 2 * k, -6 * k]).fill('#B07A3A').circle(12 * k, -5 * k, 5 * k).fill('#B07A3A')
+    .poly([16 * k, -6 * k, 21 * k, -3 * k, 16 * k, -2 * k]).fill('#8A5A2B').rect(-6 * k, 9 * k, 3 * k, 8 * k).fill('#B07A3A').rect(6 * k, 9 * k, 3 * k, 8 * k).fill('#B07A3A').poly([-9 * k, 4 * k, -18 * k, 12 * k, -10 * k, 8 * k]).fill('#B07A3A'),
+  wine: (g, k) => g.roundRect(-4 * k, -14 * k, 8 * k, 28 * k, 3 * k).fill('#3E5A2E').stroke(edge).rect(-2 * k, -18 * k, 4 * k, 6 * k).fill('#3E5A2E').rect(-4 * k, 0, 8 * k, 8 * k).fill('#F4EBD6'),
+  candle: (g, k) => g.rect(-4 * k, -6 * k, 8 * k, 18 * k).fill('#F4F1EA').stroke(edge).ellipse(0, -11 * k, 3 * k, 5 * k).fill('#F9C846'),
   plant: (g, k) => g.poly([-7 * k, 4 * k, 7 * k, 4 * k, 5 * k, 14 * k, -5 * k, 14 * k]).fill('#C8463D').circle(0, -6 * k, 8 * k).fill('#3E8F5A').circle(-6 * k, -1 * k, 6 * k).fill('#3E8F5A').circle(6 * k, -1 * k, 6 * k).fill('#5DB86F'),
   star: (g, k) => { const p: number[] = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? 6 : 14) * k; p.push(Math.cos(a) * r, Math.sin(a) * r); } g.poly(p).fill('#F9C846').stroke(edge); },
   heart: (g, k) => g.moveTo(0, 12 * k).bezierCurveTo(-18 * k, 0, -10 * k, -14 * k, 0, -5 * k).bezierCurveTo(10 * k, -14 * k, 18 * k, 0, 0, 12 * k).fill('#E5484D').stroke(edge),
@@ -188,6 +195,85 @@ const BIG: Record<string, Draw> = {
   bag: (g, k) => g.rect(-38 * k, -230 * k, 8 * k, 230 * k).fill('#3A3A44').rect(-38 * k, -230 * k, 60 * k, 8 * k).fill('#3A3A44').rect(14 * k, -222 * k, 3 * k, 30 * k).fill('#9AA3AE')
     .roundRect(-6 * k, -194 * k, 42 * k, 130 * k, 18 * k).fill('#C8463D').rect(-6 * k, -170 * k, 42 * k, 6 * k).fill('#2B2B30').rect(-6 * k, -96 * k, 42 * k, 6 * k).fill('#2B2B30')
     .ellipse(-34 * k, 0, 26 * k, 7 * k).fill('#3A3A44'),
+  // Nonna and Poppop's house (2026-10-12, from the user's photos): eclectic, Italian, Eames chairs, knotty pine
+  // a stone fireplace: a painting over it, the mantel with the family's name board, stockings, and string lights
+  fireplace: (g, k) => {
+    g.rect(-122 * k, -240 * k, 244 * k, 240 * k).fill('#9C9488').stroke({ width: 4, color: WH });
+    const stone = ['#B3AA9C', '#8C8478', '#A39A8C', '#7E776C'];
+    for (let r = 0; r < 12; r++) for (let i = 0; i < 6; i++) { const x = -118 + i * 40 + (r % 2 ? 20 : 0); if (x > 100) continue;
+      g.roundRect(x * k, (-236 + r * 20) * k, Math.min(36, 118 - x) * k, 16 * k, 5 * k).fill(stone[(r * 3 + i) % 4]); }
+    g.roundRect(-72 * k, -222 * k, 144 * k, 74 * k, 4 * k).fill(WH).rect(-66 * k, -216 * k, 132 * k, 62 * k).fill('#C9DCEB')   // a snowy painting
+      .poly([-66 * k, -154 * k, -20 * k, -190 * k, 10 * k, -170 * k, 40 * k, -196 * k, 66 * k, -176 * k, 66 * k, -154 * k]).fill('#F4F6F8');
+    g.roundRect(-58 * k, -92 * k, 116 * k, 92 * k, 10 * k).fill('#2B2320');   // the firebox
+    g.ellipse(-16 * k, -22 * k, 16 * k, 26 * k).fill('#F28C38').ellipse(14 * k, -18 * k, 13 * k, 20 * k).fill('#F28C38').ellipse(0, -14 * k, 10 * k, 16 * k).fill('#F9E04A')
+      .rect(-40 * k, -8 * k, 80 * k, 8 * k).fill('#6B4430');
+    g.rect(-130 * k, -126 * k, 260 * k, 16 * k).fill('#7A5236');               // the mantel beam
+    g.rect(-104 * k, -110 * k, 208 * k, 16 * k).fill('#E3C9A0');               // the name board
+    for (let i = 0; i < 13; i++) g.rect((-98 + i * 16) * k, -105 * k, 10 * k, 4 * k).fill({ color: '#8A5A3B', alpha: 0.7 });   // (the names)
+    for (const [x, c] of [[-84, '#C8463D'], [-50, '#3E8F5A'], [50, '#2F6FD0'], [84, '#C8463D']] as [number, string][])   // stockings
+      g.poly([(x - 8) * k, -94 * k, (x + 8) * k, -94 * k, (x + 8) * k, -66 * k, (x + 16) * k, -62 * k, (x + 14) * k, -54 * k, (x - 8) * k, -56 * k]).fill(c).rect((x - 9) * k, -96 * k, 18 * k, 7 * k).fill(WH);
+    const bulbs = ['#E5484D', '#F9C846', '#3BB273', '#4F8FE0', '#F28C38'];
+    for (let i = 0; i <= 26; i++) { const x = -126 + i * 9.7, y = -128 + 7 * Math.abs(Math.sin(i * Math.PI / 6.5)); g.circle(x * k, y * k, 3.2 * k).fill(bulbs[i % 5]); }
+  },
+  // an Eames lounge chair and ottoman: walnut shells, black leather (Nonna's favourite)
+  eames: (g, k) => {
+    for (const [x, y] of [[-40, 0], [40, 0], [0, 6]]) g.moveTo(0, -30 * k).lineTo(x * k, y * k).stroke({ width: 4 * k, color: '#4A4E55' });
+    g.roundRect(-46 * k, -124 * k, 92 * k, 46 * k, 14 * k).fill('#6B4430').stroke(edge)       // headrest shell
+      .roundRect(-48 * k, -82 * k, 96 * k, 44 * k, 14 * k).fill('#6B4430').stroke(edge)          // back shell
+      .roundRect(-40 * k, -118 * k, 80 * k, 34 * k, 12 * k).fill('#2C2C33').roundRect(-42 * k, -78 * k, 84 * k, 34 * k, 12 * k).fill('#2C2C33')
+      .roundRect(-54 * k, -48 * k, 108 * k, 22 * k, 10 * k).fill('#6B4430').stroke(edge).roundRect(-48 * k, -54 * k, 96 * k, 22 * k, 10 * k).fill('#34343C')   // seat
+      .roundRect(-62 * k, -66 * k, 16 * k, 30 * k, 6 * k).fill('#2C2C33').roundRect(46 * k, -66 * k, 16 * k, 30 * k, 6 * k).fill('#2C2C33');                 // arms
+    g.moveTo(78 * k, -18 * k).lineTo(64 * k, 2 * k).moveTo(78 * k, -18 * k).lineTo(94 * k, 2 * k).stroke({ width: 4 * k, color: '#4A4E55' })               // the ottoman
+      .roundRect(54 * k, -36 * k, 50 * k, 18 * k, 8 * k).fill('#6B4430').stroke(edge).roundRect(57 * k, -42 * k, 44 * k, 14 * k, 7 * k).fill('#34343C');
+  },
+  // a sunny yellow mid-century shell chair on wooden legs
+  shellchair: (g, k) => {
+    g.moveTo(-26 * k, -34 * k).lineTo(-34 * k, 0).moveTo(26 * k, -34 * k).lineTo(34 * k, 0).moveTo(-12 * k, -34 * k).lineTo(-14 * k, 4 * k).moveTo(12 * k, -34 * k).lineTo(14 * k, 4 * k).stroke({ width: 4 * k, color: '#8A5A3B' });
+    g.moveTo(-54 * k, -110 * k).bezierCurveTo(-70 * k, -80 * k, -56 * k, -40 * k, -30 * k, -32 * k).lineTo(30 * k, -32 * k).bezierCurveTo(56 * k, -40 * k, 70 * k, -80 * k, 54 * k, -110 * k)
+      .bezierCurveTo(30 * k, -96 * k, -30 * k, -96 * k, -54 * k, -110 * k).fill('#F2C230').stroke(edge);
+    g.roundRect(-34 * k, -52 * k, 68 * k, 18 * k, 8 * k).fill('#E3B020');
+  },
+  // a burgundy leather recliner
+  recliner: (g, k) => g.roundRect(-52 * k, -110 * k, 104 * k, 76 * k, 26 * k).fill('#6E2A35').stroke(edge).roundRect(-40 * k, -100 * k, 80 * k, 40 * k, 18 * k).fill('#80323F')
+    .roundRect(-60 * k, -60 * k, 120 * k, 56 * k, 16 * k).fill('#6E2A35').stroke(edge).roundRect(-40 * k, -58 * k, 80 * k, 22 * k, 10 * k).fill('#80323F')
+    .roundRect(-64 * k, -70 * k, 22 * k, 50 * k, 10 * k).fill('#5E222C').roundRect(42 * k, -70 * k, 22 * k, 50 * k, 10 * k).fill('#5E222C').rect(-50 * k, -6 * k, 100 * k, 6 * k).fill('#4A3A30'),
+  // a Mission-style lamp: a green pottery base and an amber mica shade, glowing
+  micalamp: (g, k) => { g.circle(0, -150 * k, 70 * k).fill({ color: '#FFD45C', alpha: 0.16 });
+    g.roundRect(-24 * k, -100 * k, 48 * k, 74 * k, 8 * k).fill('#5E8F7A').stroke(edge).rect(-30 * k, -30 * k, 60 * k, 30 * k).fill('#8A5A3B').stroke(edge)
+      .rect(-3 * k, -130 * k, 6 * k, 32 * k).fill('#4A3A30').poly([-28 * k, -196 * k, 28 * k, -196 * k, 56 * k, -130 * k, -56 * k, -130 * k]).fill('#F2A93B').stroke(edge)
+      .poly([-18 * k, -186 * k, 18 * k, -186 * k, 38 * k, -140 * k, -38 * k, -140 * k]).fill({ color: '#FFE08A', alpha: 0.6 }); },
+  // the friends' houses (2026-10-12: "homes should feel unique inside")
+  piano: (g, k) => { g.roundRect(-70 * k, -130 * k, 140 * k, 130 * k, 6 * k).fill('#2C2420').stroke(edge).rect(-64 * k, -64 * k, 128 * k, 14 * k).fill('#F4F1EA');
+    for (let i = 0; i < 9; i++) g.rect((-58 + i * 14) * k, -64 * k, 6 * k, 8 * k).fill('#2C2420');
+    g.rect(-30 * k, -120 * k, 60 * k, 36 * k).fill('#F4F1EA').rect(-26 * k, -114 * k, 52 * k, 2 * k).fill('#9AA6B2').rect(-26 * k, -104 * k, 52 * k, 2 * k).fill('#9AA6B2'); },
+  bookcase: (g, k) => { g.rect(-50 * k, -200 * k, 100 * k, 200 * k).fill('#8A5A3B').stroke(edge);
+    const c = ['#E5484D', '#2F6FD0', '#F9C846', '#3BB273', '#7B5BA6', '#F28C38'];
+    for (let r = 0; r < 4; r++) { g.rect(-44 * k, (-192 + r * 48) * k, 88 * k, 42 * k).fill('#5E3E28');
+      for (let i = 0; i < 7; i++) g.rect((-42 + i * 12) * k, (-186 + r * 48 + (i * 7 + r) % 9) * k, 10 * k, (36 - (i * 7 + r) % 9) * k).fill(c[(i + r * 2) % 6]); } },
+  grandclock: (g, k) => g.roundRect(-26 * k, -210 * k, 52 * k, 210 * k, 10 * k).fill('#6B4430').stroke(edge).circle(0, -170 * k, 20 * k).fill('#F4F1EA').moveTo(0, -170 * k).lineTo(0, -184 * k).moveTo(0, -170 * k).lineTo(10 * k, -166 * k).stroke({ width: 2.5 * k, color: NV })
+    .roundRect(-14 * k, -130 * k, 28 * k, 100 * k, 6 * k).fill('#4A2F20').rect(-1 * k, -128 * k, 2 * k, 70 * k).fill('#C9A46A').circle(0, -56 * k, 8 * k).fill('#E3B020'),
+  aquarium: (g, k) => { g.rect(-80 * k, -60 * k, 160 * k, 60 * k).fill('#3E4A5A').stroke(edge).roundRect(-80 * k, -150 * k, 160 * k, 92 * k, 6 * k).fill('#4FB3E0').stroke(edge)
+    .rect(-80 * k, -72 * k, 160 * k, 14 * k).fill('#E8D7A8');
+    for (const [x, y, c] of [[-40, -120, '#F28C38'], [20, -100, '#F9C846'], [50, -128, '#E5484D']] as [number, number, string][]) g.ellipse(x * k, y * k, 10 * k, 6 * k).fill(c).poly([(x - 9) * k, y * k, (x - 17) * k, (y - 5) * k, (x - 17) * k, (y + 5) * k]).fill(c);
+    g.rect(-60 * k, -100 * k, 4 * k, 28 * k).fill('#3E8F5A').rect(62 * k, -110 * k, 4 * k, 38 * k).fill('#3E8F5A'); },
+  rocker: (g, k) => g.moveTo(-46 * k, 0).bezierCurveTo(-20 * k, 8 * k, 20 * k, 8 * k, 46 * k, 0).stroke({ width: 5 * k, color: '#8A5A3B' })
+    .rect(-34 * k, -40 * k, 6 * k, 40 * k).fill('#8A5A3B').rect(28 * k, -40 * k, 6 * k, 40 * k).fill('#8A5A3B')
+    .roundRect(-38 * k, -130 * k, 76 * k, 82 * k, 10 * k).fill('#A8703F').stroke(edge).rect(-26 * k, -122 * k, 6 * k, 70 * k).fill('#8A5A3B').rect(-3 * k, -122 * k, 6 * k, 70 * k).fill('#8A5A3B').rect(20 * k, -122 * k, 6 * k, 70 * k).fill('#8A5A3B')
+    .roundRect(-42 * k, -52 * k, 84 * k, 16 * k, 6 * k).fill('#A8703F').stroke(edge).roundRect(-34 * k, -60 * k, 68 * k, 14 * k, 6 * k).fill('#E8A9B4'),
+  floorlamp: (g, k) => g.circle(0, -170 * k, 46 * k).fill({ color: '#FFE08A', alpha: 0.22 }).rect(-2.5 * k, -150 * k, 5 * k, 150 * k).fill('#4A4E55').ellipse(0, 0, 18 * k, 5 * k).fill('#4A4E55')
+    .poly([-22 * k, -186 * k, 22 * k, -186 * k, 30 * k, -150 * k, -30 * k, -150 * k]).fill('#F4EBD6').stroke(edge),
+  chairteal: (g, k) => g.roundRect(-50 * k, -112 * k, 100 * k, 70 * k, 22 * k).fill('#3E8F8A').stroke(edge).roundRect(-58 * k, -60 * k, 116 * k, 50 * k, 14 * k).fill('#3E8F8A').stroke(edge)
+    .roundRect(-40 * k, -60 * k, 80 * k, 20 * k, 8 * k).fill('#2F7470').roundRect(-64 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#2F7470').roundRect(42 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#2F7470')
+    .rect(-50 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28').rect(42 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28'),
+  chairgreen: (g, k) => g.roundRect(-50 * k, -112 * k, 100 * k, 70 * k, 22 * k).fill('#5E7A4A').stroke(edge).roundRect(-58 * k, -60 * k, 116 * k, 50 * k, 14 * k).fill('#5E7A4A').stroke(edge)
+    .roundRect(-40 * k, -60 * k, 80 * k, 20 * k, 8 * k).fill('#4B6339').roundRect(-64 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#4B6339').roundRect(42 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#4B6339')
+    .rect(-50 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28').rect(42 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28'),
+  chairpink: (g, k) => g.roundRect(-50 * k, -112 * k, 100 * k, 70 * k, 22 * k).fill('#E8A9B4').stroke(edge).roundRect(-58 * k, -60 * k, 116 * k, 50 * k, 14 * k).fill('#E8A9B4').stroke(edge)
+    .roundRect(-40 * k, -60 * k, 80 * k, 20 * k, 8 * k).fill('#D98C9A').roundRect(-64 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#D98C9A').roundRect(42 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#D98C9A')
+    .rect(-50 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28').rect(42 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28'),
+  chairblue: (g, k) => g.roundRect(-50 * k, -112 * k, 100 * k, 70 * k, 22 * k).fill('#5B78AA').stroke(edge).roundRect(-58 * k, -60 * k, 116 * k, 50 * k, 14 * k).fill('#5B78AA').stroke(edge)
+    .roundRect(-40 * k, -60 * k, 80 * k, 20 * k, 8 * k).fill('#4A6390').roundRect(-64 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#4A6390').roundRect(42 * k, -76 * k, 22 * k, 56 * k, 10 * k).fill('#4A6390')
+    .rect(-50 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28').rect(42 * k, -10 * k, 8 * k, 10 * k).fill('#5E3E28'),
   plant: (g, k) => g.poly([-20 * k, -40 * k, 20 * k, -40 * k, 15 * k, 0, -15 * k, 0]).fill('#C8463D').circle(0, -72 * k, 24 * k).fill('#3E8F5A').circle(-18 * k, -56 * k, 18 * k).fill('#3E8F5A').circle(18 * k, -58 * k, 18 * k).fill('#5DB86F').circle(-4 * k, -92 * k, 14 * k).fill('#5DB86F'),
 };
 // a fish of each kind for the sticker book (fish.ts), and the old boot

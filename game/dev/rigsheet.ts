@@ -20,7 +20,7 @@ const POSES: [string, PoseState][] = [
   ['front crouch\n(dig)', P({ crouch: 1 })], ['front sit\n(sofa/swing)', P({ sit: 1 })], ['back sit\n(desk)', P({ view: 'back', sit: 1 })],
   ['qfront sit', P({ view: 'qfront', sit: 1 })], ['side sit\n(slide)', P({ view: 'side', sit: 1, hold: 0.5 })], ['stool sit', P({ view: 'side', sit: 1, knee: 1 })],
   ['punch', P({ view: 'side', crouch: 0.12, moves: mv('punch') })], ['roundhouse', P({ view: 'side', moves: mv('roundhouse') })],
-  ['bow', P({ view: 'side', moves: mv('bow') })],
+  ['bow', P({ view: 'side', moves: mv('bow') })], ['wave\n(roof)', P({ wave: 20 })], ['wave other\nway', P({ wave: -20 })],
 ];
 const CW = 100, CH = 150, L = 90, PER = 11;
 void (async () => {

@@ -14,12 +14,12 @@ export interface Use { label: string; lines?: string[]; sit?: boolean; at?: bool
 export type Thing =
   | { kind: 'block'; x: number; y: number; w: number; d: number; h: number; top: string; front: string; items?: string; use?: Use }
   | { kind: 'wall'; x: number; y: number; w: number; h: number; fill: string; frame?: string; text?: string; items?: string; use?: Use }
-  | { kind: 'emoji'; x: number; y: number; e: string; size: number; solid?: [number, number]; use?: Use }
+  | { kind: 'emoji'; x: number; y: number; e: string; size: number; solid?: [number, number]; use?: Use; seat?: number }   // seat: a chair (use.sit): how high its seat is, px
   | { kind: 'rug'; x: number; y: number; w: number; h: number; color: string; color2?: string };
 export interface Interior {
   id: string; title: string;
   w: number; h: number; wall: number;
-  colors: { wall: string; stripe?: string; trim: string; floor: [string, string]; tiles?: boolean };
+  colors: { wall: string; stripe?: string; trim: string; floor: [string, string]; tiles?: boolean; pine?: boolean };   // pine: knotty-pine planks
   person?: { who: string; name: string; x: number; y: number; lines: string[]; action?: string; treat?: { label: string; boost: number } };
   crew?: { who: string; name: string; x: number; y: number; lines: string[]; face?: 'front' | 'side' | 'qfront'; flip?: boolean; action?: string; label?: string; docs?: boolean }[];   // others there (the dojo's instructors; the doctors, on hospital days: docs)
   things: Thing[];
@@ -29,23 +29,18 @@ const room = (id: string, title: string, colors: Interior['colors'], things: Thi
 const block = (x: number, y: number, w: number, d: number, h: number, top: string, front: string, items?: string, use?: Use): Thing => ({ kind: 'block', x, y, w, d, h, top, front, items, use });
 const onWall = (x: number, y: number, w: number, h: number, fill: string, text?: string, items?: string, use?: Use): Thing => ({ kind: 'wall', x, y, w, h, fill, frame: '#FFFFFF', text, items, use });
 const big = (x: number, y: number, e: string, size: number, use?: Use, solid?: [number, number]): Thing => ({ kind: 'emoji', x, y, e, size, use, solid });
+/** An armchair (a big picture you can sit in): seat is how high its seat is. */
+const armchair = (x: number, y: number, e: string, size: number, label: string, solid: [number, number], seat: number): Thing => ({ kind: 'emoji', x, y, e, size, use: sitHere(label), solid, seat });
 const rug = (x: number, y: number, w: number, h: number, color: string, color2?: string): Thing => ({ kind: 'rug', x, y, w, h, color, color2 });
 const sitHere = (label = '🪑 Sit down'): Use => ({ label, sit: true });
 const sitAt = (label: string): Use => ({ label, sit: true, at: true });   // (a chair goes in front of it)
 
-/** A family's living room: a sofa, a TV, a kitchen corner and a table; a grown-up at home with a treat. */
-function house(id: string, title: string, wall: string, sofa: string, who: string, name: string, lines: string[], treat: { label: string; boost: number }): Interior {
-  return room(id, title, { wall, trim: '#FFFFFF', floor: ['#D9B48A', '#D1AA7E'] }, [
-    rug(560, 560, 520, 220, '#E9DCC7', '#C9B48A'),
-    onWall(140, 50, 120, 120, '#BFE3F5', undefined, undefined), onWall(940, 50, 120, 120, '#BFE3F5'),
-    onWall(312, 60, 64, 80, '#7FD1C1', '', undefined, { label: 'canvas Look at the photos', lines: [`Family photos: ${name.split(' ')[0]} at the beach, ${name.split(' ')[0]} with a giant fish.`, 'A photo of a birthday cake with lots of candles.'] }),
-    block(380, 262, 340, 70, 70, sofa, sofa, undefined, sitHere('🛋️ Sit on the sofa')),
-    block(80, 262, 220, 60, 120, '#5B6472', '#3E4A5A', 'TV', { label: 'TV Watch some TV', lines: ['A cartoon about a dog who drives a bus. Funny!', 'The weather: sunny all week!', 'A cooking show. Now you\'re hungry.'] }),
-    block(860, 262, 260, 70, 80, '#9AA6B2', '#F4F6F8', 'cookies milk', undefined),
-    block(860, 560, 220, 90, 70, '#D9A066', '#B9895A', 'apple', undefined),
-    big(1130, 520, 'plant', 70, undefined, [50, 30]),
-  ], { who, name, x: 990, y: 560, lines, treat });
-}
+/** A family's home: each one its own (the user, 2026-10-12: "homes should feel unique inside"). A grown-up is in, with a treat. */
+const home = (id: string, title: string, colors: Interior['colors'], things: Thing[], who: string, name: string, at: [number, number], lines: string[], treat: { label: string; boost: number }): Interior =>
+  room(id, title, colors, things, { who, name, x: at[0], y: at[1], lines, treat });
+const window_ = (x: number, w = 130) => onWall(x, 50, w, 120, '#BFE3F5');
+const photos = (x: number, kid: string, lines: string[]) => onWall(x, 60, 110, 90, '#7FD1C1', '', undefined, { label: 'canvas Look at the photos', lines: lines.map(l => l.replace('{kid}', kid)) });
+const TV_LINES = ['A cartoon about a dog who drives a bus. Funny!', 'The weather: sunny all week!', 'A cooking show. Now you\'re hungry.'];
 
 export const INTERIORS: Record<string, Interior> = {
   school: room('school', 'School', { wall: '#F2E6CF', trim: '#B5654F', floor: ['#E3C49A', '#D9B88A'] }, [
@@ -119,14 +114,27 @@ export const INTERIORS: Record<string, Interior> = {
   ], { who: 'ranger', name: 'the ranger', x: 650, y: 412, lines: ['Got photos for me?'], action: 'cabin' }),
   // Nico's grandparents (from family photos, reference only): Nonna's kitchen, Poppop's woodshop (a red barn
   // garage, with a CNC router and a plasma cutter), Yia-Yia's painting studio
-  nonna: room('nonna', 'Poppop and Nonna', { wall: '#F2E2B6', stripe: '#F7EBCB', trim: '#8A5A3B', floor: ['#C9874A', '#BE7C40'] }, [
-    onWall(120, 40, 160, 110, '#BFE3F5'), onWall(860, 50, 230, 120, '#FFFFFF', undefined, 'face1 face2 face3', { label: 'canvas Look at the family photos', lines: ['A photo of you as a baby, covered in tomato sauce.', 'Poppop and Nonna on their wedding day.', 'Everyone at the lake. Poppop is wearing his plaid shirt (of course).'] }),
-    block(80, 262, 360, 70, 80, '#9AA6B2', '#F4F6F8', 'tomato garlic olive cheese'),   // the counter
-    block(480, 262, 200, 70, 90, '#2C3440', '#5B6472', 'pot'),            // the stove (Nonna's pot of sauce)
-    block(470, 520, 300, 120, 60, '#C9874A', '#8A5A3B', 'plate plate', sitAt('🍽️ Sit at the table')),
-    block(880, 560, 260, 70, 70, '#D77B72', '#B85C4E', undefined, sitHere('🛋️ Sit on the quilt couch')),
-    big(1130, 400, 'plant', 70, undefined, [50, 30]),
-  ], { who: 'nonna', name: 'Nonna', x: 580, y: 250, lines: ['Ciao, Nico! Are you hungry? You look hungry.'], action: 'nonna' }),
+  nonna: room('nonna', 'Poppop and Nonna', { wall: '#D9A25E', stripe: '#C98F4C', trim: '#7A5236', floor: ['#B9773E', '#AE6D36'], pine: true }, [
+    // the kitchen: a stainless fridge, cherry cabinets under granite, the stove (Nonna's pot of sauce), the big digit clock
+    block(40, 262, 110, 60, 220, '#E9EEF3', '#C9D3DC'),
+    block(165, 262, 185, 70, 80, '#2C3440', '#8A4A32', 'tomato garlic olive'),
+    block(365, 262, 140, 70, 90, '#2C3440', '#5B6472', 'pot'),
+    onWall(190, 40, 140, 60, '#1E2733', '15:55'),   // (the big digit clock)
+    onWall(530, 46, 110, 104, '#FFFFFF', undefined, 'face1 face2', { label: 'canvas Look at the family photos', lines: ['A photo of you as a baby, covered in tomato sauce.', 'Poppop and Nonna on their wedding day.', 'Every cousin at Christmas, in matching pyjamas.'] }),
+    // the dining room: the long table with the embroidered cloth (panettone!), the sideboard under the griffins of Perugia
+    onWall(670, 40, 230, 120, '#F2E2C4', 'PERVSIA', 'griffin griffin'),
+    block(670, 262, 230, 50, 70, '#7A5236', '#8A5A3B', 'wine rooster candle wine', { label: '🦅 Look at the griffin banner', lines: ['Two griffins from Perugia, in Italy. "Augusta Perusia" is the city\'s old Latin name.', 'Nonna says Perugia has the best chocolate in the world.', 'A rooster on the sideboard. Nonna says he keeps an eye on things.'] }),
+    block(120, 500, 360, 70, 60, '#FFFFFF', '#EFE6D8', 'panettone plate wine plate', sitAt('🍽️ Sit at the table')),
+    // the living room: the stone fireplace, Nonna's Eames chair, the yellow chair, the recliner, the leather sofa
+    rug(660, 470, 500, 300, '#A8463D', '#2F4A6B'),
+    big(1040, 300, 'fireplace', 100, { label: '🔥 Warm up by the fire', lines: ['The fire crackles. Toasty!', 'Everyone\'s name is on the mantel. There\'s yours: NICO!', 'Stockings for everybody. Somebody\'s already full of chocolate.'] }, [250, 40]),
+    armchair(700, 500, 'recliner', 85, '🛋️ Sit in the recliner', [110, 40], 46),
+    armchair(880, 470, 'eames', 95, "🪑 Sit in Nonna's Eames chair", [120, 40], 48),
+    armchair(1110, 490, 'shellchair', 85, '🪑 Sit in the yellow chair', [100, 36], 44),
+    block(800, 590, 200, 50, 40, '#9A6A3E', '#7A5236', 'books candle'),
+    block(760, 660, 330, 64, 70, '#7A5A3A', '#6B4E32', undefined, sitHere('🛋️ Sit on the leather sofa')),
+    big(1150, 700, 'micalamp', 75, { label: '💡 The mica lamp', lines: ['The lamp makes everything glow orange. Cozy.'] }, [50, 26]),
+  ], { who: 'nonna', name: 'Nonna', x: 435, y: 250, lines: ['Ciao, Nico! Are you hungry? You look hungry.'], action: 'nonna' }),
   woodshop: room('woodshop', "Poppop's woodshop", { wall: '#B85C4E', stripe: '#A84E42', trim: '#5E2A24', floor: ['#C9B48A', '#BEA77C'] }, [
     onWall(80, 40, 380, 170, '#C9A46A', undefined, 'hammer saw screwdriver wrench ruler', { label: '🔨 Look at the tool wall', lines: ['Every tool has a hook. Poppop knows where everything is.'] }),
     onWall(980, 50, 140, 100, '#BFE3F5'),
@@ -179,12 +187,81 @@ export const INTERIORS: Record<string, Interior> = {
     block(760, 500, 300, 60, 80, '#4FE3C1', '#3B3768', 'handheld cartridge2'),
     rug(440, 380, 300, 110, '#3B3768', '#E5484D'),
   ], { who: 'alpha', name: 'Alpha', x: 930, y: 490, lines: ['Welcome to Alpha\'s Retro Games! Everything still works. Mostly.', 'Try the Snake machine. Beat my high score, I dare you.', 'If a game doesn\'t work, blow on it. Trust me.', 'These games are older than my dad.', 'Frog Hop is my favourite. The logs are sneaky.'] }),
-  h1: house('h1', "Maya's house", '#FBE3C7', '#F28C38', 'mom', "Maya's mom", ['Hi Nico! Maya\'s out playing.', 'Would you like some lemonade?'], { label: '🍋 Lemonade', boost: 20 }),
-  h2: house('h2', "Leo's house", '#D6EEE9', '#3E8F8A', 'dad', "Leo's dad", ['Leo? He\'s at the ice cream shop, as usual.', 'Want a granola bar?'], { label: '🥜 Granola bar', boost: 20 }),
-  h3: house('h3', "Sam's house", '#F7E9C8', '#5B78AA', 'grandma', "Sam's grandma", ['Oh, hello dear! Sam\'s at the toy shop.', 'Have a cookie, fresh out of the oven.'], { label: '🍪 A warm cookie', boost: 25 }),
-  h5: house('h5', "Ava's house", '#D9ECF7', '#D77B72', 'dad', "Ava's dad", ['Ava\'s practicing soccer. She\'s getting good!', 'Want an orange slice? Soccer snack!'], { label: '🍊 Orange slices', boost: 20 }),
-  h6: house('h6', "Mrs. Kim's house", '#EDE3F5', '#7B5BA6', 'grandma', 'Mr. Kim', ['Mrs. Kim is out watering the flowers.', 'Would you like some tea? Kids\' tea: mostly honey.'], { label: '🍯 Honey tea', boost: 20 }),
-  h7: house('h7', "Mr. Brooks's house", '#F2E6CF', '#C7443B', 'mom', 'Mrs. Brooks', ['He\'s at the hospital till six.', 'Here, take a muffin for the road.'], { label: '🧁 A blueberry muffin', boost: 25 }),
+  // Maya's: a bookworm's house (books everywhere, a piano, a reading nook)
+  h1: home('h1', "Maya's house", { wall: '#FBE3C7', trim: '#C97A3A', floor: ['#E3C49A', '#D9B88A'] }, [
+    big(110, 300, 'bookcase', 100, { label: '📚 Look at the books', lines: ['Maya has read ALL of these. Some twice.', 'A whole shelf of dragon books!', 'An encyclopedia. Volume M is missing: Maya has it.'] }, [100, 36]),
+    big(220, 300, 'bookcase', 100, undefined, [100, 36]),
+    photos(300, 'Maya', ['{kid} at the library, with a stack of books taller than her.', 'A photo of {kid} at her piano recital.']),
+    big(560, 300, 'piano', 100, { label: '🎹 Play the piano', lines: ['Plink plonk! You play Chopsticks.', 'You play the only song you know. Twice.', 'Maya\'s mom claps. "Bravo!"'] }, [140, 40]),
+    window_(700),
+    block(880, 262, 270, 70, 80, '#F4F6F8', '#E8C9A0', 'apple milk cookies'),
+    rug(100, 500, 320, 220, '#F28C38', '#FBE3C7'),
+    armchair(250, 590, 'chairteal', 85, '📖 Curl up with a book', [110, 40], 46),
+    big(120, 640, 'floorlamp', 80, undefined, [30, 20]),
+    block(780, 520, 200, 60, 70, '#E8C18A', '#B9895A', 'books globe', sitAt('✏️ Sit at the homework desk')),
+    big(1150, 720, 'plant', 70, undefined, [50, 30]),
+  ], 'mom', "Maya's mom", [1080, 470], ["Hi Nico! Maya's out playing.", 'Would you like some lemonade?'], { label: '🍋 Lemonade', boost: 20 }),
+  // Leo's: a big TV and games, beanbags, and (of course) an ice cream freezer
+  h2: home('h2', "Leo's house", { wall: '#D6EEE9', trim: '#3E8F8A', floor: ['#C9CED6', '#BCC2CB'] }, [
+    onWall(100, 40, 130, 160, '#2F6FD0', 'GO\nTEAM!'),
+    block(80, 262 + 140, 160, 40, 50, '#B9895A', '#8A5A3B', 'skateboard guitar'),
+    block(380, 262, 320, 60, 130, '#3E4A5A', '#2C3440', 'TV', { label: '📺 Watch the big TV', lines: TV_LINES }),
+    window_(760),
+    block(940, 262, 200, 60, 110, '#E9F7F5', '#7FD1C1', 'icecream icecream', { label: '🍦 Peek in the ice cream freezer', lines: ['Eleven kinds of ice cream. Leo\'s dad says it\'s "for guests".', 'Mint chocolate chip, rocky road, and something called Moose Tracks.'] }),
+    block(420, 440, 240, 50, 34, '#B9895A', '#8A5A3B', 'console joystick'),
+    block(330, 580, 420, 70, 60, '#5B6472', '#4A5260', undefined, sitHere('🛋️ Flop on the couch')),
+    block(130, 640, 110, 50, 40, '#E5484D', '#C8463D', undefined, sitHere('🫘 Flop on the beanbag')),
+    block(840, 640, 110, 50, 40, '#F9C846', '#E3A92A', undefined, sitHere('🫘 Flop on the beanbag')),
+  ], 'dad', "Leo's dad", [1030, 520], ["Leo? He's at the ice cream shop, as usual.", 'Want a granola bar?'], { label: '🥜 Granola bar', boost: 20 }),
+  // Sam's: his grandma's cozy house (a ticking grandfather clock, a rocking chair, cookies always baking)
+  h3: home('h3', "Sam's house", { wall: '#F7E9C8', stripe: '#F2DDB0', trim: '#B5654F', floor: ['#C9874A', '#BE7C40'] }, [
+    big(100, 300, 'grandclock', 100, { label: '🕰️ The grandfather clock', lines: ['Tick... tock... BONG!', 'It\'s older than Sam\'s grandma. She says so, anyway.'] }, [60, 30]),
+    onWall(220, 60, 180, 110, '#FFFFFF', 'HOME\nSWEET\nHOME', undefined, { label: '🧵 Look at the stitching', lines: ['Sam\'s grandma stitched this herself. Every letter!'] }),
+    window_(460, 140),
+    block(700, 262, 290, 70, 80, '#F4F6F8', '#C9874A', 'cookies milk'),
+    block(1010, 262, 140, 70, 100, '#E9EEF3', '#9AA6B2', 'cookie'),
+    rug(150, 470, 280, 190, '#E5484D', '#F9C846'),
+    armchair(280, 560, 'rocker', 90, '🪑 Rock in the rocking chair', [90, 36], 46),
+    block(110, 690, 80, 40, 40, '#C9A46A', '#A8834A', 'twine'),
+    block(420, 640, 300, 64, 70, '#E8A9B4', '#D98C9A', undefined, sitHere('🛋️ Sit on the flowery sofa')),
+    block(850, 510, 220, 60, 60, '#F7C8D0', '#E8A9B4', 'cookies milk', sitAt('🍪 Sit at the kitchen table')),
+  ], 'grandma', "Sam's grandma", [850, 250], ["Oh, hello dear! Sam's at the toy shop.", 'Have a cookie, fresh out of the oven.'], { label: '🍪 A warm cookie', boost: 25 }),
+  // Ava's: a soccer family (a shelf of trophies, cleats by the door)
+  h5: home('h5', "Ava's house", { wall: '#D9ECF7', trim: '#2F6FD0', floor: ['#E3C49A', '#D9B88A'] }, [
+    block(80, 262, 300, 40, 140, '#FFFFFF', '#5B78AA', 'trophy trophy trophy', { label: '🏆 Look at the trophies', lines: ['Most Goals, Best Teammate, and one for "Loudest Cheering".', 'Ava\'s first trophy, from when she was four. It\'s tiny!'] }),
+    onWall(420, 40, 230, 150, '#3E8F5A', 'GOAL!', 'star', { label: '⚽ The soccer poster', lines: ['A poster of Ava\'s favourite player, mid-kick.', 'Ava drew a mustache on him. Her dad hasn\'t noticed.'] }),
+    window_(720),
+    block(900, 262, 250, 70, 80, '#F4F6F8', '#F28C38', 'apple apple milk'),
+    block(250, 520, 320, 64, 70, '#D77B72', '#C25F57', undefined, sitHere('🛋️ Sit on the sofa')),
+    armchair(700, 560, 'chairblue', 85, '🪑 Sit in the armchair', [110, 40], 46),
+    block(860, 520, 240, 60, 60, '#E8C18A', '#B9895A', 'plate apple', sitAt('🍊 Sit at the table')),
+    block(80, 700, 140, 40, 30, '#9AA6B2', '#7A8694', 'socks socks'),
+  ], 'dad', "Ava's dad", [1020, 250], ["Ava's practicing soccer. She's getting good!", 'Want an orange slice? Soccer snack!'], { label: '🍊 Orange slices', boost: 20 }),
+  // Mrs. Kim's: plants everywhere, a bonsai, and a tea table
+  h6: home('h6', "Mrs. Kim's house", { wall: '#EDE3F5', trim: '#7B5BA6', floor: ['#D9C99A', '#CDBB8A'] }, [
+    onWall(110, 40, 90, 170, '#F4F1EA', '花'),
+    big(250, 320, 'plant', 95, undefined, [60, 30]),
+    block(330, 262, 150, 40, 80, '#5E3E28', '#4A2F20', 'plant', { label: '🌳 Look at the bonsai', lines: ['A tiny tree, fifty years old! Mrs. Kim trims it with tiny scissors.', 'Mr. Kim says it\'s older than their car.'] }),
+    window_(530, 180),
+    block(860, 262, 260, 70, 80, '#F4F6F8', '#B9A3D6', 'pot apple'),
+    big(1150, 330, 'plant', 85, undefined, [50, 30]),
+    rug(380, 490, 360, 220, '#7B5BA6', '#EDE3F5'),
+    block(440, 540, 240, 60, 40, '#8A5A3B', '#6B4430', 'pot cookies', sitAt('🍵 Sit down for tea')),
+    armchair(880, 560, 'chairgreen', 85, '🪑 Sit in the armchair', [110, 40], 46),
+    big(110, 700, 'plant', 70, undefined, [50, 30]),
+    big(1130, 700, 'plant', 75, undefined, [50, 30]),
+  ], 'grandma', 'Mr. Kim', [1000, 520], ['Mrs. Kim is out watering the flowers.', 'Would you like some tea? Kids\' tea: mostly honey.'], { label: '🍯 Honey tea', boost: 20 }),
+  // Mr. Brooks's: a doctor's house (medical books, his desk, a big aquarium)
+  h7: home('h7', "Mr. Brooks's house", { wall: '#F2E6CF', trim: '#C7443B', floor: ['#B9773E', '#AE6D36'] }, [
+    big(100, 300, 'bookcase', 100, { label: '📚 Look at the books', lines: ['"Bones of the Body", "The Heart", "Germs!". A doctor\'s books.', 'A book called "1001 Jokes for Doctors". Dog-eared.'] }, [100, 36]),
+    big(210, 300, 'bookcase', 100, undefined, [100, 36]),
+    block(330, 262, 240, 60, 75, '#B9895A', '#8A5A3B', 'books clipboard stethoscope', sitAt("📋 Sit at Mr. Brooks's desk")),
+    onWall(620, 40, 140, 150, '#1E2733', 'BONES', undefined, { label: '🩻 The X-ray poster', lines: ['An X-ray of a hand. Five fingers, lots of little bones.', 'It glows a bit. Spooky!'] }),
+    big(960, 300, 'aquarium', 100, { label: '🐠 Watch the fish', lines: ['Three fish: Doc, Nurse, and Bubbles.', 'The orange one keeps hiding behind the plant.'] }, [160, 40]),
+    armchair(180, 560, 'chairblue', 85, '🪑 Sit in the armchair', [110, 40], 46),
+    block(380, 620, 320, 64, 70, '#C7443B', '#A8382F', undefined, sitHere('🛋️ Sit on the sofa')),
+    big(1140, 700, 'plant', 75, undefined, [50, 30]),
+  ], 'mom', 'Mrs. Brooks', [900, 540], ["He's at the hospital till six.", 'Here, take a muffin for the road.'], { label: '🧁 A blueberry muffin', boost: 25 }),
 };
 
 // ---- drawing
@@ -196,6 +273,10 @@ export function drawInterior(r: Interior): { view: Container; layer: Container }
   else for (let j = 0; wall + j * 40 < h; j++) g.rect(0, wall + j * 40, w, 40).fill(j % 2 ? c.floor[0] : c.floor[1]).rect(0, wall + j * 40 + 38, w, 2).fill({ color: '#000000', alpha: 0.08 });
   g.rect(0, 0, w, wall).fill(c.wall);
   if (c.stripe) for (let x = 0; x < w; x += 46) g.rect(x, 0, 18, wall).fill({ color: c.stripe, alpha: 0.4 });
+  if (c.pine) for (let x = 0, i = 0; x < w; x += 46, i++) {   // plank seams and knots
+    g.rect(x, 0, 2, wall).fill({ color: '#6B4430', alpha: 0.35 });
+    for (const y of [(i * 67) % 190 + 20, (i * 131 + 90) % 200 + 10]) g.ellipse(x + 23, y, 5, 3.5).fill({ color: '#8A5A2B', alpha: 0.55 });
+  }
   g.rect(0, wall - 14, w, 14).fill(c.trim);
   g.roundRect(w / 2 - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the door
   view.addChild(g, layer);
