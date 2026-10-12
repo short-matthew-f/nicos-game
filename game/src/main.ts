@@ -44,7 +44,7 @@ import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
-import { makeRea, stepRea, buildFor, REA } from './rea';
+import { makeRea, stepRea, buildFor, REA, startFollow, letGo, footstep as reaFootstep, stepFollow, seesCar, wantsToCome } from './rea';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
 import { CABINETS } from './arcade/games';
@@ -1555,7 +1555,7 @@ async function main() {
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   // ---- Rea at the beach (rea.ts): building sandcastles and stomping them flat
   const beachRea = makeRea();
-  let reaView: PersonView | null = null, reaSaid: Text | null = null, reaSayT = 0, reaLoading = false, reaBooms = 0;
+  let reaView: PersonView | null = null, reaSaid: Text | null = null, reaSayT = 0, reaLoading = false, reaBooms = 0, reaMash = 0, reaLast = '';
   const reaSt = neutral('front');
   const castleViews = beachRea.castles.map(c => { const v = new Container(); v.zIndex = c.y; layer.addChild(v); return v; }), castleKey = beachRea.castles.map(() => '');
   function castleArt(i: number) {
@@ -1583,41 +1583,63 @@ async function main() {
     v.addChild(g);
   }
   function reaSay(text: string) {
-    reaSaid?.destroy(); reaSayT = 2;
+    reaSaid?.destroy(); reaSayT = 2; reaLast = text;
     reaSaid = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 22, fill: NAVY_TEXT, stroke: { color: '#FFFFFF', width: 6 } } });
     reaSaid.anchor.set(0.5, 1); reaSaid.zIndex = 99999; layer.addChild(reaSaid);
   }
   function reaStep(dt: number) {
-    const near = !room && Math.hypot(nico.x - REA.sites[1][0], nico.y - REA.sites[1][1]) < 2200;
-    for (let i = 0; i < castleViews.length; i++) castleViews[i].visible = near;
+    const r = beachRea.rea, nearBeach = !room && Math.hypot(nico.x - REA.sites[1][0], nico.y - REA.sites[1][1]) < 2200;
+    const near = !room && (r.mode !== 'beach' || nearBeach);   // (tagging along: wherever Nico's been)
+    for (let i = 0; i < castleViews.length; i++) castleViews[i].visible = nearBeach;
     if (reaView) reaView.root.visible = near;
     if (reaSaid) { reaSayT -= dt; reaSaid.visible = near && reaSayT > 0; if (reaSayT <= 0) { reaSaid.destroy(); reaSaid = null; } }
-    if (!near) return;
-    if (!reaView) {
+    if (!near && r.mode === 'beach') return;
+    if (!reaView && near) {
       if (hasArt('rea')) { reaView = new PersonView('rea'); reaView.setZoom(zoom, resolution); if (low) reaView.setLow(true); layer.addChild(reaView.root); }
       else if (!reaLoading) { reaLoading = true; void loadArt(['rea']).finally(() => { reaLoading = false; }); }
     }
-    const r = beachRea.rea;
-    for (const e of stepRea(r, beachRea.castles, dt)) {
-      if (e.kind === 'say' && e.text) reaSay(e.text);
-      if (e.kind === 'boom') { reaBooms++; const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 20, '#E8C77A', 14, 160, 16); audio.noise(0.25, 0.25, 700); see(biz, 'town', 'rea'); }
-      if (e.kind === 'built') { const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 40, '#FFFFFF', 6, 80, 10); }
+    if (r.mode === 'beach') {
+      if (wantsToCome(r, nico.x, nico.y, dt) && mode === 'walk') { startFollow(r); reaSay(pick(['Nico! Me too!', 'Come! Come!', 'Up! Up!'])); }
+      else for (const e of stepRea(r, beachRea.castles, dt)) {
+        if (e.kind === 'say' && e.text) reaSay(e.text);
+        if (e.kind === 'boom') { reaBooms++; const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 20, '#E8C77A', 14, 160, 16); audio.noise(0.25, 0.25, 700); see(biz, 'town', 'rea'); }
+        if (e.kind === 'built') { const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 40, '#FFFFFF', 6, 80, 10); }
+      }
+    } else {
+      const canFollow = !room && mode === 'walk' && !cardOpen;
+      if (r.mode === 'follow' && canFollow) reaFootstep(r, nico.x, nico.y);
+      if (stepFollow(r, dt, canFollow) === 'home') reaSay(pick(['Castle!', 'Sand!']));
+    }
+    // "Mashina!" (a car, a truck, Poppop's Fiat...)
+    reaMash -= dt;
+    if (reaMash <= 0 && reaView?.root.visible) {
+      const vehicles: [number, number][] = [...cars.map(c => c.pos as [number, number]), [car.x, car.y], ...(truck.out ? truck.points() : []), ...(fiat.out ? fiat.points() : [])];
+      if (seesCar(r, vehicles)) {
+        reaMash = 7; reaSay(pick(['Mashina!', 'Mashina! Mashina!', 'Ooh! Mashina!']));
+        if (!biz.seen['town:mashina']) toast('🚗 Rea points: “Mashina!” (That\'s Russian for car.)');
+        see(biz, 'town', 'mashina');
+      }
     }
     beachRea.castles.forEach((_, i) => castleArt(i));
     if (!reaView) return;
-    const c = beachRea.castles[r.at] ?? beachRea.castles[0], walking = r.doing === 'walk';
+    const walking = r.doing === 'walk' && (r.vx || r.vy), sp = Math.hypot(r.vx, r.vy);
     if (walking) Object.assign(reaSt, chooseView(r.vx, r.vy, reaSt));
+    else if (r.mode !== 'beach') Object.assign(reaSt, chooseView(nico.x - r.x, nico.y - r.y, reaSt));   // (watching him)
     else Object.assign(reaSt, r.doing === 'build' || r.doing === 'stomp' ? { view: 'side', face: 1 } : { view: 'front', face: 1 });
-    reaSt.crouch = r.doing === 'build' ? 1 : 0;
-    stepGait(reaSt, walking ? REA.speed : 0, r.vy, dt, GAIT_SCALE * reaView.height);
-    const hop = r.doing === 'stomp' ? Math.abs(Math.sin((REA.windup - r.t) * 14)) * 16 : r.doing === 'giggle' ? Math.abs(Math.sin(r.t * 10)) * 6 : 0;
+    reaSt.crouch = r.mode === 'beach' && r.doing === 'build' ? 1 : 0;
+    stepGait(reaSt, walking ? sp : 0, r.vy, dt, GAIT_SCALE * reaView.height);
+    const hop = r.mode === 'beach' && r.doing === 'stomp' ? Math.abs(Math.sin((REA.windup - r.t) * 14)) * 16 : r.mode === 'beach' && r.doing === 'giggle' ? Math.abs(Math.sin(r.t * 10)) * 6 : 0;
     reaView.pose(r.x, r.y - hop, reaSt); reaView.root.zIndex = r.y;
     if (reaSaid) reaSaid.position.set(r.x, r.y - 100);
-    void c;
   }
   spots.push(
-    { id: 'rea', get x() { return beachRea.rea.x; }, get y() { return beachRea.rea.y + 30; }, r: 110, label: '💬 Say hi to Rea', when: () => !!reaView?.root.visible,
-      run: () => { reaSay(pick(['Nico!', 'Hi Nico!', 'Castle!', 'Look!', 'Hehe!'])); toast(pick(['Rea gives you a sandy hug.', 'Rea shows you a shell. "Mine!"', 'Rea points at the castle. "BOOM?"'])); } },
+    { id: 'rea', get x() { return beachRea.rea.x; }, get y() { return beachRea.rea.y + 30; }, r: 80, priority: 2, when: () => !!reaView?.root.visible && mode === 'walk',
+      label: () => (beachRea.rea.mode === 'beach' || beachRea.rea.mode === 'return' ? "🤝 Take Rea's hand" : '👋 Let Rea go play'),
+      run: () => {
+        const r = beachRea.rea;
+        if (r.mode === 'beach' || r.mode === 'return') { startFollow(r); reaSay(pick(['Yay!', 'Nico! Go!', 'Come!'])); toast(pick(['Rea grabs your hand. She\'s coming too!', 'Rea toddles after you, giggling.'])); }
+        else { letGo(r); reaSay(pick(['Bye bye!', 'Castle!'])); toast('Rea toddles back to her castles.'); }
+      } },
     ...beachRea.castles.map((c, i): Spot => ({ id: `castle${i}`, x: c.x, y: c.y + 70, r: 90, label: '🏰 Build Rea a sandcastle', priority: 1,
       when: () => !!reaView?.root.visible && (c.state === 'none' || c.state === 'down') && !(beachRea.rea.at === i && beachRea.rea.doing === 'build'),
       run: () => { if (!buildFor(beachRea.castles, i)) return; dust.puff(c.x, c.y - 30, '#E8C77A', 10, 100, 12); sfx.sparkle(); reaSay(pick(['Ooooh!', 'Castle!', 'Mine?'])); toast('🏰 You build a sandcastle. Rea\'s eyes go wide...'); } })),
@@ -1752,7 +1774,7 @@ async function main() {
     peel: () => peeler.snapshot(),
     peelOpen: () => peeler.open(),
     bob: () => bobber.snapshot(),
-    rea: () => ({ visible: !!reaView?.root.visible, x: beachRea.rea.x, y: beachRea.rea.y, doing: beachRea.rea.doing, at: beachRea.rea.at, booms: reaBooms, castles: beachRea.castles.map(c => ({ x: c.x, y: c.y, state: c.state, built: c.built })) }),
+    rea: () => ({ visible: !!reaView?.root.visible, mode: beachRea.rea.mode, said: reaLast, x: beachRea.rea.x, y: beachRea.rea.y, doing: beachRea.rea.doing, at: beachRea.rea.at, booms: reaBooms, castles: beachRea.castles.map(c => ({ x: c.x, y: c.y, state: c.state, built: c.built })) }),
     bobOpen: () => bobber.open(),
     bobAt: (x: number, y: number) => bobber.screenAt(x, y),
     peelAt: (x: number, y: number) => peeler.screenAt(x, y),
@@ -1765,6 +1787,7 @@ async function main() {
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
+    reaCome: () => { startFollow(beachRea.rea); },
     friendOut: (who: string) => { const l = locals.find(q => q.orig.who === who)!; l.w.i = 2; l.w.x = l.t.route[2].x; l.w.y = l.t.route[2].y; l.w.wait = 0; },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },
@@ -2089,6 +2112,7 @@ async function main() {
     const mine: [number, number, string?][] = circles(car.x, car.y, car.h).map(([x, y]) => [x, y, 'mine']);
     if (mode !== 'drive' && !room) mine.push([nico.x, nico.y, 'nico']);
     for (const l of locals) if (!gone(l)) mine.push([l.w.x, l.w.y]);
+    if (reaView?.root.visible) mine.push([beachRea.rea.x, beachRea.rea.y]);   // (the cars stop for Rea too)
     if (dog && dogView?.view.visible) mine.push([dog.x, dog.y]);
     const truckPts: [number, number, string][] = truck.out ? truck.points().map(([x, y]) => [x, y, 'truck']) : [];
     // (and Poppop in his Fiat, who gives way to everyone not already waiting for him)

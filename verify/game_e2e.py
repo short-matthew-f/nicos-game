@@ -930,7 +930,7 @@ with sync_playwright() as p:
     # Rea at the beach: building castles, knocking them down; build her one
     pg.evaluate("()=>window.__game.place(2210, 4720)"); pg.wait_for_timeout(2500)
     check(pg.evaluate("()=>window.__game.rea && window.__game.rea().visible"), f"Rea's on the beach ({pg.evaluate('()=>window.__game.rea && window.__game.rea()')})")
-    r0 = pg.evaluate("()=>window.__game.rea()"); free = [i for i, c in enumerate(r0['castles']) if c['state'] in ('none', 'down') and not (r0['at'] == i and r0['doing'] == 'build')]
+    r0 = pg.evaluate("()=>window.__game.rea()"); free = [i for i, c in enumerate(r0['castles']) if c['state'] in ('none', 'down') and not (r0['at'] == i and r0['doing'] == 'build') and math.dist((c['x'], c['y'] + 70), (r0['x'], r0['y'] + 30)) > 160]
     if free:
         i = free[0]; pg.evaluate(f"()=>window.__game.place({r0['castles'][i]['x']}, {r0['castles'][i]['y'] + 70})"); pg.wait_for_timeout(300)
         check(G()['action'] == f'castle{i}', f"walk up to an empty spot: build Rea a sandcastle ({G()['action']})")
@@ -938,6 +938,16 @@ with sync_playwright() as p:
         check(pg.evaluate(f"()=>window.__game.rea().castles[{i}].state") == 'up', 'a sandcastle, built')
     pg.wait_for_function("window.__game.rea().booms > 0", timeout=60000)
     check(pg.evaluate("()=>window.__game.rea().booms") > 0 and G()['biz']['seen'].get('town:rea'), 'Rea stomps one flat (BOOM!) and it goes in the sticker book')
+    # she tags along: take her hand, walk off, she follows; a car: "Mashina!"
+    r1 = pg.evaluate("()=>window.__game.rea()"); pg.evaluate(f"()=>window.__game.place({r1['x'] + 40}, {r1['y'] + 40})"); pg.wait_for_timeout(300)
+    check(G()['action'] == 'rea', f"next to Rea: take her hand ({G()['action']})")
+    pg.click('#action'); pg.wait_for_timeout(200)
+    check(pg.evaluate("()=>window.__game.rea()")['mode'] == 'follow', 'Rea takes his hand')
+    drag(160, -60, 1800); pg.wait_for_timeout(900)
+    r2 = pg.evaluate("()=>window.__game.rea()")
+    check(r2['mode'] == 'follow' and math.dist((r2['x'], r2['y']), (G()['nico']['x'], G()['nico']['y'])) < 200 and math.dist((r2['x'], r2['y']), (r1['x'], r1['y'])) > 150, f"...and toddles after him ({r2['x']:.0f},{r2['y']:.0f})")
+    pg.evaluate(f"()=>window.__game.placeCar({r2['x'] + 140}, {r2['y'] + 20}, 0)"); pg.wait_for_timeout(700)
+    check('Mashina' in pg.evaluate("()=>window.__game.rea()")['said'], f"a car! Rea: “Mashina!” ({pg.evaluate('()=>window.__game.rea()')['said']})")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

@@ -1167,3 +1167,21 @@ The user: "There should also be a Bobbing for Bakers game in Yarosh's", "This cu
 - `Townie.note` gives anyone their own door note. Before this, every note said Yia-Yia's.
 - Talk to them on the sidewalk for their own lines.
 - E2E: Yarosh goes out and his counter has a note. Everyone is sent home before the shop checks. New debug hook: `friendOut(who)`.
+
+## Rea tags along, and "Mashina!" (2026-10-12)
+The user: "Rea should! And when she sees cars she should say 'mashina'".
+
+**Following (`rea.ts`):**
+- Nico can take Rea's hand ("🤝 Take Rea's hand"). Now and then she also decides on her own to come along ("Nico! Me too!"), when he's close and she's between castles.
+- She follows his footsteps (a breadcrumb trail), so she never cuts through a building. She stays a little behind him: she runs to catch up and toddles when close.
+- She waits while he's in a building, the car, the pool or a game. After 25 s she goes back to the beach by retracing her own steps.
+- "👋 Let Rea go play" sends her straight back.
+
+**Cars:**
+- Any vehicle near her (the traffic, Nico's car, the fire truck, Poppop's Fiat) gets a "Mashina!", with a 7-second cooldown.
+- The first time, a toast explains: "That's Russian for car."
+- Traffic stops for her the way it stops for people.
+
+**Tests:**
+- `test/rea.test.ts`: following round a corner (no corner-cutting), waiting and going home, auto-follow, seeing a car.
+- E2E: take her hand, walk off, she follows; Nico's car parked beside her gets "Mashina!".
