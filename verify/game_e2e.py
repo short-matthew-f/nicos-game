@@ -1,6 +1,6 @@
 """End-to-end checks for the game in WebKit with an emulated iPad (touch, landscape).
 usage: python verify/game_e2e.py [url]   (default http://localhost:5173/, run `npm run dev` in game/)"""
-import sys, math
+import sys, math, json
 from playwright.sync_api import sync_playwright
 url = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:5173/'
 ok = bad = 0
@@ -1026,9 +1026,18 @@ with sync_playwright() as p:
     pg.click('#surgery .pl-close'); pg.wait_for_timeout(300)
     check(G()['biz']['seen'].get('case:splinter'), "Mr. Brooks's splinter: out, and a sticker")
     pg.evaluate("()=>window.__game.xrayOpen()"); pg.wait_for_timeout(300)
-    at = pg.evaluate("()=>window.__game.surgery()")['xray']['at']; q = pg.evaluate(f"()=>window.__game.surgeryAt({at[0]},{at[1]})"); pg.mouse.click(q['x'], q['y']); pg.wait_for_timeout(200)
+    xat = pg.evaluate("()=>window.__game.surgery()")['xray']['at']; q = pg.evaluate(f"()=>window.__game.surgeryAt({xat[0]},{xat[1]})"); pg.mouse.click(q['x'], q['y']); pg.wait_for_timeout(200)
     check(pg.evaluate("()=>window.__game.surgery()")['xray']['found'] == 1, 'X-ray detective: tap the swallowed thing')
-    pg.click('#surgery .pl-close'); pg.wait_for_timeout(300); pg.evaluate("()=>window.__game.exitRooms()"); pg.evaluate("()=>window.__game.homeAll()")
+    pg.click('#surgery .pl-close'); pg.wait_for_timeout(300); pg.evaluate("()=>window.__game.exitRooms()")
+    # the prize for the hospital page: Nico's own white coat, worn at the hospital
+    sn = G()['biz']['seen']; sn['book:hospital'] = 1; pg.evaluate(f"()=>window.__game.setBiz({{seen: {json.dumps(sn)}}})")
+    pg.evaluate("()=>window.__game.docsHere()"); door('hospital'); pg.wait_for_timeout(300)
+    if pg.locator('#place-close').is_visible(): pg.click('#place-close'); pg.wait_for_timeout(200)
+    pg.wait_for_function("window.__game.nicoLook === 'nicodoc'", timeout=15000)
+    check(G()['nicoLook'] == 'nicodoc', 'with the hospital page filled in: Dr. Nico, in his own white coat')
+    pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(500)
+    check(G()['nicoLook'] == 'nico', '...and back in his flannel outside')
+    pg.evaluate("()=>window.__game.homeAll()")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

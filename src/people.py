@@ -921,6 +921,9 @@ def _whitecoat(base, id, inner, inner_trim):
     return Look(**d)
 LOOKS['nonnadoc'] = _whitecoat(LOOKS['nonna'], 'nonnadoc', '#6E8FC4', '#8FAAD6')
 LOOKS['poppopdoc'] = _whitecoat(LOOKS['poppop'], 'poppopdoc', '#2F6E62', '#E07A3A')
+# and Nico's own (2026-10-12: the prize for filling the "At the hospital" page): over his green flannel and jeans
+LOOKS['nicodoc'] = _whitecoat(LOOKS['nicodobok'], 'nicodoc', '#3E5F4A', '#F28C38')
+LOOKS['nicodoc'].pants, LOOKS['nicodoc'].pants2, LOOKS['nicodoc'].shoe, LOOKS['nicodoc'].shoe2 = rig.PANT, rig.PANT2, rig.SHOE, rig.SHOE2
 
 @contextmanager
 def wearing(look, pfx):

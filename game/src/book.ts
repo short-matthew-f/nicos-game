@@ -16,7 +16,7 @@ import { ITEM_ICON } from './world/icons';
 /** How a sticker is drawn: a drawn icon, a big thing (animals), a beach shell, or a belt. */
 export type Art = ['icon' | 'big' | 'shell' | 'belt', string];
 export interface Entry { id: string; label: string; art: Art; hint: string; has: (b: Biz) => number }   // has: 0 not yet; 1 (or stars, for photos)
-export interface Page { id: string; title: string; reward: number; entries: Entry[] }
+export interface Page { id: string; title: string; reward: number; entries: Entry[]; prize?: string }   // prize: something as well as the money (the hospital page: a white coat)
 
 const seen = (b: Biz, k: string) => (b.seen[k] ?? 0) > 0 ? 1 : 0;
 const bool = (x: boolean) => (x ? 1 : 0);
@@ -49,7 +49,7 @@ export const PAGES: Page[] = [
   ] },
   { id: 'fish', title: 'Gone fishing', reward: 25, entries: SPECIES.map(sp => ({ id: sp.id, label: sp.name, art: ['icon', sp.kind === 'crab' ? 'crab' : sp.kind === 'bottle' ? 'bottle' : sp.kind ? sp.kind : `fish_${sp.id}`] as Art,
     hint: sp.id === 'golden' ? 'Very rare. Cast as far out as you can...' : sp.far > 0.8 ? 'A big one: cast far out from the end of the pier.' : 'Fish off the end of the pier.', has: (b: Biz) => seen(b, `fish:${sp.id}`) })) },
-  { id: 'hospital', title: 'At the hospital', reward: 30, entries: [
+  { id: 'hospital', title: 'At the hospital', reward: 30, prize: 'your very own white coat', entries: [
     ...PATIENTS.map(p => ({ id: `eyes_${p.who}`, label: `${p.name}'s glasses`, art: ['icon', 'glasses'] as Art, hint: 'Help Dr. Nonna with eye exams at the hospital.', has: (b: Biz) => seen(b, `patient:${p.who}`) })),
     ...CASES.map(c => ({ id: `case_${c.id}`, label: c.title, art: ['icon', 'tweezers'] as Art, hint: 'Steady hands with Dr. Poppop at the hospital.', has: (b: Biz) => seen(b, `case:${c.id}`) })),
     { id: 'xray', label: 'X-ray detective', art: ['icon', 'xray'] as Art, hint: 'Find 3 or more swallowed things on Dr. Poppop\'s X-rays.', has: (b: Biz) => seen(b, 'xray:detective') },

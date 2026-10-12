@@ -250,7 +250,8 @@ async function main() {
    * the pool need swimsuits"), his own clothes everywhere else. And the belt, only in the dojo. */
   function wearBelt(inDojo: boolean) {
     const atPool = (!room && nico.x > DECK.x - 40 && nico.x < DECK.x + DECK.w + 40 && nico.y > DECK.y - 60 && nico.y < DECK.y + DECK.d + 40) || play?.kind === 'swim' || play?.kind === 'waterslide';
-    const outfit = inDojo && player === 'nico' ? 'nicodobok' : atPool && !room ? `${player}swim` : player;
+    const coat = room?.id === 'hospital' && player === 'nico' && (biz.seen['book:hospital'] ?? 0) > 0;   // (his white coat: the prize for the hospital page)
+    const outfit = inDojo && player === 'nico' ? 'nicodobok' : coat ? 'nicodoc' : atPool && !room ? `${player}swim` : player;
     if (nico.view.who !== outfit && dressing !== outfit) {
       if (hasArt(outfit)) relook(nico, outfit); else { dressing = outfit; void loadArt([outfit]).then(() => { dressing = ''; }); }
     }
@@ -1497,6 +1498,7 @@ async function main() {
   const book = new BookView({
     biz, art: stickerArt, save: () => persist(),
     pay: n => { state.money += n; showMoney(); sfx.cash(5); toast(`📖 A full page! +$${n}`); },
+    prize: page => { if (page === 'hospital') setTimeout(() => toast('🥼 Dr. Nonna and Dr. Poppop give you your very own white coat! You\'ll wear it at the hospital.'), 1800); },
     opened: on => { cardOpen = on ? 'book' : null; },
   });
   const bookBtn = document.getElementById('book-btn')!;

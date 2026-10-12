@@ -1335,3 +1335,10 @@ The user: "Nonna doesn't operate a store. She was however an Ophthalmologist. An
   - a 3-star exam and frames saved;
   - the splinter out with no buzz;
   - an X-ray find.
+
+## Nico's white coat (2026-10-12)
+- The user: "Oh yes to the white coat!"
+- Filling the "At the hospital" sticker page now gives his own white coat as well as the $30 (`Page.prize`). The page footer says so, and collecting it brings a toast from Dr. Nonna and Dr. Poppop.
+- From then on, Nico wears it inside the hospital: new look `nicodoc`, a white coat with a stethoscope over his green flannel and jeans. He's back in his own clothes outside, the same way as his dobok at the dojo.
+- Only Nico wears it, not the friends you can play as.
+- E2E: with the page collected, he's in the coat at the hospital, and in his flannel outside.

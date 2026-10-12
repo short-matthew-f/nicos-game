@@ -4,7 +4,7 @@
 import { PAGES, filled, complete, claimed, claim, totals, type Art, type Page } from './book';
 import type { Biz } from './business';
 
-export interface BookHost { biz: Biz; art(a: Art): string; pay(n: number): void; opened(on: boolean): void; save(): void }
+export interface BookHost { biz: Biz; art(a: Art): string; pay(n: number): void; prize?(page: string): void; opened(on: boolean): void; save(): void }
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = '') => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
@@ -56,10 +56,10 @@ export class BookView {
     }
     const foot = h('div', 'book-foot');
     if (complete(b, p) && !claimed(b, p)) {
-      const c = h('button', 'primary', `Page complete! Collect $${p.reward}`); c.type = 'button'; c.dataset.claim = p.id;
-      c.onclick = () => { const n = claim(b, p.id); if (n) { this.host.pay(n); this.host.save(); } this.draw(); };
+      const c = h('button', 'primary', `Page complete! Collect $${p.reward}${p.prize ? ` and ${p.prize}` : ''}`); c.type = 'button'; c.dataset.claim = p.id;
+      c.onclick = () => { const n = claim(b, p.id); if (n) { this.host.pay(n); if (p.prize) this.host.prize?.(p.id); this.host.save(); } this.draw(); };
       foot.append(c);
-    } else foot.append(h('span', 'book-reward', claimed(b, p) ? `Page complete ✓ (you collected $${p.reward})` : `Fill this page: $${p.reward}`));
+    } else foot.append(h('span', 'book-reward', claimed(b, p) ? `Page complete ✓ (you collected $${p.reward}${p.prize ? ` and ${p.prize}` : ''})` : `Fill this page: $${p.reward}${p.prize ? ` + ${p.prize}` : ''}`));
     const prev = h('button', 'book-nav', '◀'), next = h('button', 'book-nav', '▶'); prev.type = next.type = 'button';
     prev.onclick = () => { this.page = (this.page + PAGES.length - 1) % PAGES.length; this.draw(); };
     next.onclick = () => { this.page = (this.page + 1) % PAGES.length; this.draw(); };
