@@ -1267,3 +1267,8 @@ Whether he's hidden comes from the drawing order. Behind Burger Barn and the sli
 **Tests:**
 - `test/fish.test.ts`: casting distance, nibbles and bites, too early, too slow, landing one (letting go on runs), a snapped line, a fish swimming away, far casts favouring big fish.
 - E2E: cast, bite, hook, reel, caught, and it's in the book.
+
+## Yarosh's height (2026-10-12)
+- The user: everyone who's played says Yarosh is way too tall. He should be taller than the kids but not the grown-ups. In real life he's about 5'3" at 14.
+- He's now at height 1.11, down from 1.42. Measured against Nonna (4'11", drawn at 1.04), 5'3" comes to about 1.11.
+- That puts him above Nico (1.0), James (1.02) and Alpha (0.9), and level with or below the adults: Miss Heidi 1.1, Yia-Yia 1.12, Nico's mom 1.16, Poppop 1.24.
