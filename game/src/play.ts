@@ -2,7 +2,7 @@
 // pure function of time, so it can be tested without drawing anything.
 import { SLIDE, SWINGS, SWING_BAR, SWING_SEAT, SOLIDS, WORLD } from './world/map';
 import { freeAt } from './player';
-import { WSLIDE, POOL } from './world/zones';
+import { WSLIDE, POOL, slidePath } from './world/zones';
 import type { View } from './rig/pose';
 
 export interface Body {
@@ -74,19 +74,19 @@ export function swingAt(t: number, seat: number): { body: Body; chain: number } 
 
 // ---- the water slide: climb the tower, sit at the top, whoosh round the twisting chute, splash
 export const WSLIDE_T = { climb: 1.1, sit: 0.3, slide: 1.4 };
-const W0 = [WSLIDE.x + 40, WSLIDE.y - 300], W1 = [WSLIDE.x + 260, WSLIDE.y - 300], W2 = [WSLIDE.x + 40, WSLIDE.y - 150], W3 = [WSLIDE.x + 230, WSLIDE.y + 50];   // (the chute comes right down to the water)
-const bez = (u: number) => [0, 1].map(i => (1 - u) ** 3 * W0[i] + 3 * (1 - u) ** 2 * u * W1[i] + 3 * (1 - u) * u * u * W2[i] + u ** 3 * W3[i]) as [number, number];
+const top = slidePath(0), end = slidePath(1);
 /** Where he lands: the chute's end, dropped to the water's surface. */
-export const SPLASH: [number, number] = [W3[0], POOL.y + 130];   // (well in: not close enough to an edge to climb straight out)
-/** Nico on the water slide at time t (null: he's splashed down). (He's drawn where the chute is drawn.) */
+export const SPLASH: [number, number] = [end.x, POOL.y + 130];   // (well in: not close enough to an edge to climb straight out)
+/** Nico on the water slide at time t (null: he's splashed down). He climbs the ladder, sits at the top, and rides the
+ * chute (world/zones.ts slidePath: the same curve the slide's drawn with). */
 export function waterSlideAt(t: number): Body | null {
   const T = WSLIDE_T, z = WSLIDE.y + 2, pose = { face: 1, hold: 0, sy: 1 };
-  if (t < T.climb) { const u = t / T.climb; return { ...pose, x: WSLIDE.x, y: lerp(WSLIDE.y + 10, W0[1] + 4, u), view: 'back', amp: 1, crouch: 0, sit: 0, z }; }
-  if (t < T.climb + T.sit) { return { ...pose, x: lerp(WSLIDE.x, W0[0], (t - T.climb) / T.sit), y: W0[1] + 4, view: 'front', amp: 0, crouch: 1, sit: 1, z }; }
+  if (t < T.climb) { const u = t / T.climb; return { ...pose, x: WSLIDE.x - 4, y: lerp(WSLIDE.y + 10, WSLIDE.y - WSLIDE.h + 2, u), view: 'back', amp: 1, crouch: 0, sit: 0, z }; }
+  if (t < T.climb + T.sit) { return { ...pose, x: lerp(WSLIDE.x - 4, top.x, (t - T.climb) / T.sit), y: top.y - top.h + 2, view: 'front', amp: 0, crouch: 1, sit: 1, z }; }
   const u = (t - T.climb - T.sit) / T.slide;
   if (u >= 1) return null;
-  const [x, y] = bez(ease(u) * 0.6 + u * 0.4);   // speeds up as it goes
-  return { ...pose, x, y: y + 4, view: 'front', amp: 0, crouch: 1, sit: 1, z };
+  const q = slidePath(ease(u) * 0.6 + u * 0.4);   // speeds up as it goes
+  return { ...pose, x: q.x, y: q.y - q.h + 2, view: 'front', amp: 0, crouch: 1, sit: 1, z: Math.max(z, q.y + 1) };
 }
 
 // ---- swimming

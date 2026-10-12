@@ -59,7 +59,16 @@ export const LAKE = { x: 6950, y: 330, w: 800, d: 420 };
 /** The swimming pool (water: solid for now) inside the pool park. */
 export const POOL = { x: 1820, y: 3880, w: 700, d: 360 };
 /** The water slide tower's foot (the chute twists from its top down to the pool's top edge). */
-export const WSLIDE = { x: 1760, y: 3860 };
+export const WSLIDE = { x: 1760, y: 3860, h: 300 };
+/** The water slide's chute (the user: "the pool slide looks wrong"): from the platform at the top of the tower it swings
+ * out round to the right and back in, dropping all the way, and comes down to the water just inside the pool's edge.
+ * u: 0 at the top, 1 at the splash. Returns where it is on the ground and how high it is there. */
+export function slidePath(u: number): { x: number; y: number; h: number } {
+  const P = [[WSLIDE.x + 34, WSLIDE.y - 14], [WSLIDE.x + 360, WSLIDE.y - 70], [WSLIDE.x + 400, WSLIDE.y + 60], [WSLIDE.x + 250, WSLIDE.y + 92]];
+  const v = 1 - u, x = v ** 3 * P[0][0] + 3 * v * v * u * P[1][0] + 3 * v * u * u * P[2][0] + u ** 3 * P[3][0];
+  const y = v ** 3 * P[0][1] + 3 * v * v * u * P[1][1] + 3 * v * u * u * P[2][1] + u ** 3 * P[3][1];
+  return { x, y, h: WSLIDE.h * Math.pow(v, 1.35) };
+}
 
 export const ZONE_LOTS = [
   { id: 'pooldeck', x: 1660, y: 3740, w: 1240, d: 640, fill: '#DCEFF5' },
@@ -87,7 +96,7 @@ export const ZONE_PROPS: ZoneProp[] = [
   // the beach
   { kind: 'umbrella', x: 900, y: 5010, color: '#E5484D' }, { kind: 'towel', x: 1000, y: 5060, color: '#5B8FD6' },
   { kind: 'umbrella', x: 1700, y: 4980, color: '#F9A826' }, { kind: 'towel', x: 1600, y: 5030, color: '#F06A8A' },
-  { kind: 'sandcastle', x: 2300, y: 4920 }, { kind: 'lifeguard', x: 3400, y: 4720 },
+  { kind: 'lifeguard', x: 3400, y: 4720 },
   { kind: 'umbrella', x: 3900, y: 4650, color: '#3BB273' }, { kind: 'towel', x: 4000, y: 4700, color: '#F9C846' },
   { kind: 'palm', x: 2100, y: 4790 }, { kind: 'palm', x: 3830, y: 4540 }, { kind: 'palm', x: 5000, y: 4310 }, { kind: 'palm', x: 5850, y: 3950 },
   { kind: 'umbrella', x: 5450, y: 4220, color: '#2F7FD8' }, { kind: 'sandcastle', x: 6300, y: 3730 },

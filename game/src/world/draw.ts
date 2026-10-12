@@ -3,8 +3,9 @@
 // only characters use the live outline filter.
 import { emblem } from './emblem';
 import { Container, Graphics, Text } from 'pixi.js';
-import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, ROAD_SEGS, roadRect, PINES, LAKE, POOL, PIER, type Building } from './map';
-import { sandPolygon, waterPolygon, SHORE, shoreY } from './zones';
+import { BUILDINGS, DRIVEWAYS, LOTS, SLIDE, SWINGS, SWING_BAR, SWING_SEAT, POND, FIELD, GOALS, GOAL_MOUTH, PROPS, type Prop, TREES, WORLD, ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, ROAD_SEGS, roadRect, PINES, LAKE, PIER, type Building } from './map';
+import { sandPolygon, waterPolygon, SHORE, shoreY, WSLIDE, slidePath } from './zones';
+import { poolWater } from './pool';
 
 export const NAVY = 0x2B3F55;
 /** The white sticker edge round everything in the world (px). Characters match it (person.ts OUTLINE). */
@@ -40,10 +41,7 @@ export function drawGround(): Graphics {
   g.ellipse(LAKE.x + LAKE.w / 2, LAKE.y + LAKE.d / 2, LAKE.w / 2 + 14, LAKE.d / 2 + 14).fill('#C9B98E');
   g.ellipse(LAKE.x + LAKE.w / 2, LAKE.y + LAKE.d / 2, LAKE.w / 2, LAKE.d / 2).fill('#5AA9C9');
   g.ellipse(LAKE.x + LAKE.w / 2 - 90, LAKE.y + LAKE.d / 2 - 50, LAKE.w / 4, LAKE.d / 7).fill({ color: '#FFFFFF', alpha: 0.22 });
-  g.roundRect(POOL.x - 18, POOL.y - 18, POOL.w + 36, POOL.d + 36, 22).fill('#FFFFFF');
-  g.roundRect(POOL.x, POOL.y, POOL.w, POOL.d, 14).fill('#4FC3E8');
-  for (let i = 1; i < 5; i++) g.rect(POOL.x + 10, POOL.y + i * POOL.d / 5 - 2, POOL.w - 20, 4).fill({ color: '#FFFFFF', alpha: 0.5 });   // lane ropes
-  g.ellipse(POOL.x + POOL.w * 0.3, POOL.y + POOL.d * 0.3, POOL.w * 0.18, POOL.d * 0.08).fill({ color: '#FFFFFF', alpha: 0.3 });
+  poolWater(g);   // (world/pool.ts)
   g.rect(PIER.x - 8, PIER.y - 40, PIER.w + 16, PIER.d + 40).fill('#8A6A48');
   for (let y = PIER.y - 36; y < PIER.y + PIER.d; y += 22) g.rect(PIER.x - 4, y, PIER.w + 8, 16).fill('#C49A6C');
   // soccer field markings
@@ -453,14 +451,34 @@ export function drawProp(p: Prop): Container {
       g.poly([x - 38, y - 380, x, y - 420, x + 38, y - 380]).fill('#E5484D');
       g.roundRect(x - 14, y - 60, 28, 60, 8).fill('#2B3F55'); break;
     case 'waterslide': {
-      // a tall tower with a ladder, and a twisting blue chute down to the pool
+      // (redrawn, 2026-10-11: "the pool slide looks wrong") a tower on four legs with a ladder up the front and a
+      // railed platform under a striped awning; the chute leaves the platform, swings out round on its posts,
+      // dropping all the way, and runs into the water. Its shadow on the ground shows how high it is.
+      const H = WSLIDE.h, pts: [number, number][] = [], gr: [number, number][] = [];
+      for (let k = 0; k <= 48; k++) { const q = slidePath(k / 48); pts.push([q.x, q.y - q.h]); gr.push([q.x, q.y]); }
+      const line = (ps: [number, number][]) => { g.moveTo(ps[0][0], ps[0][1]); for (const [a, b] of ps.slice(1)) g.lineTo(a, b); };
+      line(gr); g.stroke({ width: 34, color: NAVY, alpha: 0.13, cap: 'round', join: 'round' });   // the chute's shadow
       sh(60, 12);
-      g.roundRect(x - 50, y - 300, 100, 302, 10).fill('#FFFFFF').roundRect(x - 44, y - 294, 88, 294, 8).fill('#F9A826');
-      for (let k = y - 280; k < y - 10; k += 28) g.rect(x - 30, k, 60, 8).fill('#FFE29A');
-      g.roundRect(x - 56, y - 316, 112, 24, 8).fill('#FFFFFF').roundRect(x - 52, y - 312, 104, 16, 6).fill('#D9822B');
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 44, color: '#FFFFFF', cap: 'round' });
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 34, color: '#2F7FD8', cap: 'round' });
-      g.moveTo(x + 40, y - 300).bezierCurveTo(x + 260, y - 300, x + 40, y - 150, x + 230, y + 50).stroke({ width: 10, color: '#7CC6E6', cap: 'round' });
+      for (const lx of [x - 36, x + 44]) g.roundRect(lx - 5, y - H - 4, 10, H - 10, 4).fill('#C9D3DC');   // the back legs
+      for (const u of [0.22, 0.42, 0.62, 0.8]) { const q = slidePath(u); if (q.h < 20) continue;            // the chute's posts
+        g.roundRect(q.x - 6, q.y - q.h, 12, q.h, 4).fill('#FFFFFF').roundRect(q.x - 3.5, q.y - q.h, 7, q.h, 3).fill('#9AA6B2'); g.ellipse(q.x, q.y, 9, 4).fill({ color: NAVY, alpha: 0.18 }); }
+      // the platform, its railing and the awning
+      g.roundRect(x - 58, y - H - 14, 116, 22, 6).fill('#FFFFFF').roundRect(x - 54, y - H - 10, 108, 14, 4).fill('#D9822B');
+      for (const rx of [x - 52, x - 18, x + 18, x + 52]) g.rect(rx - 2, y - H - 52, 4, 40).fill('#FFFFFF');
+      g.roundRect(x - 56, y - H - 56, 112, 8, 4).fill('#FFFFFF');
+      g.roundRect(x - 68, y - H - 104, 136, 36, 8).fill('#FFFFFF');                    // the awning: red and white stripes, a scalloped edge
+      for (let k = 0; k < 6; k++) { g.rect(x - 64 + k * 21.4, y - H - 100, 21.4, 26).fill(k % 2 ? '#FFFFFF' : '#E5484D'); g.circle(x - 53.3 + k * 21.4, y - H - 74, 10.7).fill(k % 2 ? '#FFFFFF' : '#E5484D'); }
+      for (const ax of [x - 54, x + 54]) g.rect(ax - 2, y - H - 72, 4, 20).fill('#FFFFFF');
+      // the front legs and the ladder between them
+      for (const lx of [x - 44, x + 36]) g.roundRect(lx - 6, y - H, 12, H + 2, 4).fill('#FFFFFF').roundRect(lx - 3.5, y - H, 7, H, 3).fill('#F9A826');
+      for (let k = y - 16; k > y - H + 8; k -= 26) g.roundRect(x - 40, k - 3, 72, 6, 3).fill('#FFFFFF').rect(x - 38, k - 1.5, 68, 3).fill('#F9C846');
+      // the chute: a white rim, the blue trough, the water running down it
+      line(pts); g.stroke({ width: 50, color: '#FFFFFF', cap: 'round', join: 'round' });
+      line(pts); g.stroke({ width: 40, color: '#1F6FC8', cap: 'round', join: 'round' });
+      line(pts); g.stroke({ width: 26, color: '#3E95E8', cap: 'round', join: 'round' });
+      line(pts.map(([a, b]) => [a - 4, b - 3] as [number, number])); g.stroke({ width: 7, color: '#A9DDF7', alpha: 0.9, cap: 'round', join: 'round' });
+      const [ex, ey] = pts[pts.length - 1];
+      g.ellipse(ex, ey + 8, 34, 11).fill({ color: '#FFFFFF', alpha: 0.75 }).ellipse(ex, ey + 8, 22, 6).fill({ color: '#BFE9FA', alpha: 0.9 });   // the splash where it runs in
       break;
     }
     case 'lounge':

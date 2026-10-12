@@ -331,6 +331,114 @@ def mop_qback(h, hl):
             f'C20,-90 18,-78 18,-62 C12,-54 6,-52 0,-54 C-6,-50 -12,-54 -18,-50 C-26,-53 -33,-60 -36,-68 C-38,-74 -37,-80 -37,-84 Z" fill="{h}"/>'
             f'<path d="M-20,-108 C-8,-114 6,-112 16,-106 M-24,-90 C-26,-78 -24,-66 -19,-58 M2,-96 C1,-82 2,-70 4,-60" fill="none" stroke="{hl}" stroke-width="2.6" stroke-linecap="round"/>')
 
+# Rea (Nico's youngest cousin, 2026-10-11, from photos the user shared; redrawn the same day: "a remedial pass on the
+# new hairstyles"): a toddler's soft mop of honey-brown curls: wispy bangs that curl at the ends, the rest falling
+# in loose ringlets that flare out round her shoulders, a bit wild at the tips
+def _darker(hexc, k=0.78):
+    r, g, b = (int(hexc[i:i + 2], 16) for i in (1, 3, 5)); return f'#{int(r * k):02X}{int(g * k):02X}{int(b * k):02X}'
+def _strands(hl, paths, w=2.2): return ''.join(f'<path d="{d}" fill="none" stroke="{hl}" stroke-width="{w}" stroke-linecap="round"/>' for d in paths)
+_BANGS = 'Q16,-87 12,-93 Q8,-87 4,-93 Q0,-87 -4,-93 Q-8,-87 -12,-93 Q-16,-87 -20,-92'
+def curls_front(h, hl):
+    d = _darker(h)
+    return (f'<path d="M0,-122 C19,-122 34,-112 36,-96 C40,-84 45,-74 46,-62 Q53,-56 47,-50 Q51,-42 43,-40 Q41,-33 34,-39 '
+            f'C28,-48 24,-58 23,-70 C22,-80 21,-88 20,-92 {_BANGS} '
+            f'C-21,-88 -22,-80 -23,-70 C-24,-58 -28,-48 -34,-39 Q-41,-33 -43,-40 Q-51,-42 -47,-50 Q-53,-56 -46,-62 C-45,-74 -40,-84 -36,-96 C-34,-112 -19,-122 0,-122 Z" fill="{h}"/>'
+            + _strands(h, ['M-49,-58 q-6,0 -6,-6', 'M49,-58 q6,0 6,-6', 'M-40,-38 q-4,5 -1,9', 'M40,-38 q4,5 1,9'], 1.6) + _strands(d, ['M30,-84 C34,-74 28,-64 33,-54 C36,-48 32,-44 34,-40', 'M-30,-84 C-34,-74 -28,-64 -33,-54 C-36,-48 -32,-44 -34,-40'], 1.8)
+            + _strands(hl, ['M38,-92 C45,-82 36,-72 42,-63 C46,-56 41,-50 44,-45', 'M-38,-92 C-45,-82 -36,-72 -42,-63 C-46,-56 -41,-50 -44,-45',
+                            'M-14,-114 C-4,-119 8,-118 17,-112', 'M-10,-108 Q-13,-100 -8,-95', 'M2,-111 Q-1,-101 4,-95', 'M13,-107 Q16,-99 11,-95',
+                            'M44,-60 q5,3 2,8', 'M-44,-60 q-5,3 -2,8']))
+def curls_side(h, hl):
+    d = _darker(h)
+    return (f'<path d="M35,-96 C34,-114 18,-123 -2,-122 C-22,-121 -36,-108 -38,-90 C-41,-78 -45,-66 -45,-55 Q-50,-47 -43,-42 Q-42,-34 -33,-38 Q-27,-31 -20,-38 '
+            f'Q-13,-35 -13,-44 C-11,-56 -7,-66 -3,-74 C1,-80 6,-86 12,-90 Q16,-86 20,-92 Q24,-87 28,-93 Q32,-88 35,-96 Z" fill="{h}"/>'
+            + _strands(h, ['M-50,-52 q-6,0 -6,-6', 'M-36,-34 q-3,5 0,9'], 1.6) + _strands(d, ['M-22,-96 C-30,-84 -24,-72 -30,-62 C-34,-54 -28,-48 -30,-42', 'M-8,-92 C-14,-82 -10,-72 -14,-62'], 1.8)
+            + _strands(hl, ['M-34,-100 C-42,-88 -34,-76 -40,-64 C-44,-56 -38,-50 -40,-44', 'M-16,-114 C-2,-120 14,-118 26,-108', 'M20,-108 Q25,-100 22,-95', 'M8,-112 Q12,-103 9,-96',
+                            'M-44,-58 q-5,3 -2,8']))
+def curls_back(h, hl):
+    d = _darker(h)
+    return (f'<path d="M-36,-96 C-34,-114 -18,-122 0,-122 C18,-122 34,-114 36,-96 C40,-82 46,-66 46,-54 Q53,-46 45,-42 Q45,-34 36,-38 Q32,-30 24,-36 '
+            f'Q18,-30 12,-36 Q6,-30 0,-36 Q-6,-30 -12,-36 Q-18,-30 -24,-36 Q-32,-30 -36,-38 Q-45,-34 -45,-42 Q-53,-46 -46,-54 C-46,-66 -40,-82 -36,-96 Z" fill="{h}"/>'
+            + _strands(h, ['M-49,-58 q-6,0 -6,-6', 'M49,-58 q6,0 6,-6', 'M-40,-38 q-4,5 -1,9', 'M40,-38 q4,5 1,9'], 1.6) + _strands(d, ['M-20,-104 C-26,-90 -18,-78 -24,-66 C-28,-56 -22,-48 -24,-40', 'M20,-104 C26,-90 18,-78 24,-66 C28,-56 22,-48 24,-40', 'M0,-112 C-4,-98 4,-86 -2,-72 C-4,-60 2,-50 0,-40'], 1.8)
+            + _strands(hl, ['M-34,-90 C-40,-80 -32,-70 -38,-60 C-42,-52 -36,-46 -38,-42', 'M34,-90 C40,-80 32,-70 38,-60 C42,-52 36,-46 38,-42',
+                            'M-12,-112 C-16,-100 -8,-90 -12,-78 C-14,-68 -8,-58 -10,-48', 'M12,-112 C16,-100 8,-90 12,-78 C14,-68 8,-58 10,-48', 'M-16,-116 C-4,-121 8,-120 18,-114']))
+def curls_qfront(h, hl):
+    d = _darker(h)
+    return (f'<path d="M2,-122 C20,-122 34,-110 36,-94 C40,-82 42,-70 40,-58 Q45,-50 38,-46 Q36,-39 30,-44 C27,-54 26,-66 26,-78 L24,-90 '
+            f'Q20,-86 16,-92 Q12,-87 8,-92 Q4,-87 0,-92 Q-4,-87 -8,-92 L-12,-90 C-15,-82 -16,-72 -15,-62 C-14,-54 -18,-46 -24,-40 Q-30,-33 -35,-40 '
+            f'Q-43,-40 -41,-48 Q-49,-54 -44,-62 C-44,-76 -40,-90 -36,-100 C-30,-114 -14,-122 2,-122 Z" fill="{h}"/>'
+            + _strands(d, ['M-26,-90 C-32,-78 -24,-68 -30,-58 C-33,-52 -28,-46 -30,-42', 'M32,-84 C35,-74 30,-66 34,-56'], 1.8)
+            + _strands(hl, ['M-36,-94 C-42,-84 -34,-74 -40,-64 C-44,-56 -38,-50 -40,-46', 'M-10,-114 C2,-120 16,-118 26,-110', 'M-4,-108 Q-7,-100 -3,-95', 'M8,-110 Q6,-101 10,-95', 'M19,-106 Q22,-99 18,-95']))
+def curls_qback(h, hl):
+    d = _darker(h)
+    return (f'<path d="M-36,-96 C-34,-114 -18,-122 -2,-122 C14,-122 26,-112 26,-98 C30,-84 34,-68 34,-56 Q41,-48 32,-44 Q30,-36 22,-40 Q16,-32 8,-38 '
+            f'Q2,-32 -4,-38 Q-10,-32 -16,-38 Q-24,-32 -28,-40 Q-38,-38 -38,-46 Q-46,-52 -42,-58 C-44,-70 -40,-84 -36,-96 Z" fill="{h}"/>'
+            + _strands(d, ['M-18,-104 C-24,-90 -16,-78 -22,-66 C-26,-56 -20,-48 -22,-42', 'M10,-106 C14,-92 8,-80 12,-68 C14,-58 10,-50 12,-44'], 1.8)
+            + _strands(hl, ['M-32,-92 C-38,-82 -30,-72 -36,-62 C-40,-54 -34,-48 -36,-44', 'M-4,-112 C-8,-100 0,-90 -4,-78 C-6,-66 0,-56 -2,-46', 'M24,-96 C28,-84 22,-74 26,-62', 'M-18,-116 C-6,-121 6,-120 16,-114']))
+
+# Miss Heidi (the dojo, 2026-10-11, from photos the user shared; redrawn: "a remedial pass"): brown hair parted under
+# a black paisley bandana tied at the back of her head, pulled back past her ears into two plaits that hang down over
+# the front of her shoulders
+_BAND = '#1F1F24'
+def _plait(x0, y0, x1, y1, h, hl, w=6.5, n=7):
+    """A three-strand plait: segments leaning left and right in turn, a dark edge, a hair tie and a little tuft."""
+    import math
+    d = _darker(h, 0.7); L = math.hypot(x1 - x0, y1 - y0); ang = math.degrees(math.atan2(y1 - y0, x1 - x0)) - 90
+    out = f'<path d="M{x0},{y0} L{x1},{y1}" stroke="{d}" stroke-width="{w * 1.7}" stroke-linecap="round"/>'
+    for i in range(n):
+        t = (i + 0.5) / n; x = x0 + (x1 - x0) * t; y = y0 + (y1 - y0) * t; tilt = 28 if i % 2 else -28; side = w * 0.22 * (1 if i % 2 else -1)
+        out += (f'<g transform="translate({x:.1f},{y:.1f}) rotate({ang:.1f})"><ellipse cx="{side:.1f}" cy="0" rx="{w * 0.62:.1f}" ry="{L / n * 0.62:.1f}" transform="rotate({tilt})" fill="{h}" stroke="{d}" stroke-width="1"/>'
+                f'<path d="M{side - w * 0.2:.1f},{-L / n * 0.3:.1f} q{w * 0.25:.1f},{L / n * 0.25:.1f} 0,{L / n * 0.5:.1f}" fill="none" stroke="{hl}" stroke-width="1.2" stroke-linecap="round" transform="rotate({tilt})"/></g>')
+    return (out + f'<rect x="{x1 - 3.5}" y="{y1 - 2}" width="7" height="4" rx="2" fill="#2B2B30"/>'
+            f'<path d="M{x1 - 3.5},{y1 + 2} C{x1 - 5},{y1 + 7} {x1 - 2},{y1 + 10} {x1},{y1 + 11} C{x1 + 2},{y1 + 10} {x1 + 5},{y1 + 7} {x1 + 3.5},{y1 + 2} Z" fill="{h}"/>')
+def _paisley(pts):
+    return ''.join(f'<path d="M{x},{y} c2,-3 5,-2 4,1 c-1,2 -3,2 -4,4 c0,-2 -1,-3 0,-5 Z" fill="#FFFFFF" opacity=".85"/><circle cx="{x + 7}" cy="{y + 3}" r="1" fill="#FFFFFF" opacity=".8"/>' for x, y in pts)
+def pigtails_front(h, hl):
+    # (the face stays clear: hair only at the temples, pulled back behind the ears; the plaits come forward from behind
+    # the jaw and hang over her shoulders)
+    d = _darker(h)
+    return (_ear(-29, -79, 5, 7) + _ear(29, -79, 5, 7)
+            + f'<path d="M-29,-99 C-35,-94 -37,-84 -35,-73 C-33,-67 -29,-64 -25,-63 L-23,-69 C-26,-74 -27,-80 -27,-86 C-27,-92 -26,-96 -24,-99 Z" fill="{h}"/>'
+            + f'<path d="M29,-99 C35,-94 37,-84 35,-73 C33,-67 29,-64 25,-63 L23,-69 C26,-74 27,-80 27,-86 C27,-92 26,-96 24,-99 Z" fill="{h}"/>'
+            + _strands(d, ['M-28,-96 C-32,-88 -32,-78 -28,-70', 'M28,-96 C32,-88 32,-78 28,-70'], 1.4)
+            + _plait(-26, -64, -23, -14, h, hl) + _plait(26, -64, 23, -14, h, hl)
+            + f'<path d="M-31,-98 C-31,-116 -17,-124 0,-124 C17,-124 31,-116 31,-98 C20,-104 -20,-104 -31,-98 Z" fill="{_BAND}"/>'
+            + f'<path d="M-31,-98 C-20,-104 20,-104 31,-98 L31,-95 C20,-101 -20,-101 -31,-95 Z" fill="#3A3A42"/>'
+            + _paisley([(-20, -114), (-6, -119), (8, -118), (19, -112), (-12, -109), (12, -109)]))
+def pigtails_side(h, hl):
+    d = _darker(h)
+    return (f'<path d="M-8,-100 C-20,-100 -30,-96 -33,-88 C-36,-78 -32,-70 -24,-64 L-16,-66 C-14,-72 -12,-78 -10,-84 C-9,-90 -8,-95 -8,-100 Z" fill="{h}"/>'   # behind the ear only
+            + _strands(d, ['M-12,-98 C-22,-94 -28,-86 -28,-76'], 1.6) + _ear(-3, -82)
+            + _plait(-18, -66, 2, -18, h, hl)
+            + f'<path d="M30,-100 C26,-122 -22,-127 -33,-98 C-14,-104 12,-104 30,-100 Z" fill="{_BAND}"/>'
+            + f'<path d="M30,-100 C12,-104 -14,-104 -33,-98 L-33,-95 C-14,-101 12,-101 30,-97 Z" fill="#3A3A42"/>'
+            + f'<path d="M-32,-100 C-38,-98 -42,-92 -44,-84 L-39,-84 C-38,-90 -36,-94 -32,-96 Z M-32,-98 C-36,-94 -38,-86 -36,-78 L-32,-80 C-33,-86 -32,-92 -30,-96 Z" fill="{_BAND}"/>'
+            + f'<circle cx="-32" cy="-98" r="4" fill="{_BAND}"/>' + _paisley([(-18, -114), (-4, -119), (10, -116), (20, -110), (-8, -108)]))
+def pigtails_back(h, hl):
+    d = _darker(h)
+    return (_ear(-29, -81, 5, 7) + _ear(29, -81, 5, 7)
+            + f'<path d="M-31,-92 C-33,-78 -26,-68 -14,-64 C-6,-62 6,-62 14,-64 C26,-68 33,-78 31,-92 Z" fill="{h}"/>'
+            + _strands(d, ['M-20,-90 C-18,-80 -14,-72 -10,-66', 'M20,-90 C18,-80 14,-72 10,-66', 'M0,-92 L0,-66'], 1.6)
+            + _plait(-12, -66, -24, -48, h, hl, 6, 3) + _plait(12, -66, 24, -48, h, hl, 6, 3)
+            + f'<path d="M-32,-90 C-33,-112 -16,-124 0,-124 C16,-124 33,-112 32,-90 C20,-96 -20,-96 -32,-90 Z" fill="{_BAND}"/>'
+            + f'<path d="M-3,-93 C-7,-88 -9,-82 -10,-76 L-5,-76 C-4,-82 -2,-87 0,-91 Z M3,-93 C7,-88 9,-82 10,-76 L5,-76 C4,-82 2,-87 0,-91 Z" fill="{_BAND}"/><circle cx="0" cy="-93" r="5" fill="{_BAND}"/>'
+            + _paisley([(-20, -110), (-6, -116), (8, -116), (20, -109), (-12, -102), (10, -102)]))
+def pigtails_qfront(h, hl):
+    d = _darker(h)
+    return (_ear(-20, -79, 4, 5.5)
+            + f'<path d="M-24,-99 C-31,-95 -34,-86 -32,-74 C-30,-67 -24,-64 -19,-63 L-17,-69 C-20,-74 -21,-80 -21,-86 C-21,-92 -20,-96 -17,-99 Z" fill="{h}"/>'
+            + _strands(d, ['M-23,-95 C-27,-88 -27,-78 -23,-70'], 1.4)
+            + _plait(26, -62, 23, -22, h, hl, 5.5, 6) + _plait(-17, -62, -14, -14, h, hl)
+            + f'<path d="M-30,-97 C-29,-115 -14,-124 2,-124 C18,-124 31,-114 32,-99 C20,-105 -16,-105 -30,-97 Z" fill="{_BAND}"/>'
+            + f'<path d="M-30,-97 C-16,-105 20,-105 32,-99 L32,-96 C20,-102 -16,-102 -30,-94 Z" fill="#3A3A42"/>'
+            + _paisley([(-18, -112), (-4, -118), (10, -117), (22, -110), (-8, -107), (14, -107)]))
+def pigtails_qback(h, hl):
+    d = _darker(h)
+    return (f'<path d="M-33,-92 C-35,-78 -28,-68 -16,-64 C-8,-62 4,-62 10,-64 C18,-68 24,-78 24,-92 Z" fill="{h}"/>'
+            + _strands(d, ['M-22,-90 C-20,-80 -16,-72 -12,-66', 'M10,-90 C10,-80 8,-72 4,-66'], 1.6)
+            + _plait(-16, -66, -28, -48, h, hl, 6, 3) + _plait(6, -66, 16, -50, h, hl, 5.5, 3)
+            + f'<path d="M-33,-90 C-34,-112 -18,-124 -2,-124 C14,-124 26,-114 25,-94 C12,-98 -20,-96 -33,-90 Z" fill="{_BAND}"/>'
+            + f'<path d="M-11,-93 C-15,-88 -17,-82 -18,-76 L-13,-76 C-12,-82 -10,-87 -8,-91 Z M-5,-93 C-1,-88 1,-82 2,-76 L-3,-76 C-4,-82 -6,-87 -8,-91 Z" fill="{_BAND}"/><circle cx="-8" cy="-93" r="5" fill="{_BAND}"/>'
+            + _paisley([(-22, -110), (-8, -116), (6, -114), (-14, -102)]))
 # (hair that hangs behind the body: drawn before the torso)
 BEHIND = {
     'nico': {'side': lambda h: f'<path d="M-24,-71 C-36,-60 -34,-40 -27,-27 C-22,-36 -18,-52 -15,-66 Z" fill="{h}"/>',
@@ -349,6 +457,8 @@ HAIR = {
     'nico': (nico_side, nico_front, nico_back, nico_qfront, nico_qback),
     'tousle': (tousle_side, tousle_front, tousle_back, tousle_qfront, tousle_qback),
     'mop': (mop_side, mop_front, mop_back, mop_qfront, mop_qback),
+    'curls': (curls_side, curls_front, curls_back, curls_qfront, curls_qback),
+    'pigtails': (pigtails_side, pigtails_front, pigtails_back, pigtails_qfront, pigtails_qback),
 }
 def behind_of(look, view):
     f = BEHIND.get(look.style, {}).get(view)
@@ -720,6 +830,10 @@ LOOKS = {
     'alpha': Look('alpha', skin='#EAC09E', skin2='#D8A884', hair='#2C1F19', hl='#463229', style='mop', top='tee',
                   shirt='#F7F7F4', shirt2='#E3E3DE', sleeve='#F7F7F4', trim='#ECECE8', pants='#232428', pants2='#1B1C20',
                   shoe='#2B2D32', shoe2='#232529', height=0.9),
+    # Rea, Nico's youngest cousin: a toddler (a bigger head for her size), light-brown curls, a light-blue swimsuit, barefoot on the beach
+    'rea': Look('rea', skin='#F5D3BE', skin2='#E7BBA2', hair='#A0703F', hl='#D6AA6E', style='curls', top='tee',
+                shirt='#9CC3EC', shirt2='#86AEDA', sleeve='#F5D3BE', trim='#F5D3BE', pants='#9CC3EC', pants2='#86AEDA',
+                shoe='#F5D3BE', shoe2='#E7BBA2', height=0.6, head=(33, 33), shorts=True),
     # people who work inside the other buildings, and the grown-ups at home in the houses (made up)
     # Litchfield Tang Soo Do (2026-10-11), drawn from photos the user shared: everyone in a white dobok edged
     # in black, barefoot; the masters' belts black with a red stripe down the middle
@@ -739,6 +853,10 @@ LOOKS = {
     'erin': Look('erin', skin='#F2C8AC', skin2='#E0AD90', hair='#A88456', hl='#C7A472', style='tail', top='dobok',
                  shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F2C8AC', shoe2='#E0AD90', height=1.18,
                  glasses=('tortoise', '#DCEAF5', 'soft'), belt=('#1F1F24', None), under='#26346A', head=(25, 32)),
+    # Miss Heidi: brown hair in two braids, a black bandana, a black belt
+    'heidi': Look('heidi', skin='#F4CFBA', skin2='#E4B49C', hair='#5E4030', hl='#80593F', style='pigtails', top='dobok',
+                  shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe='#F4CFBA', shoe2='#E4B49C', height=1.1,
+                  belt=('#1F1F24', None), slim=1.06),
     # Nico in his whites, for the dojo (his own hair and face; his belt is drawn over it in the game)
     'nicodobok': Look('nicodobok', skin=rig.SK, skin2=rig.SK2, hair=rig.HAIR, style='nico', top='dobok',
                       shirt='#FAFAF7', shirt2='#E4E4DC', sleeve='#FAFAF7', trim='#1F1F24', pants='#FAFAF7', pants2='#E4E4DC', shoe=rig.SK, shoe2=rig.SK2, height=1.0),
@@ -776,6 +894,18 @@ LOOKS = {
                   shirt='#F28C38', shirt2='#D9772A', sleeve='#5B8FD6', trim='#F9E39A',
                   pants='#3E4A5A', pants2='#334050', shoe='#7A5236', shoe2='#664430', height=1.18),
 }
+
+# Swimsuits at the pool (the user: "people in the pool need swimsuits"): whoever's playing changes into one on the pool
+# deck: a rash guard and swim trunks, barefoot (art/<who>swim)
+def _swimwear(base, id, shirt, shirt2, trunks, trunks2, trim):
+    d = {k: v for k, v in vars(base).items() if k in Look.__init__.__code__.co_varnames}
+    d.update(id=id, top='tee', shirt=shirt, shirt2=shirt2, sleeve=shirt, trim=trim, pants=trunks, pants2=trunks2, shoe=base.skin, shoe2=base.skin2,
+             shorts=True, socks=None, camo=None, stripe=None, plaid=None, belt=None, watch=None)
+    return Look(**d)
+LOOKS['nicoswim'] = _swimwear(LOOKS['nicodobok'], 'nicoswim', '#2B5FA8', '#234F8E', '#F28C38', '#D9772A', '#7FD1E8')
+LOOKS['jamesswim'] = _swimwear(LOOKS['james'], 'jamesswim', '#F4F6F8', '#D9DFE6', '#2E3A66', '#26305A', '#5B8FD6')
+LOOKS['primoswim'] = _swimwear(LOOKS['primo'], 'primoswim', '#2456C8', '#1C45A6', '#3BB273', '#2F9A61', '#FFFFFF')
+LOOKS['temposwim'] = _swimwear(LOOKS['tempo'], 'temposwim', '#D9322E', '#B82723', '#F9C846', '#D9A93A', '#FFFFFF')
 
 @contextmanager
 def wearing(look, pfx):

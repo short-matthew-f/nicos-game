@@ -1103,3 +1103,57 @@ The user: "Yarosh should be very tall. The potato shop should have a potato peel
 - The user: "Yarosh can be a bit skinnier".
 - New `Look(slim=…)` option: it narrows the torso, sleeves, arms and legs (a horizontal scale on each part) and leaves the head alone. Yarosh uses `slim=0.8`.
 - The rig's shoulder and hip spacing don't change, so the arms still meet the shoulders.
+
+## Rea, Miss Heidi, Bobbing for Bakers, the pool (2026-10-11)
+The user: "There should also be a Bobbing for Bakers game in Yarosh's", "This cutie is Rea, Nico's youngest cousin... at the beach, she's knocking over buildings and building castles", "people in the pool need swimsuits", "the pool slide looks wrong", "there's something wrong about the water in the pool", "Miss Heidi, she belongs in the dojo too". Then: "Do a remedial pass on the new hairstyles for Heidi and Rea" and "Heidi's hair still looks odd. It's interacting strangely with her face." The photos are reference only; they are not in the repo.
+
+### Rea (`src/people.py` look `rea`; `rea.ts`; `main.ts`)
+- **Her look:** a toddler at height 0.6 with a bigger head for her size, in a light-blue swimsuit, barefoot. Style `curls`:
+  - a soft mop of honey-brown curls with wispy bangs that curl at the ends;
+  - loose ringlets that flare out round her shoulders, with a few frizzy wisps at the sides and ends.
+  - The first version used little round curls and read as buns, so it was redrawn.
+- **What she does at the beach (`rea.ts`):** she waddles between three spots on the sand. At each one she builds a sandcastle that rises in stages, admires it ("Pretty!"), then stomps it flat ("BOOM!", "Hehehe!", "Again!").
+- **What Nico can do:** build her a castle at an empty spot, which she toddles straight over to knock down, or say hi.
+- **Sticker:** "Rea's castles".
+- The beach's old static sandcastle next to her is gone.
+
+### Miss Heidi (`heidi`)
+- **Her look:** in her dobok with a black belt. Style `pigtails`:
+  - a black paisley bandana tied at the back of her head;
+  - brown hair swept back over her ears from under the bandana;
+  - two three-strand plaits that come forward from behind her jaw and hang over the front of her shoulders.
+  - Her face is kept clear: an earlier pass drew hair bands across her forehead and cheeks.
+- **In the dojo:** she stands with the instructors and does the form with them (now five in the line).
+- **Sparring:** she's a rival between Erin and Mrs. Master Krantz ("not so easy").
+
+### Bobbing for Bakers (`bob.ts` rules, `bobView.ts` screen)
+- Baked potatoes drift and bob in a wooden washtub, seen from above. Some are plain, some wrapped in foil (worth 2), and now and then there's a golden one (worth 5).
+- Nico moves the back of his head over the water by dragging (a tap goes for that spot), then DUNKs.
+- He only catches one if it's bobbed up to the top when his face goes in.
+- A round lasts 30 seconds. Scoring 8 or more gets a loaded baker on the house (a speed boost). The best score is in `scores.bob` and on Alpha's high-score board.
+- It starts from the washtub in Yarosh's shop. The "EVERY POTATO" sign moved so very-tall Yarosh doesn't cover it.
+
+### The pool
+- **Swimsuits:** on the pool deck, in the water and on the slide, whoever's playing changes into a swimsuit: a rash guard and trunks, barefoot (`<who>swim` art for Nico, James, Primo and Tempo). Everywhere else they wear their own clothes. Nico's whites in the dojo work the same way.
+- **The water (`world/pool.ts`):**
+  - The far wall's tiles show through the water, and the floor is tiled.
+  - Dark lane lines with T ends run along the bottom, as in real pools, and the deep end is darker.
+  - There are depth markers on the edge.
+  - Light ripples and sparkles move across the surface.
+  - Gone: the white stripes across the surface and the white blob.
+- **The slide:**
+  - The tower stands on four legs with a ladder up the front, and a railed platform under a red-and-white striped awning.
+  - The chute leaves the platform, swings out round on support posts, dropping the whole way, and runs into the water with a splash.
+  - Its shadow on the ground shows how high it is.
+  - The ride follows the same curve (`slidePath` in `world/zones.ts`).
+
+### Fixes
+- Leaving the dojo while an instructor's speech bubble was showing threw an error every frame, because the bubble had already been destroyed with the room. The loop now skips destroyed bubbles.
+
+### Tests
+- New: `test/rea.test.ts` and `test/bob.test.ts`.
+- New e2e checks:
+  - the swimsuit at the pool, and his own clothes away from it;
+  - Miss Heidi in the form;
+  - catching a baker by dunking as it bobs up;
+  - building Rea a castle, and her stomping one.

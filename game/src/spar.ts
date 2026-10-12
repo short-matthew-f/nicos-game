@@ -16,6 +16,8 @@ export interface Rival { who: string; name: string; reaction: number; aggression
 export const RIVALS: Rival[] = [
   { who: 'erin', name: 'Erin', reaction: 0.5, aggression: 0.32, block: 0.22, kickiness: 0.35, speed: 0.85,
     lines: { start: "Let's have fun! Hands up!", hit: ['Nice one!', 'Ooh, good jab!', 'You got me!'], win: 'Good match, Nico! Again sometime?', lose: 'Wow! You beat me fair and square!' } },
+  { who: 'heidi', name: 'Miss Heidi', reaction: 0.45, aggression: 0.4, block: 0.3, kickiness: 0.45, speed: 0.9,
+    lines: { start: 'Hands up, eyes on me. Ready?', hit: ['Ooh, nice!', 'Good one!', 'Yes! Like that!'], win: 'Great match! Keep that guard up.', lose: 'Wow, Nico! You got me!' } },
   { who: 'mrskrantz', name: 'Mrs. Master Krantz', reaction: 0.4, aggression: 0.45, block: 0.38, kickiness: 0.5, speed: 0.95,
     lines: { start: 'Watch my feet, Nico. Ready?', hit: ['Good!', 'Sharp!', 'Again!'], win: 'Keep your guard up and you will get me next time.', lose: 'Excellent! I am proud of you.' } },
   { who: 'schindewolf', name: 'Master Schindewolf', reaction: 0.32, aggression: 0.55, block: 0.5, kickiness: 0.6, speed: 1,

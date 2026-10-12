@@ -142,17 +142,19 @@ export const INTERIORS: Record<string, Interior> = {
   crew: [
     { who: 'mrskrantz', name: 'Mrs. Master Krantz', x: 470, y: 420, lines: ['Hi Nico! Ready for class?', 'Remember to bow when you step on the mat.', 'Great kicks today!', 'Stand tall, eyes forward.'] },
     { who: 'schindewolf', name: 'Master Schindewolf', x: 960, y: 560, face: 'qfront', flip: true, lines: ['Chamber that kick, Nico!', 'Keep your guard up.', 'Kihap! Let me hear it!', 'Again. Sharper this time.'] },
+    { who: 'heidi', name: 'Miss Heidi', x: 800, y: 440, face: 'qfront', flip: true, lines: ['Hi Nico! Ready to work hard?', 'Bend those knees. Strong stance!', 'Breathe in... and KIHAP!', 'Nice form! Keep your hands up.', 'Let\'s see that front kick!'] },
     { who: 'erin', name: 'Erin', x: 230, y: 500, face: 'qfront', lines: ['Hi Nico! Want to practice your form?', 'Nice stance!', 'Stretch first, then kick high.', 'You\'re getting faster!'] },
   ] },
   // Nico's friends' shops (2026-10-11), the friends drawn from photos the user shared (reference only)
   potato: room('potato', "Yarosh's Potatoes", { wall: '#F7E6C4', stripe: '#FFFFFF', trim: '#8A5A3B', floor: ['#FFFFFF', '#F2D9A0'], tiles: true }, [
     onWall(40, 40, 320, 160, '#2F3B33', 'POTATOES!', 'bakedpot tots mash chips', { label: '📋 Read the menu', lines: ['Baked, mashed, curly, tots. Every potato, every way.', 'Today\'s special: a baked potato with EVERYTHING on it.', 'Small print: "No, we don\'t do salads."'] }),
     block(300, 330, 600, 70, 90, '#F4EBD6', '#C9874A', 'bakedpot potato potato'),
-    onWall(440, 40, 320, 130, '#F9C846', 'EVERY POTATO,\nEVERY WAY'),
+    onWall(660, 40, 260, 130, '#F9C846', 'EVERY POTATO,\nEVERY WAY'),
     block(940, 262, 200, 60, 110, '#9AA6B2', '#5B6472', 'fries', { label: '🍟 Peek in the fryer', lines: ['Sizzle sizzle! The curly fries go round and round.', 'It smells amazing in here.'] }),
     block(330, 530, 220, 55, 70, '#D9A066', '#8A5A3B', 'potato potato potato', { label: '🔪 Help Yarosh peel potatoes', action: 'peel' }),   // the peeling board (peel.ts)
     big(130, 470, 'potsack', 110, { label: '🥔 Look at the potatoes', lines: ['A whole sack of potatoes. Some of them have funny faces.', 'Yarosh says this one looks like you.', 'Russet, red, gold, sweet. Who knew there were so many?'] }, [90, 30]),
-    ...[[260, 640], [820, 600], [1060, 660]].map(([x, y]) => block(x - 70, y, 140, 50, 60, '#E8C18A', '#B9895A', undefined, sitHere('🪑 Sit at a table'))),
+    big(1040, 600, 'washtub', 120, { label: '💦 Bob for bakers!', action: 'bob' }, [150, 46]),   // (bob.ts)
+    ...[[260, 640], [760, 650]].map(([x, y]) => block(x - 70, y, 140, 50, 60, '#E8C18A', '#B9895A', undefined, sitHere('🪑 Sit at a table'))),
   ], { who: 'yarosh', name: 'Yarosh', x: 600, y: 322, lines: ['Potatoes! What\'ll it be?'], action: 'potato' }),
   retro: room('retro', "Alpha's Retro Games", { wall: '#2B2A4A', stripe: '#3B3768', trim: '#4FE3C1', floor: ['#2F2F38', '#26262E'], tiles: true }, [
     onWall(60, 40, 300, 160, '#1E2733', 'HIGH SCORES', undefined, { label: '🏆 Read the high scores', action: 'scores' }),

@@ -5,6 +5,7 @@ extensions.add(CullerPlugin);
 import { WORLD, SOLIDS, ROADS_X, ROADS_Y, PARKED_CAR, BUILDINGS, SWINGS, PROPS, POND, SHED, SHOP, BAKERY, TREES, PINES, doorOf } from './world/map';
 import { shoreY } from './world/zones';
 import { drawGround, drawWorld, drawBuilding } from './world/draw';
+import { PoolRipples } from './world/pool';
 import { outlineArt, slapIn, update as updateStickers, landed } from './world/stickers';
 import { Dust } from './world/dust';
 import { icon, itemIcon, bigThing } from './world/icons';
@@ -32,7 +33,7 @@ import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
-import { POOL, WSLIDE } from './world/zones';
+import { POOL, WSLIDE, ZONE_LOTS } from './world/zones';
 import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, pinballArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
 import { WALLPAPERS, RUGS, REDECORATE, PAINTINGS_KEPT } from './decor';
 import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
@@ -43,10 +44,12 @@ import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
+import { makeRea, stepRea, buildFor, REA } from './rea';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
 import { CABINETS } from './arcade/games';
 import { PeelGame } from './peelView';
+import { BobGame } from './bobView';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
@@ -129,7 +132,8 @@ async function main() {
   const night = new Night(); world.addChild(night.view); app.stage.addChildAt(night.moon, app.stage.getChildIndex(world) + 1);
   // the weather and the seasons: puddles and snow on the ground, holiday lights on the houses, the sky falling over it all
   const weather = new Weather();
-  world.addChildAt(weather.ground, 1); for (const c of weather.decor) layer.addChild(c); world.addChild(weather.glow);
+  const ripples = new PoolRipples(); world.addChildAt(ripples.view, 1);
+  world.addChildAt(weather.ground, 2); for (const c of weather.decor) layer.addChild(c); world.addChild(weather.glow);
   app.stage.addChildAt(weather.sky, app.stage.getChildIndex(night.moon) + 1);
   const umbrellas = new Map<object, Graphics>();   // (one for anyone out in the rain)
   const UMBRELLA_COLORS = [0xE5484D, 0x2F6FD0, 0xF9C846, 0x3BB273, 0x8E5BC8, 0xF06A8A];
@@ -231,14 +235,16 @@ async function main() {
   /** Nico's karate belt, round his waist (only Nico wears it: friends he plays as don't). */
   // (only in the dojo: the user, "The belt should only be on in the dojo"; the loop keeps it right)
   let beltShown: string | null = null;
-  let doboking = false;   // (his dobok's art is loading)
+  let dressing = '';   // (the outfit whose art is loading)
+  const DECK = ZONE_LOTS.find(l => l.id === 'pooldeck')!;
+  /** What he's wearing: his whites in the dojo (only Nico has them), a swimsuit round the pool (the user: "people in
+   * the pool need swimsuits"), his own clothes everywhere else. And the belt, only in the dojo. */
   function wearBelt(inDojo: boolean) {
-    // in the dojo, Nico changes into his whites (the dobok: art/nicodobok); out again when he leaves
-    const who = nico.view.who;
-    if (inDojo && who === 'nico' && !doboking) {
-      if (hasArt('nicodobok')) relook(nico, 'nicodobok'); else { doboking = true; void loadArt(['nicodobok']).then(() => { doboking = false; }); }
+    const atPool = (!room && nico.x > DECK.x - 40 && nico.x < DECK.x + DECK.w + 40 && nico.y > DECK.y - 60 && nico.y < DECK.y + DECK.d + 40) || play?.kind === 'swim' || play?.kind === 'waterslide';
+    const outfit = inDojo && player === 'nico' ? 'nicodobok' : atPool && !room ? `${player}swim` : player;
+    if (nico.view.who !== outfit && dressing !== outfit) {
+      if (hasArt(outfit)) relook(nico, outfit); else { dressing = outfit; void loadArt([outfit]).then(() => { dressing = ''; }); }
     }
-    if (!inDojo && who === 'nicodobok') relook(nico, 'nico');
     const rank = Math.max(0, saved.biz.belt);   // (a beginner wears a white belt)
     const want = inDojo && nico.view.who === 'nicodobok' ? `${saved.biz.belt}` : null;
     if (want === beltShown) return;
@@ -431,6 +437,13 @@ async function main() {
     setBest: n => { state.biz.scores.peel = n; persist(); },
     pay: n => { state.money += n; showMoney(); sfx.cash(Math.min(6, n)); toast(`🥔 Yarosh pays you $${n} for the peeling!`); persist(); },
     opened: on => { cardOpen = on ? 'peel' : null; if (on) { see(state.biz, 'job', 'peel'); app.ticker.stop(); } else { app.ticker.start(); } },
+  });
+  // Bobbing for Bakers at Yarosh's (bob.ts): a loaded baker on the house for a big score
+  const bobber = new BobGame({
+    best: () => state.biz.scores.bob ?? 0,
+    setBest: n => { state.biz.scores.bob = n; persist(); },
+    prize: n => { if (n >= 8) { boost = Math.min(BOOST.max, boost + 75); toast('🥔 A loaded baker on the house! You feel speedy! ⚡'); } },
+    opened: on => { cardOpen = on ? 'bob' : null; if (on) { see(state.biz, 'game', 'bob'); app.ticker.stop(); } else { app.ticker.start(); } },
   });
   const work = new Workshop({
     biz: state.biz,
@@ -653,8 +666,8 @@ async function main() {
   }
   /** The dojo's people, every frame: idle at their places, or doing the routine (Nico too, if he's joined in). */
   function dojoStep(dt: number) {
-    for (const b of bubbles) { b.t += dt; b.c.y -= dt * 12; b.c.alpha = Math.max(0, 1 - Math.max(0, b.t - 1.1) / 0.4); }
-    for (const b of bubbles.filter(q => q.t > 1.5)) b.c.destroy({ children: true });
+    for (const b of bubbles) { if (b.c.destroyed) continue; b.t += dt; b.c.y -= dt * 12; b.c.alpha = Math.max(0, 1 - Math.max(0, b.t - 1.1) / 0.4); }   // (leaving the room takes its bubbles with it)
+    for (const b of bubbles.filter(q => q.t > 1.5 && !q.c.destroyed)) b.c.destroy({ children: true });
     for (let i = bubbles.length - 1; i >= 0; i--) if (bubbles[i].c.destroyed) bubbles.splice(i, 1);
     if (room?.id !== 'dojo') { if (games.showing) games.stop(); return; }
     if (games.showing) {   // sparring or pad rhythm: the two playing take the mat, the others watch from their places
@@ -663,11 +676,11 @@ async function main() {
       applyDojo(dt, poses, events);
       return;
     }
-    const ready = ['krantz', 'mrskrantz', 'schindewolf', 'erin'].every(a => dojoCast.has(a as Actor));
+    const ready = ['krantz', 'mrskrantz', 'schindewolf', 'erin', 'heidi'].every(a => dojoCast.has(a as Actor));
     if (!dojoRoutine) {
       if (!ready || mode !== 'walk' || cardOpen) return;
       if ((dojoIn -= dt) > 0) return;
-      dojoRoutine = new Routine(Math.random() < 0.5 ? 'form' : 'pads', Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin']);
+      dojoRoutine = new Routine(Math.random() < 0.5 ? 'form' : 'pads', Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin', 'heidi']);
       if (dojoRoutine.kind === 'pads') dojoSay([600, 300], 'Grab the pads! Partner up!');
     }
     const { poses, events } = dojoRoutine.update(dt);
@@ -737,13 +750,14 @@ async function main() {
     if (GRAN[id]) { GRAN[id](); return; }
     if (id.startsWith('arcade:')) { arcade.open(id.slice(7)); return; }
     if (id === 'peel') { peeler.open(); return; }
+    if (id === 'bob') { bobber.open(); return; }
     if (id === 'scores') { showScores(); return; }
     const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p);
   };
   /** Alpha's high-score board: Nico's best at every game in town. */
   function showScores() {
     const s = biz.scores, row = (name: string, n: number | undefined) => `${name}: ${n ? n.toLocaleString() : '—'}`;
-    const lines = [...CABINETS.map(c => row(`👾 ${c.name[0]}${c.name.slice(1).toLowerCase()}`, s[c.id])), row('🕹️ Pinball', s.pinball), row('🥔 Potatoes peeled in a shift', s.peel), ...SONGS.map(sg => row(`🥁 ${sg.name}`, s[`rhythm:${sg.id}`])),
+    const lines = [...CABINETS.map(c => row(`👾 ${c.name[0]}${c.name.slice(1).toLowerCase()}`, s[c.id])), row('🕹️ Pinball', s.pinball), row('🥔 Potatoes peeled in a shift', s.peel), row('💦 Bobbing for Bakers', s.bob), ...SONGS.map(sg => row(`🥁 ${sg.name}`, s[`rhythm:${sg.id}`])),
       `🥋 Sparring: ${RIVALS.filter(r => s[`spar:${r.who}`]).length} of ${RIVALS.length} instructors beaten`];
     showCard('scores', "🏆 High scores", lines.join('\n'), [], 'Cool!');
   }
@@ -774,7 +788,7 @@ async function main() {
       showCard('dojo', '🥋 Mr. Master Krantz', `Mr. Master Krantz: “${has ? pick([`Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to Litchfield Tang Soo Do! Would you like to try a class?'}”`, [
         { label: black ? '🥋 Form practice' : has ? `🥋 Form practice: earn your ${next.name} belt` : '🥋 Form practice: your first belt', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
         { label: '🥊 Sparring', sub: 'pick a partner', id: 'spar', disabled: !!dojoRoutine, onClick: () => showCard('spar', '🥊 Sparring', 'Who do you want to spar with? Erin goes easy on you; Mr. Master Krantz does not!', RIVALS.map(r => ({
-          label: r.name, sub: biz.scores[`spar:${r.who}`] ? 'beaten! ★' : ['easy', 'medium', 'hard', 'black belt'][RIVALS.indexOf(r)], id: `spar:${r.who}`, onClick: () => { closePlace(); games.startSpar(r); },
+          label: r.name, sub: biz.scores[`spar:${r.who}`] ? 'beaten! ★' : ['easy', 'not so easy', 'medium', 'hard', 'black belt'][RIVALS.indexOf(r)], id: `spar:${r.who}`, onClick: () => { closePlace(); games.startSpar(r); },
         })), 'Not now') },
         { label: '🎵 Pad rhythm', sub: 'punch and kick to the beat', id: 'rhythm', disabled: !!dojoRoutine, onClick: () => showCard('rhythm', '🎵 Pad rhythm', 'Hit the pads in time: PUNCH, KICK and KIHAP when each one reaches the line!', SONGS.map(sg => ({
           label: sg.name, sub: biz.scores[`rhythm:${sg.id}`] ? `best ${biz.scores[`rhythm:${sg.id}`].toLocaleString()}` : `${sg.bpm} bpm`, id: `song:${sg.id}`, onClick: () => { closePlace(); games.startRhythm(sg); },
@@ -1539,6 +1553,75 @@ async function main() {
     dogSpot, petSpot,
     { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
+  // ---- Rea at the beach (rea.ts): building sandcastles and stomping them flat
+  const beachRea = makeRea();
+  let reaView: PersonView | null = null, reaSaid: Text | null = null, reaSayT = 0, reaLoading = false, reaBooms = 0;
+  const reaSt = neutral('front');
+  const castleViews = beachRea.castles.map(c => { const v = new Container(); v.zIndex = c.y; layer.addChild(v); return v; }), castleKey = beachRea.castles.map(() => '');
+  function castleArt(i: number) {
+    const c = beachRea.castles[i], v = castleViews[i], fall = c.state === 'down' && c.t < REA.fall ? c.t / REA.fall : 1;
+    const key = `${c.state}${Math.floor(c.built * 6)}${c.state === 'down' ? Math.floor(fall * 6) : ''}`;
+    if (key === castleKey[i]) return; castleKey[i] = key;
+    v.removeChildren().forEach(q => q.destroy());
+    const g = new Graphics(), { x, y } = c, SAND = '#E8C77A', DARK = '#D4B062', W = '#FFFFFF';
+    if (c.state === 'building' || c.state === 'up') {
+      const b = c.state === 'up' ? 1 : c.built;
+      g.ellipse(x + 6, y + 3, 44, 9).fill({ color: '#2B3F55', alpha: 0.14 });
+      const mh = 12 + 18 * Math.min(1, b * 2);                                           // the mound, then walls, towers and a flag
+      g.roundRect(x - 40, y - mh, 80, mh + 2, 6).fill(W).roundRect(x - 37, y - mh + 3, 74, mh - 2, 5).fill(SAND);
+      if (b > 0.45) for (const dx of [-28, 0, 28]) { const th = 22 * Math.min(1, (b - 0.45) * 3); g.roundRect(x + dx - 11, y - mh - th, 22, th + 4, 3).fill(W).roundRect(x + dx - 8, y - mh - th + 3, 16, th, 2).fill(DARK);
+        for (const k of [-6, 0, 6]) g.rect(x + dx + k - 2, y - mh - th - 3, 4, 4).fill(DARK); }
+      if (b >= 1) { g.rect(x - 1, y - mh - 46, 2, 26).fill('#2B3F55').poly([x + 1, y - mh - 46, x + 16, y - mh - 41, x + 1, y - mh - 36]).fill('#E5484D'); g.roundRect(x - 6, y - 14, 12, 14, 6).fill('#B58C4C'); }
+    } else if (c.state === 'down') {                                                      // flattened: a lumpy heap, bits scattered
+      const s = 0.6 + 0.4 * fall;
+      g.ellipse(x, y - 4, 46 * s + 8, 12).fill(W).ellipse(x, y - 4, 46 * s + 4, 9).fill(SAND);
+      for (const [dx, dy, r] of [[-30, -6, 9], [-8, -12, 11], [16, -8, 10], [34, -2, 7], [-44, 2, 6], [46, 4, 5]] as [number, number, number][]) g.circle(x + dx * s, y + dy * (1 - 0.5 * (1 - fall)), r).fill(DARK);
+      g.poly([x + 30 * s, y - 2, x + 46 * s, y - 8, x + 34 * s, y + 4]).fill('#E5484D');   // the flag, knocked over
+    } else {                                                                              // an empty spot: her bucket and spade
+      g.roundRect(x - 10, y - 18, 20, 18, 3).fill(W).poly([x - 8, y - 16, x + 8, y - 16, x + 6, y - 2, x - 6, y - 2]).fill('#E5484D').rect(x + 12, y - 26, 3, 24).fill('#5B8FD6');
+    }
+    v.addChild(g);
+  }
+  function reaSay(text: string) {
+    reaSaid?.destroy(); reaSayT = 2;
+    reaSaid = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 22, fill: NAVY_TEXT, stroke: { color: '#FFFFFF', width: 6 } } });
+    reaSaid.anchor.set(0.5, 1); reaSaid.zIndex = 99999; layer.addChild(reaSaid);
+  }
+  function reaStep(dt: number) {
+    const near = !room && Math.hypot(nico.x - REA.sites[1][0], nico.y - REA.sites[1][1]) < 2200;
+    for (let i = 0; i < castleViews.length; i++) castleViews[i].visible = near;
+    if (reaView) reaView.root.visible = near;
+    if (reaSaid) { reaSayT -= dt; reaSaid.visible = near && reaSayT > 0; if (reaSayT <= 0) { reaSaid.destroy(); reaSaid = null; } }
+    if (!near) return;
+    if (!reaView) {
+      if (hasArt('rea')) { reaView = new PersonView('rea'); reaView.setZoom(zoom, resolution); if (low) reaView.setLow(true); layer.addChild(reaView.root); }
+      else if (!reaLoading) { reaLoading = true; void loadArt(['rea']).finally(() => { reaLoading = false; }); }
+    }
+    const r = beachRea.rea;
+    for (const e of stepRea(r, beachRea.castles, dt)) {
+      if (e.kind === 'say' && e.text) reaSay(e.text);
+      if (e.kind === 'boom') { reaBooms++; const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 20, '#E8C77A', 14, 160, 16); audio.noise(0.25, 0.25, 700); see(biz, 'town', 'rea'); }
+      if (e.kind === 'built') { const c = beachRea.castles[e.at!]; dust.puff(c.x, c.y - 40, '#FFFFFF', 6, 80, 10); }
+    }
+    beachRea.castles.forEach((_, i) => castleArt(i));
+    if (!reaView) return;
+    const c = beachRea.castles[r.at] ?? beachRea.castles[0], walking = r.doing === 'walk';
+    if (walking) Object.assign(reaSt, chooseView(r.vx, r.vy, reaSt));
+    else Object.assign(reaSt, r.doing === 'build' || r.doing === 'stomp' ? { view: 'side', face: 1 } : { view: 'front', face: 1 });
+    reaSt.crouch = r.doing === 'build' ? 1 : 0;
+    stepGait(reaSt, walking ? REA.speed : 0, r.vy, dt, GAIT_SCALE * reaView.height);
+    const hop = r.doing === 'stomp' ? Math.abs(Math.sin((REA.windup - r.t) * 14)) * 16 : r.doing === 'giggle' ? Math.abs(Math.sin(r.t * 10)) * 6 : 0;
+    reaView.pose(r.x, r.y - hop, reaSt); reaView.root.zIndex = r.y;
+    if (reaSaid) reaSaid.position.set(r.x, r.y - 100);
+    void c;
+  }
+  spots.push(
+    { id: 'rea', get x() { return beachRea.rea.x; }, get y() { return beachRea.rea.y + 30; }, r: 110, label: '💬 Say hi to Rea', when: () => !!reaView?.root.visible,
+      run: () => { reaSay(pick(['Nico!', 'Hi Nico!', 'Castle!', 'Look!', 'Hehe!'])); toast(pick(['Rea gives you a sandy hug.', 'Rea shows you a shell. "Mine!"', 'Rea points at the castle. "BOOM?"'])); } },
+    ...beachRea.castles.map((c, i): Spot => ({ id: `castle${i}`, x: c.x, y: c.y + 70, r: 90, label: '🏰 Build Rea a sandcastle', priority: 1,
+      when: () => !!reaView?.root.visible && (c.state === 'none' || c.state === 'down') && !(beachRea.rea.at === i && beachRea.rea.doing === 'build'),
+      run: () => { if (!buildFor(beachRea.castles, i)) return; dust.puff(c.x, c.y - 30, '#E8C77A', 10, 100, 12); sfx.sparkle(); reaSay(pick(['Ooooh!', 'Castle!', 'Mine?'])); toast('🏰 You build a sandcastle. Rea\'s eyes go wide...'); } })),
+  );
   const cat = drawCat(); cat.visible = false; layer.addChild(cat);
   const jobEl = document.getElementById('job')!;
   jobEl.addEventListener('click', () => {
@@ -1668,12 +1751,16 @@ async function main() {
     arcadeClose: () => arcade.close(),
     peel: () => peeler.snapshot(),
     peelOpen: () => peeler.open(),
+    bob: () => bobber.snapshot(),
+    rea: () => ({ visible: !!reaView?.root.visible, x: beachRea.rea.x, y: beachRea.rea.y, doing: beachRea.rea.doing, at: beachRea.rea.at, booms: reaBooms, castles: beachRea.castles.map(c => ({ x: c.x, y: c.y, state: c.state, built: c.built })) }),
+    bobOpen: () => bobber.open(),
+    bobAt: (x: number, y: number) => bobber.screenAt(x, y),
     peelAt: (x: number, y: number) => peeler.screenAt(x, y),
     fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
     karateWant: () => work.karateWant(),
     games: () => ({ showing: games.showing, spar: games.spar ? { nico: { ...games.spar.nico }, rival: { ...games.spar.rival }, over: games.spar.over, winner: games.spar.winner, intro: games.spar.intro } : null, rhythm: games.rhythm ? { score: games.rhythm.score, combo: games.rhythm.combo, notes: games.rhythm.notes.length, judged: games.rhythm.notes.filter(n => n.judged).length } : null, last: games.last }),
     gamesStop: () => games.stop(),
-    dojoGo: (k: 'form' | 'pads') => { if (room?.id === 'dojo' && !dojoRoutine && dojoCast.size >= 4) dojoRoutine = new Routine(k, Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin']); },
+    dojoGo: (k: 'form' | 'pads') => { if (room?.id === 'dojo' && !dojoRoutine && dojoCast.size >= 5) dojoRoutine = new Routine(k, Object.fromEntries([...dojoCast].map(([a, c]) => [a, c.home])), ['krantz', 'mrskrantz', 'schindewolf', 'erin', 'heidi']); },
     bookOpen: (p?: string) => book.open(p),
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
@@ -1916,6 +2003,7 @@ async function main() {
       }
     }
     // Biscuit: heels, sits, lies down, fetches; waits by the door while Nico's in somewhere, rides along in the car
+    reaStep(dt);
     if (dog && dogView) {
       const hidden = !!room || mode === 'drive';
       if (hidden) { const [hx, hy] = mode === 'drive' ? [car.x, car.y] : room!.outside; Object.assign(dog, { x: hx - 50, y: hy + 20, vx: 0, vy: 0, mode: 'follow', still: 0 }); }
@@ -1938,6 +2026,7 @@ async function main() {
     wearBelt(room?.id === 'dojo');
     dojoStep(dt);
     weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
+    ripples.update(dt, !room && Math.abs(nico.x - (POOL.x + POOL.w / 2)) < 1700 && Math.abs(nico.y - (POOL.y + POOL.d / 2)) < 1200);
     if (!room && mode !== 'drive') { if (weather.rain > 0.6 && !biz.seen['sky:rain']) see(biz, 'sky', 'rain'); if (weather.snow > 0.6 && !biz.seen['sky:snow']) see(biz, 'sky', 'snow'); }
     if ((stickerCheck -= dt) <= 0) { stickerCheck = 1.5; checkStickers(); }
     umbrellaUp([...locals.filter(l => !gone(l)).map(l => ({ key: l as object, x: l.w.x, y: l.w.y, h: l.view.height })), ...(mode === 'walk' && !room ? [{ key: nico as object, x: nico.x, y: nico.y, h: nico.view.height }] : [])]);

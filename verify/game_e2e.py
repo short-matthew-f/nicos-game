@@ -584,8 +584,12 @@ with sync_playwright() as p:
     check(G()['mode'] == 'walk' and not G()['inWater'] and not G()['floating'], f"climbed out onto the deck ({G()['nico']['x']:.0f},{G()['nico']['y']:.0f})")
     at('swim'); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(300)
     check(G()['play'] == 'swim', 'or just jump in from the deck')
+    pg.wait_for_function("window.__game.nicoLook === 'nicoswim'", timeout=15000)
+    check(G()['nicoLook'] == 'nicoswim', 'at the pool he wears his swimsuit')
     gs = drag(0, 90, 2500); pg.click('#action'); pg.wait_for_timeout(250)
     check(G()['mode'] == 'walk', 'and climb back out')
+    at('school'); pg.wait_for_timeout(600)
+    check(G()['nicoLook'] == 'nico', f"...and his own clothes away from it ({G()['nicoLook']})")
     # the rest of the shed: shelves, parts bins, paint station, each a sticker outline to buy
     pg.evaluate("()=>{window.__game.setBiz({finds:[{id:'radio', value:7}, {id:'teddy', value:3}]}); window.__game.setMoney(100)}")
     door('shed'); pg.wait_for_timeout(300)
@@ -805,7 +809,7 @@ with sync_playwright() as p:
     check(G()['beltShown'] == '0' and G()['nicoLook'] == 'nicodobok', f"in the dojo he's in his whites, with his belt ({G()['beltShown']}, {G()['nicoLook']})")
     check(all(k in G()['roomSpots'] for k in ('crew0', 'crew1', 'crew2')), f"Mrs. Master Krantz, Master Schindewolf and Erin are there too ({list(G()['roomSpots'])})")
     # they do a form together, and Nico can step into the line; then the pads
-    pg.wait_for_function('window.__game.dojoCast >= 4', timeout=20000)
+    pg.wait_for_function('window.__game.dojoCast >= 5', timeout=20000)
     pg.evaluate("()=>window.__game.dojoGo('form')"); pg.wait_for_timeout(400)
     check(G()['dojo'] and G()['dojo']['kind'] == 'form' and G()['dojo']['canJoin'], f"the instructors line up for a form ({G()['dojo']})")
     room_at('joinform'); pg.wait_for_timeout(150); pg.click('#action'); pg.wait_for_timeout(300)
@@ -846,7 +850,7 @@ with sync_playwright() as p:
     # peeling potatoes for Yarosh: drag to peel, tap the eyes, into the pot; he pays for each one
     room_at('thing4'); pg.click('#action'); pg.wait_for_timeout(400)   # (the peeling board)
     check(pg.evaluate('()=>window.__game.peel()')['open'], 'the peeling board opens')
-    pg.click('.pl-btn'); pg.wait_for_timeout(300)
+    pg.click('#peel .pl-btn'); pg.wait_for_timeout(300)
     for spud in range(2):
         sn = pg.evaluate('()=>window.__game.peel()'); rx, ry = sn['rx'], sn['ry']
         for y in range(int(-ry * 1.1), int(ry * 1.1) + 1, 16):
@@ -889,6 +893,43 @@ with sync_playwright() as p:
     room_at('thing0'); pg.click('#action'); pg.wait_for_timeout(300)
     check(all(w in pg.locator('#place-text').inner_text() for w in ['Snake', 'Space blasters', 'Frog hop', 'Pinball', 'peeled']), f"the high-score board lists his games ({pg.locator('#place-text').inner_text()})")
     pg.click('#place-close'); pg.wait_for_timeout(200); pg.evaluate("()=>window.__game.exitRooms()")
+    # Miss Heidi's at the dojo too (five in the form line)
+    door('dojo'); pg.wait_for_timeout(300); pg.wait_for_function('window.__game.dojoCast >= 5', timeout=20000)
+    if pg.locator('#place-close').is_visible(): pg.click('#place-close'); pg.wait_for_timeout(200)
+    pg.evaluate("()=>window.__game.place(600, 760)"); pg.wait_for_timeout(300); pg.evaluate("()=>window.__game.dojoGo('form')"); pg.wait_for_timeout(400)
+    check(G()['dojo'] and 'heidi' in G()['dojo']['actors'], f"Miss Heidi does the form with them ({G()['dojo']})")
+    pg.wait_for_function('window.__game.dojo === null', timeout=40000)
+    pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
+    # Bobbing for Bakers at Yarosh's: tap a baker as it bobs up
+    door('potato'); pg.wait_for_timeout(300); pg.click('#place-close') if pg.locator('#place-close').is_visible() else None
+    pg.evaluate("()=>window.__game.bobOpen()"); pg.wait_for_timeout(300); pg.click('#bob .pl-btn'); pg.wait_for_timeout(200)
+    got = 0
+    for tries in range(12):
+        sn = pg.evaluate('()=>window.__game.bob()'); sp = [q for q in sn['spuds'] if q['gone'] <= 0][0]
+        q = pg.evaluate(f"()=>window.__game.bobAt({sp['x']},{sp['y']})"); pg.mouse.move(q['x'], q['y']); pg.mouse.down(); pg.mouse.move(q['x'] + 1, q['y']); pg.wait_for_timeout(250)
+        # wait for it to bob up, then DUNK
+        for _ in range(40):
+            sn = pg.evaluate('()=>window.__game.bob()'); cur = [z for z in sn['spuds'] if abs(z['ph'] - sp['ph']) < 1e-9]
+            if not cur or cur[0]['h'] > 0.5: break
+            pg.wait_for_timeout(50)
+        pg.mouse.up(); pg.click('.bob-dunk'); pg.wait_for_timeout(700)
+        got = pg.evaluate('()=>window.__game.bob()')['caught']
+        if got: break
+    check(got >= 1, f"Bobbing for Bakers: dunk on a baker as it bobs up, and you've got it ({pg.evaluate('()=>window.__game.bob()')})")
+    pg.click('#bob .pl-close'); pg.wait_for_timeout(300)
+    check(not pg.locator('#bob').is_visible() and G()['biz']['scores'].get('bob', 0) >= 1, 'stop: the score is kept')
+    pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
+    # Rea at the beach: building castles, knocking them down; build her one
+    pg.evaluate("()=>window.__game.place(2210, 4720)"); pg.wait_for_timeout(2500)
+    check(pg.evaluate("()=>window.__game.rea && window.__game.rea().visible"), f"Rea's on the beach ({pg.evaluate('()=>window.__game.rea && window.__game.rea()')})")
+    r0 = pg.evaluate("()=>window.__game.rea()"); free = [i for i, c in enumerate(r0['castles']) if c['state'] in ('none', 'down') and not (r0['at'] == i and r0['doing'] == 'build')]
+    if free:
+        i = free[0]; pg.evaluate(f"()=>window.__game.place({r0['castles'][i]['x']}, {r0['castles'][i]['y'] + 70})"); pg.wait_for_timeout(300)
+        check(G()['action'] == f'castle{i}', f"walk up to an empty spot: build Rea a sandcastle ({G()['action']})")
+        pg.click('#action'); pg.wait_for_timeout(200)
+        check(pg.evaluate(f"()=>window.__game.rea().castles[{i}].state") == 'up', 'a sandcastle, built')
+    pg.wait_for_function("window.__game.rea().booms > 0", timeout=60000)
+    check(pg.evaluate("()=>window.__game.rea().booms") > 0 and G()['biz']['seen'].get('town:rea'), 'Rea stomps one flat (BOOM!) and it goes in the sticker book')
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

@@ -172,6 +172,13 @@ const BIG: Record<string, Draw> = {
   arcade2: (g, k) => arcadeCab(g, k, '#FF9A2E', '#7A1F2B'),
   arcade3: (g, k) => arcadeCab(g, k, '#E5486D', '#1E2733'),
   arcade4: (g, k) => arcadeCab(g, k, '#B8FF6A', '#2E5A2E'),
+  // Yarosh's washtub, for bobbing for bakers: wooden staves, metal hoops, water with potatoes floating in it
+  washtub: (g, k) => { g.ellipse(0, -10 * k, 74 * k, 14 * k).fill({ color: '#2B3F55', alpha: 0.12 });
+    g.poly([-72 * k, -70 * k, 72 * k, -70 * k, 62 * k, 0, -62 * k, 0]).fill('#B07A4A').stroke({ width: 4, color: WH });
+    for (const x of [-40, -14, 14, 40]) g.rect(x * k, -66 * k, 2 * k, 62 * k).fill('#8A5A3B');
+    g.rect(-70 * k, -56 * k, 140 * k, 7 * k).fill('#9AA6B2').rect(-64 * k, -18 * k, 128 * k, 7 * k).fill('#9AA6B2');
+    g.ellipse(0, -70 * k, 72 * k, 18 * k).fill('#8A5A3B').ellipse(0, -70 * k, 64 * k, 14 * k).fill('#4FB3E0');
+    for (const [x, y, f] of [[-30, -72, 0], [8, -68, 1], [34, -74, 0]]) g.ellipse(x * k, y * k, 13 * k, 7 * k).fill(f ? '#C9D3DC' : '#A8703F'); },
   // a big burlap sack of potatoes
   potsack: (g, k) => { g.poly([-34 * k, -78 * k, 34 * k, -78 * k, 42 * k, 0, -42 * k, 0]).fill('#C9A46A').stroke({ width: 4, color: WH }).rect(-34 * k, -82 * k, 68 * k, 8 * k).fill('#8A6A3E');
     for (const [x, y] of [[-20, -90], [0, -96], [20, -90], [-10, -104], [12, -104]]) g.ellipse(x * k, y * k, 13 * k, 9 * k).fill('#C9955A').stroke({ width: 2, color: '#A87A45' });

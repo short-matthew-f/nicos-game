@@ -376,3 +376,11 @@ body.dg-on #hud, body.dg-on #hint, body.dg-on #action { display: none !important
 .pl-panel p { margin: 0; font-size: 20px; font-weight: 700; max-width: 520px; }
 .pl-btn { border: 0; border-radius: 18px; padding: 14px 30px; font-size: 22px; font-weight: 900; color: #2B3F55; background: #F9C846; box-shadow: 0 6px 0 #D9A93A; cursor: pointer; }
 .pl-close { position: absolute; top: 18px; right: 18px; width: 56px; height: 56px; border-radius: 50%; border: 0; font-size: 24px; font-weight: 900; color: #2B3F55; background: rgba(255,255,255,.8); cursor: pointer; }
+
+/* ---- Bobbing for Bakers (bobView.ts): the peeling board's frame, with a big DUNK button beside the tub */
+.bob { background: radial-gradient(ellipse at 50% 40%, #DCEFF5 0%, #7FB8D9 90%); }
+.bob-row { display: flex; align-items: center; gap: 22px; }
+.bob-dunk { width: 170px; height: 170px; border-radius: 50%; border: 0; font: 900 32px system-ui, -apple-system, sans-serif; letter-spacing: 1px; color: #fff;
+  background: radial-gradient(circle at 40% 35%, #7FC8F0, #2F7FD8 60%, #1E5FAE); box-shadow: 0 10px 0 #174A88, 0 0 26px rgba(47,127,216,.5); cursor: pointer; touch-action: none; }
+.bob-dunk:active { transform: translateY(8px); box-shadow: 0 2px 0 #174A88; }
+@media (max-aspect-ratio: 1/1) { .bob-row { flex-direction: column; } .bob-dunk { width: 130px; height: 130px; font-size: 26px; } }

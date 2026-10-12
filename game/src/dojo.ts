@@ -5,7 +5,7 @@
 // with them), or pair up with pads: one holds, the other throws jab, cross, kicks, then they swap. Nico can kick
 // Mrs. Master Krantz's pads too. Pure timing and poses; main.ts draws it (rig/pose.ts `moves` does the limbs).
 
-export type Actor = 'krantz' | 'mrskrantz' | 'schindewolf' | 'erin' | 'nico';
+export type Actor = 'krantz' | 'mrskrantz' | 'schindewolf' | 'erin' | 'heidi' | 'nico';
 /** A pose: arm and leg angles (degrees from hanging down; negative is forward), a forward lean, a crouch. */
 export interface Move { fa: number; ba: number; fl: number; bl: number; bow?: number; crouch?: number }
 export const MOVES: Record<string, Move> = {
