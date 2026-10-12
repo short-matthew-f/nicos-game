@@ -1243,3 +1243,27 @@ Whether he's hidden comes from the drawing order. Behind Burger Barn and the sli
 **Tests:**
 - `test/hide.test.ts`: spots are free; seek finds him, with giggles and a give-up; hide covers caught in the open, caught at your spot after he's checked the others, and safe when his time runs out.
 - E2E: eyes shut, then find him, then hide and get spotted in the open.
+
+## Fishing off the pier (2026-10-12)
+"🎣 Fish off the pier" is at the end of the pier (`fish.ts` rules, `fishView.ts` screen, `fishArt.ts` drawings).
+
+**The screen:** a side view of the end of the pier: Nico with his rod, the sea in cross-section with fish swimming about, weed and the sandy bottom, the line out to a red-and-white bobber. One big button does what you need, and so does the space bar.
+
+**How it plays:**
+- **Cast:** hold to wind up (a power bar), let go to cast. Further out means bigger fish.
+- **Wait:** little twitches are nibbles. Then a big plunge with ripples: "BITE! TAP NOW!" and the button goes red.
+  - Tap too early: "Too soon! You scared it off" (wait again).
+  - Too slow: "It stole your bait."
+- **Reel:** hold to reel in, and the tension meter rises. When the fish makes a run ("It's running! Let go!"), the meter climbs fast: hold on and the line snaps. Ease off too long and it swims away.
+
+**The catch (10 kinds):** sardine, mackerel, flounder, crab, sea bass, bluefish, striped bass, an old boot, a message in a bottle (+$5) and the golden fish (very rare, far out, +$10). Each has its size range, how far out it likes, and how hard it fights.
+
+**Saved without a new save format:**
+- what's been caught, in `seen['fish:<id>']`;
+- the biggest of each kind, in `scores['fish:<id>']` (cm).
+
+**Sticker book:** a new page, "Gone fishing", with all 10 (a $25 reward for the full page). Each fish has a drawn icon.
+
+**Tests:**
+- `test/fish.test.ts`: casting distance, nibbles and bites, too early, too slow, landing one (letting go on runs), a snapped line, a fish swimming away, far casts favouring big fish.
+- E2E: cast, bite, hook, reel, caught, and it's in the book.

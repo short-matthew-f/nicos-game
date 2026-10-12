@@ -974,6 +974,21 @@ with sync_playwright() as p:
     hp = pg.evaluate("()=>window.__game.hide()")['primo']; pg.evaluate(f"()=>window.__game.place({hp['x'] + 90}, {hp['y'] + 40})"); pg.wait_for_timeout(400)
     check(pg.evaluate("()=>window.__game.hide()")['result'] == 'caught', 'out in the open: Primo spots you')
     pg.wait_for_timeout(3300)
+    # fishing off the end of the pier: wind up and cast, wait for the bite, tap, reel it in
+    pg.evaluate("()=>window.__game.place(4400, 5050)"); pg.wait_for_timeout(400)
+    check(G()['action'] == 'fishing', f"at the end of the pier: fish ({G()['action']})")
+    pg.click('#action'); pg.wait_for_timeout(300)
+    fb = pg.locator('.fish-btn').bounding_box(); fx, fy = fb['x'] + fb['width'] / 2, fb['y'] + fb['height'] / 2
+    pg.mouse.move(fx, fy); pg.mouse.down(); pg.wait_for_timeout(600); pg.mouse.up(); pg.wait_for_timeout(900)
+    check(pg.evaluate("()=>window.__game.fish()")['phase'] == 'waiting', 'hold, let go: cast! The bobber floats')
+    pg.evaluate("()=>window.__game.fishBite()"); pg.wait_for_timeout(100); pg.mouse.down(); pg.wait_for_timeout(150)
+    f1 = pg.evaluate("()=>window.__game.fish()")
+    check(f1['phase'] == 'fight' and f1['fish'], f"a bite! tap: hooked a {f1['fish']}")
+    pg.mouse.up(); pg.evaluate("()=>window.__game.fishLand()"); pg.mouse.down(); pg.wait_for_timeout(150); pg.mouse.up(); pg.wait_for_timeout(300)
+    f2 = pg.evaluate("()=>window.__game.fish()")
+    check(f2['phase'] == 'caught', f"reeled in: caught! ({f2})")
+    pg.click('#fishing .pl-close'); pg.wait_for_timeout(300)
+    check(not pg.locator('#fishing').is_visible() and G()['biz']['seen'].get(f"fish:{f2['fish']}"), "done fishing: the catch is in the sticker book")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

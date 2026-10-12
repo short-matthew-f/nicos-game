@@ -3,6 +3,7 @@
 // photos, storage treasures, things he's made, things he's done with the family, karate belts, and
 // bits of town life. A full page pays a one-off reward. Data and pure functions over the save
 // (Biz.seen remembers what's been sold or used up); main.ts draws the book.
+import { SPECIES } from './fish';
 import { ITEMS, type Biz } from './business';
 import { SHELL_KINDS } from './world/beach';
 import { DESIGNS } from './jewelry';
@@ -44,6 +45,8 @@ export const PAGES: Page[] = [
     { id: 'metalstar', label: 'A metal star', art: ['icon', 'star'], hint: "Poppop's plasma cutter.", has: b => bool(b.unlocked.includes('metalstar')) },
     { id: 'painting', label: 'A painting with Yia-Yia', art: ['icon', 'palette'], hint: "Paint at Yia-Yia's studio.", has: b => seen(b, 'art:painting') || bool(b.paintings.length > 0) },
   ] },
+  { id: 'fish', title: 'Gone fishing', reward: 25, entries: SPECIES.map(sp => ({ id: sp.id, label: sp.name, art: ['icon', sp.kind === 'crab' ? 'crab' : sp.kind === 'bottle' ? 'bottle' : sp.kind ? sp.kind : `fish_${sp.id}`] as Art,
+    hint: sp.id === 'golden' ? 'Very rare. Cast as far out as you can...' : sp.far > 0.8 ? 'A big one: cast far out from the end of the pier.' : 'Fish off the end of the pier.', has: (b: Biz) => seen(b, `fish:${sp.id}`) })) },
   { id: 'dojo', title: 'Karate belts', reward: 40, entries: BELTS.map((bt, i) => ({ id: bt.id, label: `${bt.name} belt`, art: ['belt', bt.color] as Art, hint: i === 0 ? 'Take a class at the dojo.' : 'Earn it in Sensei\'s class.', has: (b: Biz) => bool(b.belt >= i) })) },
   { id: 'town', title: 'Around town', reward: 20, entries: [
     { id: 'dog', label: 'A dog of your own', art: ['icon', 'heart'], hint: 'The doghouse in your yard.', has: b => bool(b.unlocked.includes('doghouse')) },

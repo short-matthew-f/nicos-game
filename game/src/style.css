@@ -397,3 +397,10 @@ body.dg-on #hud, body.dg-on #hint, body.dg-on #action { display: none !important
 .eyes-shut { position: fixed; inset: 0; z-index: 29; display: flex; align-items: center; justify-content: center; pointer-events: auto;
   background: rgba(20, 24, 40, .93); color: #fff; font: 900 40px system-ui, -apple-system, sans-serif; text-align: center; padding: 20px; }
 .eyes-shut[hidden] { display: none; }
+
+/* ---- fishing off the pier (fishView.ts) */
+.fishing { background: radial-gradient(ellipse at 50% 30%, #E3F4FB 0%, #7FB8D9 85%); }
+.fish-msg { flex: 1; font: 800 20px system-ui, -apple-system, sans-serif; color: #2B3F55; background: #fff; border-radius: 16px; padding: 8px 16px; }
+.fish-btn { font-size: 22px; line-height: 1.1; padding: 10px; }
+.fish-btn.hot { background: radial-gradient(circle at 40% 35%, #FF8A7A, #E5484D 60%, #A3283A); box-shadow: 0 10px 0 #7A1820, 0 0 30px rgba(229,72,77,.7); animation: fish-pulse .35s ease-in-out infinite alternate; }
+@keyframes fish-pulse { to { transform: scale(1.06); } }

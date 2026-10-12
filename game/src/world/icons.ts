@@ -3,6 +3,7 @@
 // suddenly a bunch of emoji in the game"). icon(name, size): a Graphics centred on (0, 0), about
 // `size` px tall. Unknown names draw a small box, so data can't break the room.
 import { Graphics } from 'pixi.js';
+import { SPECIES } from '../fish';
 
 const WH = '#FFFFFF', NV = '#2B3F55';
 type Draw = (g: Graphics, k: number) => void;
@@ -189,6 +190,15 @@ const BIG: Record<string, Draw> = {
     .ellipse(-34 * k, 0, 26 * k, 7 * k).fill('#3A3A44'),
   plant: (g, k) => g.poly([-20 * k, -40 * k, 20 * k, -40 * k, 15 * k, 0, -15 * k, 0]).fill('#C8463D').circle(0, -72 * k, 24 * k).fill('#3E8F5A').circle(-18 * k, -56 * k, 18 * k).fill('#3E8F5A').circle(18 * k, -58 * k, 18 * k).fill('#5DB86F').circle(-4 * k, -92 * k, 14 * k).fill('#5DB86F'),
 };
+// a fish of each kind for the sticker book (fish.ts), and the old boot
+for (const sp of SPECIES) if (!sp.kind) ICONS[`fish_${sp.id}`] = (g, k) => {
+  g.poly([-11 * k, 0, -17 * k, -7 * k, -16 * k, 0, -17 * k, 7 * k]).fill(sp.color);
+  g.ellipse(0, 0, 13 * k, sp.id === 'flounder' ? 8 * k : 6.5 * k).fill(sp.color).stroke(edge).ellipse(1 * k, 2.5 * k, 9 * k, 2.6 * k).fill(sp.belly).circle(8 * k, -1.5 * k, 1.6 * k).fill(NV);
+  if (sp.id === 'golden') g.rect(-6 * k, -11 * k, 1.5 * k, 5 * k).fill(WH).rect(-8 * k, -9 * k, 5.5 * k, 1.5 * k).fill(WH);
+  if (sp.id === 'striper') for (let i = 0; i < 3; i++) g.rect(-8 * k, (-3 + i * 2.5) * k, 15 * k, 0.9 * k).fill(NV);
+};
+ICONS.boot = (g, k) => g.poly([-8 * k, -13 * k, 2 * k, -13 * k, 3 * k, 0, 13 * k, 2 * k, 13 * k, 9 * k, -9 * k, 9 * k]).fill('#5A4131').stroke(edge).rect(-10 * k, 7 * k, 24 * k, 3 * k).fill('#3E2C20');
+
 export function icon(name: string, size = 32): Graphics {
   const g = new Graphics(), k = size / 32;
   (ICONS[name] ?? ((q: Graphics, kk: number) => q.roundRect(-8 * kk, -8 * kk, 16 * kk, 16 * kk, 3 * kk).fill('#C9D3DC')))(g, k);

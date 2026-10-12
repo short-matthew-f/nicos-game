@@ -33,7 +33,7 @@ import { steer, moveCar, carFits, circles, CAR, type CarState } from './drive';
 import { ActionButton, nearest, type Spot } from './interact';
 import { PLACES, BOOST, buy, type Place } from './places';
 import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, SWIM, inPool, atEdge, climbOut, type Body } from './play';
-import { POOL, WSLIDE, ZONE_LOTS } from './world/zones';
+import { POOL, WSLIDE, ZONE_LOTS, PIER } from './world/zones';
 import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, pinballArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
 import { WALLPAPERS, RUGS, REDECORATE, PAINTINGS_KEPT } from './decor';
 import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
@@ -52,6 +52,7 @@ import { Arcade } from './arcade/view';
 import { CABINETS } from './arcade/games';
 import { PeelGame } from './peelView';
 import { BobGame } from './bobView';
+import { FishGame } from './fishView';
 import { BELTS, nextBelt, isBlack } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
@@ -446,6 +447,16 @@ async function main() {
     setBest: n => { state.biz.scores.bob = n; persist(); },
     prize: n => { if (n >= 8) { boost = Math.min(BOOST.max, boost + 75); toast('🥔 A loaded baker on the house! You feel speedy! ⚡'); } },
     opened: on => { cardOpen = on ? 'bob' : null; if (on) { see(state.biz, 'game', 'bob'); app.ticker.stop(); } else { app.ticker.start(); } },
+  });
+  // fishing off the end of the pier (fish.ts): the catch goes in the sticker book, the biggest of each kind is kept
+  const fisher = new FishGame({
+    onCatch: (s, size) => {
+      const isNew = !biz.seen[`fish:${s.id}`], key = `fish:${s.id}`, record = !s.kind && size > (biz.scores[key] ?? 0);
+      see(biz, 'fish', s.id); if (record) biz.scores[key] = size;
+      if (s.worth) { state.money += s.worth; showMoney(); sfx.cash(Math.min(6, s.worth)); }
+      persist(); return { isNew, record: record && !isNew };
+    },
+    opened: on => { cardOpen = on ? 'fish' : null; if (on) app.ticker.stop(); else app.ticker.start(); },
   });
   const work = new Workshop({
     biz: state.biz,
@@ -1758,6 +1769,7 @@ async function main() {
     reaView.pose(r.x, r.y - hop, reaSt); reaView.root.zIndex = r.y;
     if (reaSaid) reaSaid.position.set(r.x, r.y - 100);
   }
+  spots.push({ id: 'fishing', x: PIER.x + PIER.w / 2, y: PIER.y + PIER.d - 70, r: 110, label: '🎣 Fish off the pier', when: () => mode === 'walk' && !room, run: () => fisher.open() });
   spots.push({ id: 'hide', get x() { return primoLocal()?.w.x ?? 0; }, get y() { return (primoLocal()?.w.y ?? 0) + 30; }, r: 120, label: '🙈 Play hide-and-seek',
     when: () => { const l = primoLocal(); return !hide && !!l && player !== 'primo' && mode === 'walk' && !room && !l.climb && l.w.x > 1372 && l.w.x < 2948 && l.w.y > 1102 && l.w.y < 2138; },
     run: () => showCard('hide', '🙈 Hide-and-seek', 'Primo: “Hide-and-seek! Who\'s it?”', [
@@ -1924,6 +1936,10 @@ async function main() {
     arcadeClose: () => arcade.close(),
     peel: () => peeler.snapshot(),
     peelOpen: () => peeler.open(),
+    fishOpen: () => fisher.open(),
+    fish: () => fisher.snapshot(),
+    fishBite: () => fisher.biteNow(),
+    fishLand: () => fisher.landNow(),
     bob: () => bobber.snapshot(),
     rea: () => ({ visible: !!reaView?.root.visible, mode: beachRea.rea.mode, said: reaLast, x: beachRea.rea.x, y: beachRea.rea.y, doing: beachRea.rea.doing, at: beachRea.rea.at, booms: reaBooms, castles: beachRea.castles.map(c => ({ x: c.x, y: c.y, state: c.state, built: c.built })) }),
     bobOpen: () => bobber.open(),
