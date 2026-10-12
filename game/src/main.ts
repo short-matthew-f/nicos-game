@@ -45,6 +45,7 @@ import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep,
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
 import { Race, COURSES, nicoStart, type Course } from './race';
+import { HideSeek, SPOTS, HIDE, warmth, type Kind as HideKind } from './hide';
 import { makeRea, stepRea, buildFor, REA, startFollow, letGo, footstep as reaFootstep, stepFollow, seesCar, wantsToCome } from './rea';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
@@ -1556,7 +1557,7 @@ async function main() {
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
   // ---- racing Tempo along the beach (race.ts)
   let race: Race | null = null, raceFlag: Container | null = null, raceEnd = 0;
-  const raceHud = document.createElement('div'); raceHud.className = 'race-hud'; raceHud.hidden = true; document.body.append(raceHud);
+  const raceHud = document.createElement('div'); raceHud.id = 'race-hud'; raceHud.className = 'race-hud'; raceHud.hidden = true; document.body.append(raceHud);
   const tempoLocal = () => locals.find(l => l.t.who === 'tempo');
   const raceBest = (c: Course) => biz.scores[`race:${c.id}`];   // (best winning time, in tenths of a second)
   function flagArt(x: number, y: number) {
@@ -1613,6 +1614,70 @@ async function main() {
     if (race.phase === 'count') raceHud.textContent = `${Math.ceil(race.count)}`;
     else if (race.phase === 'go') raceHud.textContent = race.time < 0.8 ? 'GO!' : `${race.time.toFixed(1)}s`;
     else if ((raceEnd -= dt) <= 0) stopRace();
+  }
+  // ---- hide-and-seek with Primo round the playground and the park (hide.ts)
+  let hide: HideSeek | null = null, hideEnd = 0, hideMarks: Container | null = null;
+  const hideHud = document.createElement('div'); hideHud.id = 'hide-hud'; hideHud.className = 'race-hud'; hideHud.hidden = true; document.body.append(hideHud);
+  const eyes = document.createElement('div'); eyes.className = 'eyes-shut'; eyes.hidden = true; document.body.append(eyes);
+  const primoLocal = () => locals.find(l => l.t.who === 'primo');
+  let hideSaid: Text | null = null, hideSayT = 0;
+  function primoSay(text: string, t = 2.2) {
+    hideSaid?.destroy(); hideSayT = t;
+    hideSaid = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 22, fill: NAVY_TEXT, stroke: { color: '#FFFFFF', width: 6 } } });
+    hideSaid.anchor.set(0.5, 1); hideSaid.zIndex = 99999; layer.addChild(hideSaid);
+  }
+  function startHide(kind: HideKind, spotIndex?: number) {
+    const l = primoLocal(); if (!l) return;
+    closePlace();
+    if (l.swingT >= 0) { seats[l.seat].set(1); seatTaken[l.seat] = null; l.swingT = -1; l.seat = -1; }
+    l.climb = null; l.st.crouch = 0;
+    hide = new HideSeek(kind, Math.random, spotIndex); hideEnd = 0;
+    hide.primo.x = kind === 'seek' ? l.w.x : HIDE.start[0]; hide.primo.y = kind === 'seek' ? l.w.y : HIDE.start[1];
+    hideHud.hidden = false; hideHud.className = 'race-hud';
+    hideMarks?.destroy({ children: true }); hideMarks = null;
+    if (kind === 'hide') {   // where you can hide: dashed rings on the ground
+      const g = new Graphics(); for (const s of SPOTS) g.ellipse(s.x, s.y + 4, 44, 16).stroke({ width: 4, color: '#FFFFFF', alpha: 0.85 });
+      hideMarks = new Container(); hideMarks.addChild(g); hideMarks.zIndex = 0; layer.addChild(hideMarks);
+      primoSay('Hide! I\'m counting! 1... 2... 3...', 3);
+    } else { eyes.hidden = false; primoSay('Close your eyes! No peeking!'); }
+    sfx.tap();
+  }
+  function stopHide() {
+    const l = primoLocal(); if (l) { l.view.root.visible = true; l.st.crouch = 0; }
+    hide = null; hideHud.hidden = true; eyes.hidden = true; hideMarks?.destroy({ children: true }); hideMarks = null;
+  }
+  function hideStep(dt: number) {
+    const l = primoLocal();
+    if (hideSaid) { hideSayT -= dt; if (hideSayT <= 0 || !l) { hideSaid.destroy(); hideSaid = null; } else { hideSaid.position.set(l.w.x, l.w.y - 140); hideSaid.visible = l.view.root.visible; } }
+    if (!hide) return;
+    if (!l || room || mode === 'drive') { stopHide(); return; }
+    const h = hide;
+    for (const e of h.update(dt, nico.x, nico.y)) {
+      if (e === 'tick') { audio.tone('triangle', 520, 520, 0.08, 0.05); if (h.kind === 'hide') primoSay(`${HIDE.count - Math.ceil(h.count) + 1}...`, 0.9); }
+      if (e === 'go') { audio.tone('square', 880, 880, 0.2, 0.06); eyes.hidden = true; if (h.kind === 'hide') primoSay('Ready or not, here I come!'); }
+      if (e === 'giggle') primoSay(pick(['hehe', 'hee hee!', '*giggle*']), 1.4);
+      if (e === 'peek') primoSay(pick(['Are you here?', 'Hmm...', 'Nico?']), 1.2);
+      if (e === 'notHere') primoSay(pick(['Not here!', 'Nope.', 'Where IS he?']), 1.2);
+      if (e === 'found' || e === 'safe' || e === 'caught' || e === 'gaveup') {
+        const won = h.won, key = `hide:${h.kind}`, t10 = Math.max(1, Math.round(h.time * 10)), best = biz.scores[key];
+        if (won) { see(biz, 'game', 'hide'); sfx.cash(3); const first = !best; if (!best || (h.kind === 'seek' ? t10 < best : t10 > best)) biz.scores[key] = t10; if (first) { state.money += 3; showMoney(); } persist(); }
+        hideHud.className = `race-hud ${won ? 'won' : 'lost'}`;
+        hideHud.textContent = e === 'found' ? `🙈 Found him! ${h.time.toFixed(1)}s` : e === 'safe' ? '🫣 He never found you!' : e === 'caught' ? `👀 Primo found you! ${h.time.toFixed(1)}s` : '⏰ Primo wins!';
+        primoSay(e === 'found' ? pick(['Aww, you found me!', 'How did you know?!', 'No fair, you peeked!']) : e === 'safe' ? 'I give up! Where WERE you?' : e === 'caught' ? pick(['Found you! Haha!', 'I see you, Nico!']) : 'Here I am! You\'ll never find me!');
+        hideEnd = 2.8;
+      }
+    }
+    if (h.phase === 'count') {
+      const n = Math.ceil(h.count);
+      if (h.kind === 'seek') { eyes.textContent = `🙈 Eyes shut! Primo's hiding... ${n}`; hideHud.textContent = `Counting... ${n}`; }
+      else hideHud.textContent = `Hide! Primo's counting: ${n}`;
+    } else if (h.phase === 'play') {
+      if (h.kind === 'seek') { const w = warmth(Math.hypot(nico.x - h.spot!.x, nico.y - h.spot!.y)); hideHud.textContent = `Find Primo! ${w === 'hot' ? '🔥 Hot!' : w === 'warm' ? '☀️ Warm' : '❄️ Cold'}`; }
+      else hideHud.textContent = HideSeek.spotAt(nico.x, nico.y) ? `🤫 Hiding... ${Math.max(0, HIDE.hide - h.time).toFixed(0)}s` : '👀 Hide in a spot!';
+    } else if ((hideEnd -= dt) <= 0) {
+      if (l) { l.w.x = h.primo.x; l.w.y = h.primo.y; }
+      stopHide();
+    }
   }
   // ---- Rea at the beach (rea.ts): building sandcastles and stomping them flat
   const beachRea = makeRea();
@@ -1693,6 +1758,12 @@ async function main() {
     reaView.pose(r.x, r.y - hop, reaSt); reaView.root.zIndex = r.y;
     if (reaSaid) reaSaid.position.set(r.x, r.y - 100);
   }
+  spots.push({ id: 'hide', get x() { return primoLocal()?.w.x ?? 0; }, get y() { return (primoLocal()?.w.y ?? 0) + 30; }, r: 120, label: '🙈 Play hide-and-seek',
+    when: () => { const l = primoLocal(); return !hide && !!l && player !== 'primo' && mode === 'walk' && !room && !l.climb && l.w.x > 1372 && l.w.x < 2948 && l.w.y > 1102 && l.w.y < 2138; },
+    run: () => showCard('hide', '🙈 Hide-and-seek', 'Primo: “Hide-and-seek! Who\'s it?”', [
+      { label: '🙈 I\'ll seek', sub: biz.scores['hide:seek'] ? `best ${(biz.scores['hide:seek'] / 10).toFixed(1)}s` : 'you count, Primo hides', id: 'hide:seek', onClick: () => startHide('seek') },
+      { label: '🫣 I\'ll hide', sub: biz.scores['hide:hide'] ? 'you\'ve beaten him!' : 'Primo counts, you hide', id: 'hide:hide', onClick: () => startHide('hide') },
+    ], 'Not now') });
   spots.push({ id: 'race', get x() { return tempoLocal()?.w.x ?? 0; }, get y() { return (tempoLocal()?.w.y ?? 0) + 30; }, r: 120, label: '🏃 Race Tempo!',
     when: () => !race && player !== 'tempo' && mode === 'walk' && !room && (tempoLocal()?.w.y ?? 0) > 4300,
     run: () => showCard('race', '🏃 Race Tempo', 'Tempo: “Race you! Where to?”', COURSES.map(c => ({ label: `🏁 ${c.name}`, sub: raceBest(c) ? `best ${(raceBest(c)! / 10).toFixed(1)}s` : 'not won yet', id: `race:${c.id}`, onClick: () => startRace(c) })), 'Not now') });
@@ -1764,6 +1835,16 @@ async function main() {
   }
   const smoothstep = (a: number) => { a = Math.max(0, Math.min(1, a)); return a * a * (3 - 2 * a); };
   function stepLocal(l: Local, dt: number) {
+    if (hide && l.t.who === 'primo') {   // hide-and-seek (hide.ts)
+      const h = hide, p = h.primo, seekCount = h.kind === 'seek' && h.phase === 'count';
+      l.view.root.visible = !seekCount;   // (he's off hiding while your eyes are shut)
+      l.w.x = p.x; l.w.y = p.y;
+      if (p.vx || p.vy) Object.assign(l.st, chooseView(p.vx, p.vy, l.st), { crouch: 0 });
+      else if (h.kind === 'seek') Object.assign(l.st, { view: h.phase === 'done' ? 'front' : 'back', face: 1, crouch: h.phase === 'play' && h.spot?.crouch ? 1 : 0 });
+      else Object.assign(l.st, h.phase === 'count' ? { view: 'back', face: 1, crouch: 0 } : { ...chooseView(nico.x - p.x, nico.y - p.y, l.st), crouch: 0 });
+      stepGait(l.st, Math.hypot(p.vx, p.vy), p.vy, dt, GAIT_SCALE * l.view.height);
+      l.view.pose(p.x, p.y, l.st); return;
+    }
     if (race && l.t.who === 'tempo') {   // racing Nico (race.ts)
       const t = race.tempo; l.w.x = t.x; l.w.y = t.y; l.w.vx = t.vx; l.w.vy = t.vy;
       if (t.vx || t.vy) Object.assign(l.st, chooseView(t.vx, t.vy, l.st)); else Object.assign(l.st, chooseView(race.course.flag[0] - t.x, race.course.flag[1] - t.y, l.st));
@@ -1858,6 +1939,8 @@ async function main() {
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     reaCome: () => { startFollow(beachRea.rea); },
+    hideGo: (kind: HideKind, spot?: number) => startHide(kind, spot),
+    hide: () => (hide ? { kind: hide.kind, phase: hide.phase, result: hide.result, spot: hide.spot, primo: { ...hide.primo }, checked: [...hide.checked], count: hide.count } : null),
     raceGo: (id: string) => startRace(COURSES.find(c => c.id === id)!),
     race: () => (race ? { phase: race.phase, winner: race.winner, time: race.time, tempo: { ...race.tempo }, flag: race.course.flag } : null),
     friendOut: (who: string) => { const l = locals.find(q => q.orig.who === who)!; l.w.i = 2; l.w.x = l.t.route[2].x; l.w.y = l.t.route[2].y; l.w.wait = 0; },
@@ -2099,7 +2182,7 @@ async function main() {
       }
     }
     // Biscuit: heels, sits, lies down, fetches; waits by the door while Nico's in somewhere, rides along in the car
-    reaStep(dt); raceStep(dt);
+    reaStep(dt); raceStep(dt); hideStep(dt);
     if (dog && dogView) {
       const hidden = !!room || mode === 'drive';
       if (hidden) { const [hx, hy] = mode === 'drive' ? [car.x, car.y] : room!.outside; Object.assign(dog, { x: hx - 50, y: hy + 20, vx: 0, vy: 0, mode: 'follow', still: 0 }); }

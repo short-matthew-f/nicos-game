@@ -951,13 +951,29 @@ with sync_playwright() as p:
     # racing Tempo on the beach: 3, 2, 1, GO, first to the flag
     pg.evaluate("()=>window.__game.place(2640, 4760)"); pg.wait_for_timeout(300); m0 = G()['money']
     pg.evaluate("()=>window.__game.raceGo('pier')"); pg.wait_for_timeout(500)
-    check(pg.evaluate("()=>window.__game.race()")['phase'] == 'count' and pg.locator('.race-hud').is_visible(), 'a race: on your marks, the countdown')
+    check(pg.evaluate("()=>window.__game.race()")['phase'] == 'count' and pg.locator('#race-hud').is_visible(), 'a race: on your marks, the countdown')
     pg.wait_for_function("window.__game.race() && window.__game.race().phase === 'go'", timeout=6000)
     fl = pg.evaluate("()=>window.__game.race()")['flag']; pg.evaluate(f"()=>window.__game.place({fl[0] - 40}, {fl[1] + 10})"); pg.wait_for_timeout(400)
     rc = pg.evaluate("()=>window.__game.race()")
     check(rc and rc['winner'] == 'nico' and G()['money'] == m0 + 5 and G()['biz']['scores'].get('race:pier'), f"first to the flag: beat Tempo, +$5, a best time ({rc}, {m0} -> {G()['money']})")
     pg.wait_for_timeout(3000)
-    check(pg.evaluate("()=>window.__game.race()") is None and not pg.locator('.race-hud').is_visible(), 'and the race packs up')
+    check(pg.evaluate("()=>window.__game.race()") is None and not pg.locator('#race-hud').is_visible(), 'and the race packs up')
+    # hide-and-seek with Primo: you seek (eyes shut while he hides), then you hide
+    pg.evaluate("()=>window.__game.place(2300, 1650)"); pg.wait_for_timeout(300)
+    pg.evaluate("()=>window.__game.hideGo('seek', 3)"); pg.wait_for_timeout(500)
+    check(pg.locator('.eyes-shut').is_visible() and pg.evaluate("()=>window.__game.hide()")['phase'] == 'count', 'hide-and-seek: eyes shut while Primo hides')
+    pg.wait_for_function("window.__game.hide() && window.__game.hide().phase === 'play'", timeout=15000)
+    sp = pg.evaluate("()=>window.__game.hide()")['spot']
+    check(not pg.locator('.eyes-shut').is_visible() and 'Find Primo' in pg.locator('#hide-hud').inner_text(), f"ready or not: find him ({sp['name']})")
+    pg.evaluate(f"()=>window.__game.place({sp['x'] + 40}, {sp['y'] + 70})"); pg.wait_for_timeout(300)
+    check(pg.evaluate("()=>window.__game.hide()")['result'] == 'found' and G()['biz']['scores'].get('hide:seek'), 'found him!')
+    pg.wait_for_timeout(3300)
+    pg.evaluate("()=>window.__game.hideGo('hide')"); pg.wait_for_timeout(300)
+    check(pg.evaluate("()=>window.__game.hide()")['kind'] == 'hide' and not pg.locator('.eyes-shut').is_visible(), 'your turn to hide: Primo counts')
+    pg.wait_for_function("window.__game.hide() && window.__game.hide().phase === 'play'", timeout=15000)
+    hp = pg.evaluate("()=>window.__game.hide()")['primo']; pg.evaluate(f"()=>window.__game.place({hp['x'] + 90}, {hp['y'] + 40})"); pg.wait_for_timeout(400)
+    check(pg.evaluate("()=>window.__game.hide()")['result'] == 'caught', 'out in the open: Primo spots you')
+    pg.wait_for_timeout(3300)
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

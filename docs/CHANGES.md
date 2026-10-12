@@ -1209,3 +1209,37 @@ The user: "Build on all three of those games."
 - **Tests:**
   - `test/race.test.ts`: both courses are free of solids, the right winner at flat-out and at slow speed, the countdown.
   - E2E: countdown, then Nico wins (+$5, a best time), then the race packs up.
+
+## Hide-and-seek with Primo (2026-10-12)
+When Primo's round the playground or the park, "🙈 Play hide-and-seek" lets Nico pick who's it (`hide.ts`).
+
+**Seven hiding spots** (`SPOTS`), each tested to be free ground:
+- behind Burger Barn;
+- behind the big tree;
+- behind the slide tower;
+- behind the swings;
+- behind the fountain;
+- crouched behind a park bench;
+- down in the flowers.
+
+Whether he's hidden comes from the drawing order. Behind Burger Barn and the slide he's out of sight. Behind the bench or the tree he peeks out a little, which suits a young seeker.
+
+**You seek:**
+- The screen goes dark while Primo hides: "🙈 Eyes shut! Primo's hiding... 7".
+- Then you have 90 s to find him. He giggles now and then ("hehe"), and the banner says 🔥 Hot / ☀️ Warm / ❄️ Cold.
+- Walk up to him: "Found him!"
+
+**You hide:**
+- Dashed rings mark the spots while Primo counts out loud.
+- Then he checks the spots one by one ("Are you here?" "Not here!"). Out in the open, he sees you straight away.
+- Last the minute and you win.
+
+**Results:**
+- Best seek time and longest hide go in `scores['hide:seek' / 'hide:hide']`.
+- First win: +$3. A sticker: "Hide-and-seek with Primo".
+- Primo is let off his swing (or his roof) to play. Afterwards he walks back to his rounds.
+- The offer only appears when you aren't playing as Primo.
+
+**Tests:**
+- `test/hide.test.ts`: spots are free; seek finds him, with giggles and a give-up; hide covers caught in the open, caught at your spot after he's checked the others, and safe when his time runs out.
+- E2E: eyes shut, then find him, then hide and get spotted in the open.

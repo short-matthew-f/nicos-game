@@ -392,3 +392,8 @@ body.dg-on #hud, body.dg-on #hint, body.dg-on #action { display: none !important
 .race-hud.go { color: #FFFFFF; background: #3BB273; }
 .race-hud.won { color: #2B3F55; background: #F9C846; font-size: 30px; }
 .race-hud.lost { color: #FFFFFF; background: #D9322E; font-size: 30px; }
+
+/* ---- hide-and-seek (hide.ts): eyes shut while Primo hides */
+.eyes-shut { position: fixed; inset: 0; z-index: 29; display: flex; align-items: center; justify-content: center; pointer-events: auto;
+  background: rgba(20, 24, 40, .93); color: #fff; font: 900 40px system-ui, -apple-system, sans-serif; text-align: center; padding: 20px; }
+.eyes-shut[hidden] { display: none; }
