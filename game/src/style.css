@@ -404,3 +404,6 @@ body.dg-on #hud, body.dg-on #hint, body.dg-on #action { display: none !important
 .fish-btn { font-size: 22px; line-height: 1.1; padding: 10px; }
 .fish-btn.hot { background: radial-gradient(circle at 40% 35%, #FF8A7A, #E5484D 60%, #A3283A); box-shadow: 0 10px 0 #7A1820, 0 0 30px rgba(229,72,77,.7); animation: fish-pulse .35s ease-in-out infinite alternate; }
 @keyframes fish-pulse { to { transform: scale(1.06); } }
+
+/* ---- eye exams with Dr. Nonna (eyesView.ts) and surgery with Dr. Poppop (surgeryView.ts) */
+.eyes, .surgery { background: radial-gradient(ellipse at 50% 30%, #FFFFFF 0%, #BFD9EE 90%); }

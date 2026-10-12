@@ -53,6 +53,10 @@ import { CABINETS } from './arcade/games';
 import { PeelGame } from './peelView';
 import { BobGame } from './bobView';
 import { FishGame } from './fishView';
+import { EyesGame } from './eyesView';
+import { SurgeryGame } from './surgeryView';
+import { FRAMES, framesOf, glassesKey } from './eyes';
+import { CASES } from './surgery';
 import { BELTS, nextBelt, isBlack, training, type TrainKind } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
@@ -151,10 +155,12 @@ async function main() {
   for (const d of ducks.views) layer.addChild(d);
   const truck = new FireTruck();
   layer.addChild(truck.view);
-  const fiat = new Fiat();   // Poppop's Fiat 500, out for a drive now and then (Nonna too)
+  const fiat = new Fiat();   // Poppop's Fiat 500, the Cinquecento: out for a drive now and then (Nonna too), and some days to the hospital
+  /** Dr. Nonna and Dr. Poppop are in at the hospital (the Cinquecento's parked outside). */
+  const docsIn = () => fiat.out && fiat.trip === 'hospital' && fiat.at === 'hospital';
   layer.addChild(fiat.view);
   // Nonna drops off a couple of her pizzelle at Nico's bakery on the way past, if there's room in the case
-  fiat.wants = stop => stop === 'parts' || (stop === 'bakery' && isUnlocked(biz, 'bakery') && biz.bakery.rack.length < BAKERY_RULES.rack);
+  fiat.wants = stop => stop === 'parts' || stop === 'hospital' || (stop === 'bakery' && isUnlocked(biz, 'bakery') && biz.bakery.rack.length < BAKERY_RULES.rack);
   fiat.onStop = stop => {
     if (stop !== 'bakery') return;
     const n = Math.min(2, BAKERY_RULES.rack - biz.bakery.rack.length);
@@ -458,6 +464,22 @@ async function main() {
     },
     opened: on => { cardOpen = on ? 'fish' : null; if (on) app.ticker.stop(); else app.ticker.start(); },
   });
+  // at the hospital with Dr. Nonna and Dr. Poppop (eyes.ts, surgery.ts): eye exams and new glasses, steady hands, X-rays
+  const eyeExams = new EyesGame({
+    scores: () => biz.scores,
+    fitted: (who, i, stars) => {
+      biz.scores[glassesKey(who)] = i + 1; see(biz, 'patient', who); boost = Math.min(BOOST.max, boost + 10 * stars);
+      for (const l of locals) if (l.t.who === who) l.view.setGlasses(FRAMES[i]);   // (they walk out wearing them)
+      persist();
+    },
+    opened: on => { cardOpen = on ? 'eyes' : null; if (on) app.ticker.stop(); else app.ticker.start(); },
+  });
+  const surgery = new SurgeryGame({
+    steadyDone: (c, stars) => { see(biz, 'case', c.id); biz.scores[`case:${c.id}`] = Math.max(biz.scores[`case:${c.id}`] ?? 0, stars); persist(); },
+    xrayDone: (found, score) => { if (found >= 3) see(biz, 'xray', 'detective'); biz.scores.xray = Math.max(biz.scores.xray ?? 0, score); persist(); },
+    opened: on => { cardOpen = on ? 'surgery' : null; if (on) app.ticker.stop(); else app.ticker.start(); },
+  });
+  const notIn = () => toast(fiat.out && fiat.trip === 'hospital' ? '🏥 Dr. Nonna and Dr. Poppop are on their way in the Cinquecento!' : '🏥 Dr. Nonna and Dr. Poppop aren\'t in today. (Ask them at home: they\'ll drive you over in the Cinquecento!)');
   const work = new Workshop({
     biz: state.biz,
     money: () => state.money,
@@ -636,6 +658,7 @@ async function main() {
     if (id === 'dojo') { const e = emblem(92); e.position.set(r.w / 2, 128); e.zIndex = 1; rl.addChild(e); }   // the school's emblem, big on the back wall
     // everyone else there (the dojo's instructors), each turned their own way
     for (const p of r.crew ?? []) {
+      if (p.docs && !docsIn()) continue;   // (the doctors are only in on hospital days)
       const add = () => {
         if (room?.id !== id) return;
         const v = new PersonView(p.who); v.setZoom(zoom, resolution); if (low) v.setLow(true);
@@ -759,6 +782,12 @@ async function main() {
     sfx.tap();
   }
 
+  /** Off to the hospital in the Cinquecento: Dr. Nonna and Dr. Poppop (meet them there). */
+  function goHospital() {
+    if (fiat.out) return;
+    closePlace(); fiat.go('hospital'); fiat.wait = 0;
+    toast('🏥 Poppop: “Off to the hospital! Meet us there, kiddo.” (It\'s up past the school, top right of town.)');
+  }
   /** A training session done (win or lose): it counts toward the next belt test (karate.ts training). */
   function trained(kind: TrainKind) {
     if (isBlack(biz.belt) || biz.belt < 0) return;
@@ -774,6 +803,16 @@ async function main() {
     if (GRAN[id]) { GRAN[id](); return; }
     if (id.startsWith('arcade:')) { arcade.open(id.slice(7)); return; }
     if (id === 'peel') { peeler.open(); return; }
+    if (id === 'eyes') { if (docsIn()) eyeExams.open(); else notIn(); return; }
+    if (id === 'surgery') {
+      if (!docsIn()) { notIn(); return; }
+      showCard('surgery', '🩺 Dr. Poppop', 'Dr. Poppop: “Scrub in, kiddo! What\'ll it be?”', [
+        ...CASES.map((c, i) => ({ label: `🩹 ${c.title}`, sub: biz.scores[`case:${c.id}`] ? '⭐'.repeat(biz.scores[`case:${c.id}`]) : i === 0 || biz.scores[`case:${CASES[i - 1].id}`] ? 'steady hands' : 'do the one before first', id: `case:${c.id}`,
+          disabled: i > 0 && !biz.scores[`case:${CASES[i - 1].id}`], onClick: () => { closePlace(); surgery.openSteady(c); } })),
+        { label: '🩻 X-ray detective', sub: biz.scores.xray ? `best ${biz.scores.xray}` : 'what did they swallow?', id: 'xray', onClick: () => { closePlace(); surgery.openXray(); } },
+      ], 'Not now');
+      return;
+    }
     if (id === 'bob') { bobber.open(); return; }
     if (id === 'scores') { showScores(); return; }
     const p = PLACES.find(q => q.building === id); if (p) (BIZ_DOORS[id] ?? showPlace)(p);
@@ -795,11 +834,13 @@ async function main() {
         if (t && t.kind === 'block') { nico.x = t.x + t.w / 2; nico.y = t.y + t.d + 50; sitOnBench(t.x + t.w / 2, t.y + t.d + 6); }
         boost = Math.min(BOOST.max, boost + 60); sfx.coin(); toast('🍝 Nonna brings a huge bowl of pasta. Mangia! You feel super speedy! ⚡');
       } },
+      { label: '🏥 Go to the hospital together', sub: fiat.out ? 'the Cinquecento\'s out' : 'meet them there', id: 'hospital', disabled: fiat.out, onClick: () => goHospital() },
       { label: biz.learned.includes('pizzelle') ? '🧇 Make pizzelle with Nonna' : '🧇 Learn to make pizzelle', sub: biz.learned.includes('pizzelle') ? 'you know how!' : 'her secret recipe', id: 'pizzelle', onClick: () => work.pizzelle() },
     ], 'Grazie!'),
     poppop: () => showCard('poppop', '👴 Poppop', `Poppop: “${pick(['Hey there, kiddo! What shall we make today?', 'Safety glasses on. Now, what are we building?', 'I\'ve got some nice oak here. Want to make something?'])}”`, [
       { label: '🐦 Build a birdhouse', sub: done2('birdhouse') ? 'made one!' : 'hammer and nails', id: 'proj:birdhouse', onClick: () => work.birdhouse() },
       { label: '🤖 Carve a sign on the CNC router', sub: done2('sign') ? 'make a new one' : 'the machine carves it', id: 'proj:cnc', onClick: () => work.cnc() },
+      { label: '🏥 Go to the hospital together', sub: fiat.out ? 'the Cinquecento\'s out' : 'meet them there', id: 'hospital', disabled: fiat.out, onClick: () => goHospital() },
       { label: '⚡ Cut a metal star (plasma cutter)', sub: done2('metalstar') ? 'made one!' : 'sparks!', id: 'proj:plasma', onClick: () => work.plasma() },
     ], 'Thanks, Poppop!'),
     yiayia: () => showCard('yiayia', '🎨 Yia-Yia', `Yia-Yia: “${pick(['Hello, my darling! Shall we paint?', 'The light is lovely today. Let\'s paint!', 'Your last one was wonderful. Another?'])}” ${biz.paintings.length ? `(${biz.paintings.length} of your paintings are on the walls.)` : ''}`, [
@@ -881,7 +922,7 @@ async function main() {
         if (u.lines) toast(pick(u.lines));
       } });
     });
-    (r.crew ?? []).forEach((p, i) => out.push({ id: `crew${i}`, x: p.x, y: p.y + 110, r: 100, label: `💬 Talk to ${p.name}`, run: () => toast(`${p.name}: “${pick(p.lines)}”`), when: () => !dojoRoutine }));
+    (r.crew ?? []).forEach((p, i) => { if (p.docs && !docsIn()) return; out.push({ id: `crew${i}`, x: p.x, y: p.y + 110, r: 100, label: p.label ?? `💬 Talk to ${p.name}`, run: () => { if (p.action) placeAction(p.action); else toast(`${p.name}: “${pick(p.lines)}”`); }, when: () => !dojoRoutine }); });
     if (room.id === 'dojo') {
       out.push({ id: 'joinform', x: 860, y: 620, r: 260, priority: 2, label: '🥋 Join the form!', when: () => !!dojoRoutine?.canJoin, run: () => dojoJoin('form') });
       out.push({ id: 'pads', x: 560, y: 470, r: 70, priority: 1, label: "👊 Kick Mrs. Master Krantz's pads", when: () => !dojoRoutine && dojoCast.has('mrskrantz'), run: () => dojoJoin('nicopads') });
@@ -1466,7 +1507,7 @@ async function main() {
     if (stickers && toastEl.classList.contains('on')) return;   // (wait for the last message to go first)
     const now = new Set(PAGES.flatMap(p => p.entries.filter(e => e.has(biz) > 0).map(e => `${p.id}:${e.id}`)));
     if (stickers) for (const k of now) if (!stickers.has(k)) {
-      const [pid, eid] = k.split(':'), e = PAGES.find(p => p.id === pid)!.entries.find(q => q.id === eid)!;
+      const pid = k.slice(0, k.indexOf(':')), eid = k.slice(k.indexOf(':') + 1), e = PAGES.find(p => p.id === pid)!.entries.find(q => q.id === eid)!;
       toast(`📖 New sticker: ${e.label}!`); bookBtn.classList.remove('new'); void bookBtn.offsetWidth; bookBtn.classList.add('new'); sfx.sparkle(); break;
     }
     stickers = now;
@@ -1491,6 +1532,7 @@ async function main() {
     const view = new PersonView(t.who);
     layer.addChild(view.root);
     const r = t.route[0];
+    view.setGlasses(framesOf(saved.biz.scores, t.who));   // (frames from Dr. Nonna's eye exams)
     return { t, orig: t, w: { i: 0, x: r.x, y: r.y, wait: 0, vx: 0, vy: 0 }, st: neutral('front'), view, swingT: -1, seat: -1, said: 0, trip: [], met: null };
   });
   // ---- play as a friend (Nico: switch between Nico, James, Primo and Tempo). Whoever you play as hands
@@ -1502,6 +1544,7 @@ async function main() {
     v.setZoom(zoom, resolution); if (low) v.setLow(true);
     v.root.visible = old.root.visible; v.root.zIndex = old.root.zIndex; v.root.position.copyFrom(old.root.position);
     if (o.bubble) { const b = o.bubble as unknown as Container; b.removeFromParent(); v.root.addChild(b); }
+    v.setGlasses(framesOf(biz.scores, who));
     parent?.addChild(v.root); old.root.destroy({ children: true }); o.view = v; if ((o as unknown) === nico) beltShown = '?';   // (a new look: the loop puts the belt back if it should be on)
   }
   function playAs(who: string) {
@@ -1821,7 +1864,7 @@ async function main() {
   const gone = (l: Local) => l.w.wait > 0 && !!l.t.route[l.w.i].inside && !l.trip.length && !l.met;
   /** Who's out, with the note they left on the door (null: they're in). */
   function away(who: string): string | null {
-    if ((who === 'poppop' || who === 'nonna') && fiat.out) return '📝 “Gone for a drive in the Fiat! Back soon. Love, Poppop & Nonna”';
+    if ((who === 'poppop' || who === 'nonna') && fiat.out) return fiat.trip === 'hospital' ? '📝 “At the hospital today! Come and see us there. Love, Poppop & Nonna”' : '📝 “Gone for a drive in the Cinquecento! Back soon. Love, Poppop & Nonna”';
     const l = locals.find(q => q.orig.who === who);
     if (l && !gone(l)) return l.orig.note ?? '📝 “Gone to paint the sea at the beach! Come find me. Love, Yia-Yia”';
     return null;
@@ -1958,7 +2001,7 @@ async function main() {
     bobOpen: () => bobber.open(),
     bobAt: (x: number, y: number) => bobber.screenAt(x, y),
     peelAt: (x: number, y: number) => peeler.screenAt(x, y),
-    fiatGo: (near?: 'bakery' | 'parts') => { fiat.go(); if (near) fiat.s = fiat.stops[near] - 300; },
+    fiatGo: (near?: 'bakery' | 'parts' | 'hospital') => { fiat.go(near === 'hospital' ? 'hospital' : 'town'); if (near) fiat.s = fiat.stops[near]! - 300; },
     karateWant: () => work.karateWant(),
     games: () => ({ showing: games.showing, spar: games.spar ? { nico: { ...games.spar.nico }, rival: { ...games.spar.rival }, over: games.spar.over, winner: games.spar.winner, intro: games.spar.intro } : null, rhythm: games.rhythm ? { score: games.rhythm.score, combo: games.rhythm.combo, notes: games.rhythm.notes.length, judged: games.rhythm.notes.filter(n => n.judged).length } : null, last: games.last }),
     gamesStop: () => games.stop(),
@@ -1968,6 +2011,10 @@ async function main() {
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     reaCome: () => { startFollow(beachRea.rea); },
+    docsHere: () => { fiat.home(); fiat.go('hospital'); fiat.s = fiat.stops.hospital!; fiat.at = 'hospital'; fiat.dwell = 0; },
+    docsIn: () => docsIn(),
+    eyes: () => eyeExams.snapshot(), eyesOpen: () => eyeExams.open(), eyesPick: (n: 1 | 2) => eyeExams.pick(n), eyesFrame: (i: number) => { if (eyeExams.phase === 'read') eyeExams.phase = 'frames'; eyeExams.pickFrame(i); },
+    surgery: () => surgery.snapshot(), steadyOpen: (i: number) => surgery.openSteady(CASES[i]), xrayOpen: () => surgery.openXray(), surgeryAt: (x: number, y: number) => surgery.screenAt(x, y),
     trainNow: (k: TrainKind) => trained(k),
     hideGo: (kind: HideKind, spot?: number) => startHide(kind, spot),
     hide: () => (hide ? { kind: hide.kind, phase: hide.phase, result: hide.result, spot: hide.spot, primo: { ...hide.primo }, checked: [...hide.checked], count: hide.count } : null),

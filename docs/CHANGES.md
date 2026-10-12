@@ -1294,3 +1294,44 @@ The user: "it would be neat if you had to play the non-belt games and earn the r
 **Tests:**
 - `test/training.test.ts`: the rules above.
 - E2E: after the white belt, the yellow test is locked; two sessions later, it's ready.
+
+## Dr. Nonna and Dr. Poppop at the hospital; the Cinquecento (2026-10-12)
+The user: "Nonna doesn't operate a store. She was however an Ophthalmologist. And Pop-Pop was a surgeon. I want them to both get mini games centered around that. They could both be seen sometimes in the hospital... the house and the barn are where they hang out when they're at home." Then: "call the fiat the Cinquecento, they never call it the fiat. In the hospital they're Dr. The games sound fun. Build them!"
+
+### The Cinquecento
+- What Nico sees now calls it the Cinquecento (the door note); the code keeps `fiat`.
+- **Hospital days** (`world/map.ts hospitalRoute`, `world/fiat.ts`):
+  - About half their drives (`FIAT.hospital` 0.55) are hospital days. At the top of the east road it turns along the front of the hospital, U-turns past it, and parks at the kerb outside the door for about two minutes while they're inside.
+  - The home door note says "At the hospital today! Come and see us there."
+  - Nonna or Poppop at home: "🏥 Go to the hospital together" sends the Cinquecento off right away (meet them there).
+
+### In the hospital, they're doctors
+- New looks `nonnadoc` and `poppopdoc`: a white coat open over their own shirt, a stethoscope, and a pen in the pocket (`Look(stetho=True)`).
+- They're only in on hospital days (`crew` entries marked `docs`), standing either side of the front desk.
+- New on the wall: an eye chart and an X-ray light box. Using either when the doctors aren't in tells Nico how to find them.
+
+### Dr. Nonna's eye exams (`eyes.ts`, `eyesView.ts`)
+- **"Better one, or two?":** two lens windows show the eye chart, blurrier the further off they are. Nico taps the clearer one four times, homing in on the patient's prescription. Then the patient reads the chart back (right only if he chose well), for 1 to 3 stars.
+- **Frames:** six to choose from (round gold, square black, tortoiseshell, bright red, sky blue, purple cat-eye), tried on the patient's face.
+- **Glasses for the town:**
+  - Patients are the six made-up townspeople, never family or real people.
+  - They wear their new glasses round town from then on: a glasses overlay drawn on the person's head in each view, moving with them (`PersonView.setGlasses`).
+  - Saved as `scores['glasses:<who>']`.
+
+### Dr. Poppop's operating (`surgery.ts`, `surgeryView.ts`)
+- **Steady hands**, like the board game: guide the tweezers along the red-rimmed opening, pick up the stuck thing, and bring it back out. Touching the side goes BZZT (and drops it); three buzzes and Poppop takes over.
+- **Four cases**, each narrower and twistier, unlocked in order: a splinter in Mr. Brooks's thumb, a marble Teddy swallowed, a key the toy robot swallowed, a bee's stinger in Ava's arm.
+- **X-ray detective:** five patients have each swallowed something (a coin, a LEGO brick, a tiny dinosaur...). Sweep the scanner over them to see their skeleton and tap the thing, with 20 seconds each.
+
+### Sticker book
+- A new page, "At the hospital", with a $30 reward: each patient's glasses, each case, and "X-ray detective".
+- Fixed: a sticker id with a colon in it broke the "New sticker!" lookup. Ids can't have colons now (tested), and the lookup splits on the first colon only.
+
+### Tests
+- New: `test/eyes.test.ts`, `test/surgery.test.ts`, a hospital-day drive in `test/fiat.test.ts`, and sticker ids in `test/book.test.ts`.
+- E2E:
+  - "go to the hospital together";
+  - the doctors are in;
+  - a 3-star exam and frames saved;
+  - the splinter out with no buzz;
+  - an X-ray find.

@@ -197,6 +197,9 @@ for (const sp of SPECIES) if (!sp.kind) ICONS[`fish_${sp.id}`] = (g, k) => {
   if (sp.id === 'golden') g.rect(-6 * k, -11 * k, 1.5 * k, 5 * k).fill(WH).rect(-8 * k, -9 * k, 5.5 * k, 1.5 * k).fill(WH);
   if (sp.id === 'striper') for (let i = 0; i < 3; i++) g.rect(-8 * k, (-3 + i * 2.5) * k, 15 * k, 0.9 * k).fill(NV);
 };
+ICONS.glasses = (g, k) => g.circle(-8 * k, 0, 7 * k).fill({ color: '#DCEAF5', alpha: 0.6 }).stroke({ width: 3 * k, color: '#2B3F55' }).circle(8 * k, 0, 7 * k).fill({ color: '#DCEAF5', alpha: 0.6 }).stroke({ width: 3 * k, color: '#2B3F55' }).moveTo(-1 * k, -1 * k).lineTo(1 * k, -1 * k).stroke({ width: 3 * k, color: '#2B3F55' });
+ICONS.tweezers = (g, k) => g.moveTo(-12 * k, -12 * k).lineTo(10 * k, 12 * k).moveTo(-8 * k, -14 * k).lineTo(12 * k, 10 * k).stroke({ width: 3.5 * k, color: '#8E96A3', cap: 'round' }).circle(11 * k, 11 * k, 3 * k).fill('#5B8FD6');
+ICONS.xray = (g, k) => { g.roundRect(-12 * k, -14 * k, 24 * k, 28 * k, 3 * k).fill('#1E2733').stroke(edge); for (let i = 0; i < 4; i++) g.rect(-7 * k, (-8 + i * 5) * k, 14 * k, 2 * k).fill('#BFE3F5'); g.rect(-1 * k, -11 * k, 2 * k, 22 * k).fill('#FFFFFF'); };
 ICONS.boot = (g, k) => g.poly([-8 * k, -13 * k, 2 * k, -13 * k, 3 * k, 0, 13 * k, 2 * k, 13 * k, 9 * k, -9 * k, 9 * k]).fill('#5A4131').stroke(edge).rect(-10 * k, 7 * k, 24 * k, 3 * k).fill('#3E2C20');
 
 export function icon(name: string, size = 32): Graphics {

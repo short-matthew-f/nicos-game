@@ -556,7 +556,7 @@ def camo_defs(pfx, c):
 
 class Look:
     def __init__(s, id, *, skin, skin2, hair, hl=None, style, shirt, shirt2, sleeve, pants, pants2,
-                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None, shorts=False, socks=None, watch=None, slim=1.0):
+                 shoe, shoe2, height=1.0, camo=None, trim='#FFFFFF', top='tee', stripe=None, glasses=None, mustache=None, plaid=None, beard=None, belt=None, under=None, head=None, shorts=False, socks=None, watch=None, slim=1.0, stetho=False):
         s.__dict__.update(locals()); del s.__dict__['s']
         s.hl = hl or hair
         if plaid: s.shirt = s.sleeve = 'url(#eplaid2)'   # (a plaid flannel: the pattern is in defs; the game export's prefix is 'e')
@@ -608,6 +608,9 @@ class Look:
                 t += f'<path d="M5,-36 L13,-36 L13,-26 Q9,-22 5,-26 Z" fill="{s.trim}"/><circle cx="9" cy="-31" r="2.4" fill="{s.shirt2}"/>'
             t += (f'<rect x="-21" y="-40" width="3" height="40" fill="{s.trim}"/>'
                   f'<rect x="18" y="-40" width="3" height="40" fill="{s.trim}"/>')
+        if s.stetho and not back:   # a doctor's stethoscope round the neck, a pen in the coat pocket
+            t += ('<path d="M-9,-54 C-12,-40 -8,-30 0,-27 C8,-30 12,-40 9,-54" fill="none" stroke="#5B6472" stroke-width="2.6" stroke-linecap="round"/>'
+                  '<circle cx="0" cy="-25" r="3.8" fill="#C9D3DC" stroke="#5B6472" stroke-width="1.6"/><rect x="9" y="-34" width="9" height="9" rx="1.5" fill="#E4E4DC"/><rect x="12" y="-38" width="2" height="7" fill="#2F7FD8"/>')
         return t
 
     def upper_side(s, pfx, face_cls=''):
@@ -683,6 +686,9 @@ class Look:
                 t += f'<path d="M-2,-52 Q6,-45 14,-52" fill="none" stroke="{s.shirt2}" stroke-width="3"/>'
                 t += f'<path d="M9,-36 L16,-36 L16,-27 Q12.5,-23 9,-27 Z" fill="{s.trim}"/>'
             t += f'<rect x="17" y="-40" width="3" height="40" fill="{s.trim}"/>'
+        if s.stetho and not back:   # a doctor's stethoscope round the neck, a pen in the coat pocket
+            t += ('<path d="M-2,-54 C-6,-40 -4,-30 2,-26 C8,-30 12,-40 10,-54" fill="none" stroke="#5B6472" stroke-width="2.6" stroke-linecap="round"/>'
+                  '<circle cx="2" cy="-24" r="3.6" fill="#C9D3DC" stroke="#5B6472" stroke-width="1.6"/><rect x="-16" y="-34" width="9" height="9" rx="1.5" fill="#E4E4DC"/><rect x="-13" y="-38" width="2" height="7" fill="#2F7FD8"/>')
         return t
 
     def upper_qfront(s, pfx, face_cls=''):
@@ -906,6 +912,15 @@ LOOKS['nicoswim'] = _swimwear(LOOKS['nicodobok'], 'nicoswim', '#2B5FA8', '#234F8
 LOOKS['jamesswim'] = _swimwear(LOOKS['james'], 'jamesswim', '#F4F6F8', '#D9DFE6', '#2E3A66', '#26305A', '#5B8FD6')
 LOOKS['primoswim'] = _swimwear(LOOKS['primo'], 'primoswim', '#2456C8', '#1C45A6', '#3BB273', '#2F9A61', '#FFFFFF')
 LOOKS['temposwim'] = _swimwear(LOOKS['tempo'], 'temposwim', '#D9322E', '#B82723', '#F9C846', '#D9A93A', '#FFFFFF')
+
+# At the hospital they're doctors (the user, 2026-10-12: Nonna was an ophthalmologist, Poppop a surgeon; "In the
+# hospital they're Dr."): a white coat open over their own shirt, a stethoscope round the neck
+def _whitecoat(base, id, inner, inner_trim):
+    d = {k: v for k, v in vars(base).items() if k in Look.__init__.__code__.co_varnames}
+    d.update(id=id, top='cardigan', shirt='#FAFAF7', shirt2=inner, sleeve='#FAFAF7', trim=inner_trim, plaid=None, stetho=True)
+    return Look(**d)
+LOOKS['nonnadoc'] = _whitecoat(LOOKS['nonna'], 'nonnadoc', '#6E8FC4', '#8FAAD6')
+LOOKS['poppopdoc'] = _whitecoat(LOOKS['poppop'], 'poppopdoc', '#2F6E62', '#E07A3A')
 
 @contextmanager
 def wearing(look, pfx):

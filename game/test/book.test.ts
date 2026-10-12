@@ -37,3 +37,7 @@ describe('sticker book', () => {
     }
   });
 });
+
+import { PAGES as ALL_PAGES } from '../src/book';
+import { it as it2, expect as expect2 } from 'vitest';
+it2('sticker ids never have a colon in them (keys are page:sticker)', () => { for (const p of ALL_PAGES) for (const e of p.entries) expect2(e.id.includes(':'), `${p.id}/${e.id}`).toBe(false); });

@@ -1,11 +1,12 @@
-// Poppop's Fiat 500 (2026-10-10: "Poppop should drive a fiat 500"; "white with maroon seats"): it
+// Poppop's Fiat 500, the Cinquecento (2026-10-10: "Poppop should drive a fiat 500"; "white with maroon seats";
+// 2026-10-12: "call the fiat the Cinquecento, they never call it the fiat"): it
 // lives on the driveway in front of his red barn, and every few minutes he and Nonna pop out for a
 // drive: into town, round the ring road with the traffic, a stop at Parts & Tools (and at Nico's
 // bakery, once he has one, where Nonna drops off pizzelle) and home again. Small, round and slow;
 // you can see the tops of their heads through the open canvas roof.
 import { Container, Graphics } from 'pixi.js';
 import { Loop, roundCorners } from './path';
-import { poppopRoute, POPPOP_STOPS } from './map';
+import { poppopRoute, hospitalRoute, POPPOP_STOPS } from './map';
 import { NAVY, BAND as B } from './draw';
 import { SQUEEZE } from './cars';
 import { CAR_SCALE } from '../drive';
@@ -13,7 +14,7 @@ import { CAR_SCALE } from '../drive';
 const S = CAR_SCALE, L = 80, W = 52;   // base art (a little stubby egg next to the other cars' 112 x 56)
 /** Poppop drives a bit under the speed of traffic, and goes out every couple of minutes. */
 export const FIAT = { max: 210, acc: 220, brake: 720, len: L * S, wid: W * S, color: '#F7F6F2', seats: '#7A1F2B', firstRun: 45, every: [100, 200] as [number, number],
-  dwell: { parts: 7, bakery: 5 } as Record<Stop, number> };
+  dwell: { parts: 7, bakery: 5, hospital: 110 } as Record<Stop, number>, hospital: 0.55 };   // (hospital: how often a drive is a hospital day)
 export type Stop = keyof typeof POPPOP_STOPS;
 
 function fiatArt(color: string): { body: Container; poppop: Container; nonna: Container } {
@@ -51,7 +52,11 @@ function fiatArt(color: string): { body: Container; poppop: Container; nonna: Co
 
 export class Fiat {
   readonly view = new Container();
-  readonly loop = new Loop(roundCorners(poppopRoute(), 150));
+  private loops = { town: new Loop(roundCorners(poppopRoute(), 150)), hospital: new Loop(roundCorners(hospitalRoute(), 150)) };
+  loop = this.loops.town;
+  /** Where along each drive each stop is. */
+  private stopsOf: Record<'town' | 'hospital', Partial<Record<Stop, number>>>;
+  trip: 'town' | 'hospital' = 'town';
   s = 0; speed = 0;
   out = false;
   wait = FIAT.firstRun;            // s until he goes for a drive
@@ -59,7 +64,7 @@ export class Fiat {
   private stuck = 0; private squeeze = 0;
   private body: Container; private shadow: Graphics; private poppop: Container; private nonna: Container;
   /** Where along the drive each stop is, which he's been to this time out, and how long he's been at the current one. */
-  readonly stops: Record<Stop, number>;
+  get stops(): Partial<Record<Stop, number>> { return this.stopsOf[this.trip]; }
   private done = new Set<Stop>();
   at: Stop | null = null; dwell = 0;
   /** Set by the game: whether to pull in at a stop (the bakery: only once Nico has one). */
@@ -69,7 +74,8 @@ export class Fiat {
 
   constructor() {
     ({ body: this.body, poppop: this.poppop, nonna: this.nonna } = fiatArt(FIAT.color));
-    this.stops = Object.fromEntries((Object.keys(POPPOP_STOPS) as Stop[]).map(k => [k, this.nearestS(...POPPOP_STOPS[k])])) as Record<Stop, number>;
+    const at = (trip: 'town' | 'hospital') => { this.loop = this.loops[trip]; return Object.fromEntries((Object.keys(POPPOP_STOPS) as Stop[]).filter(k => trip === 'hospital' || k !== 'hospital').map(k => [k, this.nearestS(...POPPOP_STOPS[k])])); };
+    this.stopsOf = { town: at('town'), hospital: at('hospital') }; this.loop = this.loops.town;
     this.shadow = new Graphics().roundRect(-FIAT.len / 2, -FIAT.wid / 2, FIAT.len, FIAT.wid, 24 * S).fill({ color: NAVY, alpha: 0.18 });
     this.shadow.position.set(6, 10);
     this.view.addChild(this.shadow, this.body);
@@ -84,7 +90,11 @@ export class Fiat {
     return [-0.3, 0, 0.3].map(f => f * FIAT.len).map(a => [x + Math.cos(h) * a, y + Math.sin(h) * a]);
   }
   /** Off he goes (also used by tests). */
-  go() { if (!this.out) { this.out = true; this.s = 0; this.speed = 0; this.done.clear(); this.at = null; } }
+  go(trip?: 'town' | 'hospital') {
+    if (this.out) return;
+    this.trip = trip ?? (Math.random() < FIAT.hospital ? 'hospital' : 'town'); this.loop = this.loops[this.trip];
+    this.out = true; this.s = 0; this.speed = 0; this.done.clear(); this.at = null;
+  }
   /** Straight home (tests). */
   home() { this.out = false; this.s = 0; this.speed = 0; this.at = null; this.wait = FIAT.every[0]; this.place(); }
   nearestS(x: number, y: number): number {
@@ -122,7 +132,7 @@ export class Fiat {
     }
     // ease into the next stop, or into the parking spot at the end
     let end = this.loop.length, next: Stop | null = null;
-    for (const k of Object.keys(this.stops) as Stop[]) if (!this.done.has(k) && this.stops[k] >= this.s - 1 && this.stops[k] < end && this.wants(k)) { end = this.stops[k]; next = k; }
+    for (const k of Object.keys(this.stops) as Stop[]) { const sk = this.stops[k]!; if (!this.done.has(k) && sk >= this.s - 1 && sk < end && this.wants(k)) { end = sk; next = k; } }
     const left = end - this.s, park = Math.max(next ? 0 : 40, Math.sqrt(2 * FIAT.brake * 0.35 * Math.max(0, left)));
     if (next && left <= 6) { this.at = next; this.dwell = 0; this.speed = 0; this.place(); return true; }
     this.speed = blocked ? Math.max(0, this.speed - FIAT.brake * dt) : Math.min(top, Math.max(next ? 30 : 0, park), this.speed + FIAT.acc * dt);
@@ -141,8 +151,8 @@ export class Fiat {
     this.view.position.set(x, y);
     this.body.rotation = this.shadow.rotation = this.out ? this.heading : Math.PI / 2;   // parked straight, nose to the road
     this.view.zIndex = y + FIAT.wid * 0.4;
-    // parked: they're at home; at Parts & Tools they've both gone in, at the bakery Nonna has
-    this.poppop.visible = this.out && this.at !== 'parts';
+    // parked: they're at home; at Parts & Tools or the hospital they've both gone in, at the bakery Nonna has
+    this.poppop.visible = this.out && this.at !== 'parts' && this.at !== 'hospital';
     this.nonna.visible = this.out && !this.at;
   }
 }

@@ -211,10 +211,19 @@ export const PARKED_CAR = { x: GARAGE.x + GARAGE.w / 2, y: DRIVEWAYS[0].y + DRIV
  * pulling in by Parts & Tools. Then back east and up the drive, turning round in front of the
  * barn so he's parked nose-out again. Starts and ends at the parked spot (the loop's s = 0). */
 const DOWN = ROADS_Y[1] + 900;   // how far down the west road he goes before turning round
-export const POPPOP_STOPS: Record<'bakery' | 'parts', [number, number]> = {
+export const POPPOP_STOPS: Record<'bakery' | 'parts' | 'hospital', [number, number]> = {
   bakery: [ROADS_X[0] - LANE, BAKERY.y + BAKERY.d - 60],   // (heading south, the kerb on the bakery's side)
   parts: [ROADS_X[0] + LANE, BAKERY.y + BAKERY.d - 120],   // (heading back north, on the Parts & Tools side)
+  hospital: [3730, ROADS_Y[0] - LANE],                     // (hospital days: heading west, at the kerb outside the hospital door)
 };
+/** Hospital days (2026-10-12: Dr. Nonna and Dr. Poppop): the same drive, but at the top of the east road he turns right
+ * along the front of the hospital, U-turns past it, and pulls in at the kerb outside the door; then on west as usual. */
+export function hospitalRoute(): [number, number][] {
+  const r = poppopRoute(), [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y, past = 4060;
+  void x0; void y1;
+  const i = r.findIndex(([x, y]) => x === x1 + LANE && y === y0 - LANE);
+  return [...r.slice(0, i), [x1 + LANE, y0 + LANE], [past, y0 + LANE], [past, y0 - LANE], ...r.slice(i + 1)];
+}
 export function poppopRoute(): [number, number][] {
   const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
   const mid = WOODSHOP.x + WOODSHOP.w / 2, out = mid - 60, back = mid + 60, top = WOODSHOP.y + WOODSHOP.d + 50;

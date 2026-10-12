@@ -5,6 +5,7 @@ import { DropShadowFilter, OutlineFilter } from 'pixi-filters';
 import { partOps, opsMatrix, mul, VIEWS, type PoseState, type View } from './pose';
 import { NAVY } from '../world/draw';
 import { BUILD_ID } from '../update';
+import type { Frame } from '../eyes';
 
 interface PartMeta { part: string; img: string; x: number; y: number; w: number; h: number }
 interface ArtMeta { res: number; height?: number; views: Record<View, PartMeta[]> }
@@ -86,6 +87,28 @@ export class PersonView {
     }
   }
 
+  private specs: Partial<Record<View, Graphics>> = {};
+  /** Glasses over the face (2026-10-12: the frames Nico picked at Dr. Nonna's eye exams), drawn in the head's own
+   * place in each view, so they move with it. null takes them off. */
+  setGlasses(f: Frame | null) {
+    for (const v of VIEWS) {
+      this.specs[v]?.destroy(); delete this.specs[v];
+      if (!f || v === 'back') continue;
+      const g = new Graphics(), c = this.views[v].c, w = 2.4, lens = { color: '#DCEAF5', alpha: 0.25 };
+      const one = (x: number, y: number, rx: number, ry: number) => {
+        if (f.shape === 'round') g.ellipse(x, y, rx, ry).fill(lens).stroke({ width: w, color: f.color });
+        else if (f.shape === 'cat') g.poly([x - rx, y - ry * 0.4, x - rx * 0.2, y - ry, x + rx, y - ry * 1.15, x + rx * 0.8, y + ry * 0.7, x - rx * 0.6, y + ry * 0.8]).fill(lens).stroke({ width: w, color: f.color, join: 'round' });
+        else g.roundRect(x - rx, y - ry, rx * 2, ry * 2, f.shape === 'soft' ? ry * 0.9 : 2.5).fill(lens).stroke({ width: w, color: f.color });
+      };
+      if (v === 'front') { one(-9.5, -85, 7.5, 6.2); one(9.5, -85, 7.5, 6.2); g.moveTo(-2, -86).lineTo(2, -86).moveTo(-17, -86).lineTo(-27, -84).moveTo(17, -86).lineTo(27, -84).stroke({ width: w, color: f.color }); }
+      else if (v === 'qfront') { one(0, -84, 7, 6.2); one(17, -84, 4.2, 6); g.moveTo(7, -85).lineTo(13, -85).moveTo(-7, -85).lineTo(-17, -82).stroke({ width: w, color: f.color }); }
+      else if (v === 'side') { one(20, -85, 3.2, 6); g.moveTo(17, -86).lineTo(-1, -83).stroke({ width: w, color: f.color }); }
+      else { g.moveTo(-26, -84).lineTo(-18, -86).stroke({ width: w, color: f.color }); }   // qback: just the arm by the ear
+      const up = this.views[v].parts.findIndex(p => p.meta.part === 'up');
+      c.addChildAt(g, c.getChildIndex(this.views[v].parts[up].sprite) + 1); this.specs[v] = g;
+    }
+  }
+
   /** Cheaper drawing for slow devices: keep the white sticker outline, drop the soft shadow. */
   setLow(low: boolean) { this.root.filters = low ? [this.outline] : [this.outline, this.shadow]; }
 
@@ -107,6 +130,8 @@ export class PersonView {
     }
     const belt = this.belts[st.view];
     if (belt && ops.up) { const m = opsMatrix(ops.up); belt.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5])); }
+    const specs = this.specs[st.view];
+    if (specs && ops.up) { const m = opsMatrix(ops.up); specs.setFromMatrix(new Matrix(m[0], m[1], m[2], m[3], m[4], m[5])); }
     const sx = st.view === 'front' || st.view === 'back' ? 1 : st.face;   // side and 3/4 views flip to face left
     this.root.position.set(x, y);
     this.root.scale.set(RIG_SCALE * this.height * sx, RIG_SCALE * this.height);

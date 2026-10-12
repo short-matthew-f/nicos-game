@@ -17,8 +17,16 @@ describe("Poppop's Fiat 500", () => {
       expect(onRoad(p) || inside(drive, p, 60), `s=${s} at ${p.map(Math.round)}`).toBe(true);
     }
   });
+  it('hospital days: along the front of the hospital, a U-turn, and a long stop at the door (they go in)', () => {
+    const f = new Fiat(); f.wants = () => true; const seen: string[] = []; let atDoor: [number, number] | null = null;
+    f.go('hospital');
+    for (let s = 0; s < f.loop.length; s += 10) { const p = f.loop.at(s); expect(onRoad(p) || inside(drive, p, 60), `s=${s} at ${p.map(Math.round)}`).toBe(true); }
+    for (let t = 0; t < 400 && f.out; t += 0.05) { f.update(0.05, []); if (f.at && !seen.includes(f.at)) { seen.push(f.at); if (f.at === 'hospital') atDoor = [...f.pos] as [number, number]; } }
+    expect(seen).toContain('hospital'); expect(f.out).toBe(false);
+    expect(Math.abs(atDoor![0] - 3730)).toBeLessThan(40); expect(atDoor![1]).toBeLessThan(945);   // (the hospital's side of the road)
+  });
   it('waits at home, then goes for a drive into town and comes home again', () => {
-    const f = new Fiat();
+    const f = new Fiat(); f.go = ((go) => (trip?: 'town' | 'hospital') => go(trip ?? 'town'))(f.go.bind(f));
     f.update(FIAT.firstRun - 1, []);
     expect(f.out).toBe(false);
     f.update(1.01, []);
@@ -34,7 +42,7 @@ describe("Poppop's Fiat 500", () => {
       const f = new Fiat(), stopped = new Set<string>(), done: string[] = [];
       f.wants = k => k === 'parts' || bakery;
       f.onStop = k => done.push(k);
-      f.go();
+      f.go('town');
       for (let t = 0; t < 200 && f.out; t += 0.05) { f.update(0.05, []); if (f.at) { stopped.add(f.at); expect(f.speed).toBe(0); } }
       expect(f.out).toBe(false);
       expect([...stopped].sort()).toEqual(bakery ? ['bakery', 'parts'] : ['parts']);

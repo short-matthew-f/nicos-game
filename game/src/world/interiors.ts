@@ -20,7 +20,7 @@ export interface Interior {
   w: number; h: number; wall: number;
   colors: { wall: string; stripe?: string; trim: string; floor: [string, string]; tiles?: boolean };
   person?: { who: string; name: string; x: number; y: number; lines: string[]; action?: string; treat?: { label: string; boost: number } };
-  crew?: { who: string; name: string; x: number; y: number; lines: string[]; face?: 'front' | 'side' | 'qfront'; flip?: boolean }[];   // others there (the dojo's instructors)
+  crew?: { who: string; name: string; x: number; y: number; lines: string[]; face?: 'front' | 'side' | 'qfront'; flip?: boolean; action?: string; label?: string; docs?: boolean }[];   // others there (the dojo's instructors; the doctors, on hospital days: docs)
   things: Thing[];
 }
 const W = 1200, H = 820, WALL = 250;
@@ -52,13 +52,22 @@ export const INTERIORS: Record<string, Interior> = {
     ...[0, 1, 2].flatMap(r => [0, 1, 2, 3].map(i => block(170 + i * 230, 420 + r * 130, 130, 40, 60, '#E8C18A', '#B9895A', i === 1 && r === 0 ? 'books' : undefined, sitHere('🪑 Sit at a desk')))),
     block(940, 262, 200, 60, 70, '#B9895A', '#8A5A3B', 'apple globe', { label: "🌍 Spin the globe", lines: ['You spin the globe and point... Australia!', 'You spin the globe and point... the middle of the ocean.'] }),
   ], { who: 'janitor', name: 'the janitor', x: 1080, y: 420, lines: ["School's out! I'm giving the floors a good polish.", 'Mind the wet floor, kiddo.', 'Found a lost lunchbox. Not yours, is it?'] }),
-  hospital: room('hospital', 'Hospital', { wall: '#EAF3FB', trim: '#8FB3D9', floor: ['#F4F6F8', '#E9EEF3'], tiles: true }, [
-    onWall(120, 60, 220, 110, '#FFFFFF', 'WASH YOUR HANDS!'), onWall(860, 50, 120, 120, '#BFE3F5'),
+  hospital: { ...room('hospital', 'Hospital', { wall: '#EAF3FB', trim: '#8FB3D9', floor: ['#F4F6F8', '#E9EEF3'], tiles: true }, [
+    onWall(120, 60, 220, 110, '#FFFFFF', 'WASH YOUR HANDS!'),
+    onWall(1010, 40, 130, 170, '#FFFFFF', 'E\nF P\nT O Z', undefined, { label: '👓 The eye chart', action: 'eyes' }),        // Dr. Nonna's (eyes.ts)
+    onWall(830, 50, 150, 110, '#1E2733', 'X-RAY', undefined, { label: '🩻 The X-ray light box', action: 'surgery' }),       // Dr. Poppop's (surgery.ts)
     block(420, 330, 360, 60, 80, '#F4F6F8', '#8FB3D9', 'clipboard stethoscope'),
     ...[0, 1, 2, 3].map(i => block(130 + i * 120, 600, 90, 40, 50, '#5B8FD6', '#4A79B8', undefined, sitHere('🪑 Sit in the waiting room'))),
     block(880, 560, 240, 90, 50, '#FFFFFF', '#C9D3DC', 'pillow', { label: 'pillow Lie on the bed', lines: ['The paper on the bed crinkles. Crinkle crinkle!'] }),
     big(1120, 330, 'plant', 70, undefined, [50, 30]),
   ], { who: 'nurse', name: 'the nurse', x: 600, y: 322, lines: ['Let me check... healthy as a horse!', 'Open wide and say aah! Perfect.', 'Here, have a sticker for being brave. ⭐'], treat: { label: '🩺 Get a check-up', boost: 20 } }),
+    // on hospital days, Nico's grandparents are here as doctors (2026-10-12: Nonna an ophthalmologist, Poppop a surgeon)
+    crew: [
+      { who: 'nonnadoc', name: 'Dr. Nonna', x: 1010, y: 420, face: 'qfront', flip: true, docs: true, action: 'eyes', label: '👓 Help Dr. Nonna with eye exams',
+        lines: ['Ciao, Nico! Come, help me with my patients.', 'Read me the bottom line... very good!', 'Eyes are the windows to the soul, you know.'] },
+      { who: 'poppopdoc', name: 'Dr. Poppop', x: 250, y: 420, face: 'qfront', docs: true, action: 'surgery', label: '🩺 Help Dr. Poppop',
+        lines: ['Scrub in, kiddo! Steady hands.', 'Measure twice, cut once. Same in here as in the woodshop.', 'Every patient goes home smiling.'] },
+    ] },
   fire: room('fire', 'Fire Station', { wall: '#F2D6CF', trim: '#8C2F2B', floor: ['#C9CED6', '#BCC2CB'] }, [
     onWall(120, 40, 260, 140, '#FFFFFF', undefined, 'helmet helmet helmet', { label: '⛑️ Try on a helmet', lines: ["It's way too big! It covers your eyes.", 'You look like a real firefighter!'] }),
     big(640, 560, 'firetruck', 105, { label: '🔔 Ring the truck\'s bell', action: 'bell' }, [360, 90]),

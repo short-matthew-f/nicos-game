@@ -998,6 +998,37 @@ with sync_playwright() as p:
     check(f2['phase'] == 'caught', f"reeled in: caught! ({f2})")
     pg.click('#fishing .pl-close'); pg.wait_for_timeout(300)
     check(not pg.locator('#fishing').is_visible() and G()['biz']['seen'].get(f"fish:{f2['fish']}"), "done fishing: the catch is in the sticker book")
+    # Dr. Nonna and Dr. Poppop at the hospital (hospital days in the Cinquecento): eye exams, steady hands, X-rays
+    pg.evaluate("()=>window.__game.homeAll()"); pg.wait_for_timeout(200)
+    door('nonna'); pg.wait_for_timeout(300)
+    check(pg.locator('#place-menu button[data-item=hospital]').count() == 1, "at home, Nonna offers: go to the hospital together")
+    pg.click('#place-menu button[data-item=hospital]'); pg.wait_for_timeout(300)
+    check(G()['fiat']['out'], 'the Cinquecento sets off for the hospital')
+    pg.evaluate("()=>window.__game.exitRooms()"); pg.evaluate("()=>window.__game.docsHere()"); pg.wait_for_timeout(200)
+    door('hospital'); pg.wait_for_timeout(400)
+    if pg.locator('#place-close').is_visible(): pg.click('#place-close'); pg.wait_for_timeout(200)
+    rs = G()['roomSpots']; crew = [k for k in rs if k.startswith('crew')]
+    check(len(crew) == 2 and pg.evaluate("()=>window.__game.docsIn()"), f"Dr. Nonna and Dr. Poppop are in ({crew})")
+    pg.evaluate("()=>window.__game.eyesOpen()"); pg.wait_for_timeout(300)
+    ey = pg.evaluate("()=>window.__game.eyes()"); who = ey['patient']
+    for _ in range(4): pg.evaluate(f"()=>window.__game.eyesPick({pg.evaluate('()=>window.__game.eyes()')['better']})"); pg.wait_for_timeout(80)
+    check(pg.evaluate("()=>window.__game.eyes()")['stars'] == 3, 'better one, or two: always the clearer, a perfect prescription')
+    pg.evaluate("()=>window.__game.eyesFrame(3)"); pg.wait_for_timeout(200); pg.click('#eyes .pl-close'); pg.wait_for_timeout(300)
+    check(G()['biz']['scores'].get(f'glasses:{who}') == 4 and G()['biz']['seen'].get(f'patient:{who}'), f"{who} goes home in bright red glasses (and a sticker)")
+    pg.evaluate("()=>window.__game.steadyOpen(0)"); pg.wait_for_timeout(300)
+    path = pg.evaluate("()=>window.__game.surgery()")['steady']['path']
+    a0 = pg.evaluate(f"()=>window.__game.surgeryAt({path[0][0]},{path[0][1]})"); pg.mouse.move(a0['x'], a0['y']); pg.mouse.down()
+    for (px, py) in path[1:] + list(reversed(path[:-1])):
+        q = pg.evaluate(f"()=>window.__game.surgeryAt({px},{py})"); pg.mouse.move(q['x'], q['y'], steps=30)
+    pg.mouse.up(); pg.wait_for_timeout(300)
+    sg = pg.evaluate("()=>window.__game.surgery()")['steady']
+    check(sg['phase'] == 'done' and sg['buzzes'] == 0, f"steady hands: in, grab the splinter, out, no buzz ({sg['phase']}, {sg['buzzes']})")
+    pg.click('#surgery .pl-close'); pg.wait_for_timeout(300)
+    check(G()['biz']['seen'].get('case:splinter'), "Mr. Brooks's splinter: out, and a sticker")
+    pg.evaluate("()=>window.__game.xrayOpen()"); pg.wait_for_timeout(300)
+    at = pg.evaluate("()=>window.__game.surgery()")['xray']['at']; q = pg.evaluate(f"()=>window.__game.surgeryAt({at[0]},{at[1]})"); pg.mouse.click(q['x'], q['y']); pg.wait_for_timeout(200)
+    check(pg.evaluate("()=>window.__game.surgery()")['xray']['found'] == 1, 'X-ray detective: tap the swallowed thing')
+    pg.click('#surgery .pl-close'); pg.wait_for_timeout(300); pg.evaluate("()=>window.__game.exitRooms()"); pg.evaluate("()=>window.__game.homeAll()")
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")
