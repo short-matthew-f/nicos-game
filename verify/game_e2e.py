@@ -842,7 +842,7 @@ with sync_playwright() as p:
     pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
     check(G()['beltShown'] is None and G()['nicoLook'] == 'nico', f"...and changes back outside ({G()['beltShown']}, {G()['nicoLook']})")
     # Nico's friends' shops beside the school: Yarosh's Potatoes (order at the counter) and Alpha's Retro Games (Snake, high scores)
-    pg.evaluate("()=>window.__game.setMoney(20)"); door('potato'); pg.wait_for_timeout(300)
+    pg.evaluate("()=>{window.__game.setMoney(20); window.__game.homeAll()}"); door('potato'); pg.wait_for_timeout(300)
     check(G()['room'] == 'potato' and pg.locator('#place-menu button[data-item="bakedpot"]').count() == 1, f"inside Yarosh's Potatoes: order at the counter ({G()['room']})")
     m0 = G()['money']
     pg.click('#place-menu button[data-item="bakedpot"]'); pg.wait_for_timeout(300)
@@ -863,7 +863,7 @@ with sync_playwright() as p:
     check(sn['done'] == 2, f"peel all over, dig out the eyes: two potatoes in the pot ({sn})")
     m0 = G()['money']; pg.click('.pl-close'); pg.wait_for_timeout(300)
     check(G()['money'] == m0 + 2 and not pg.locator('#peel').is_visible() and G()['biz']['scores'].get('peel') == 2, f"stop: Yarosh pays $2, and it's his best shift ({m0} -> {G()['money']})")
-    door('retro'); pg.wait_for_timeout(300)
+    pg.evaluate('()=>window.__game.homeAll()'); door('retro'); pg.wait_for_timeout(300)
     check(G()['room'] == 'retro', "inside Alpha's Retro Games")
     room_at('thing3'); pg.click('#action'); pg.wait_for_timeout(400)
     a0 = pg.evaluate('()=>window.__game.arcade()')
@@ -900,8 +900,16 @@ with sync_playwright() as p:
     check(G()['dojo'] and 'heidi' in G()['dojo']['actors'], f"Miss Heidi does the form with them ({G()['dojo']})")
     pg.wait_for_function('window.__game.dojo === null', timeout=40000)
     pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(300)
+    # Yarosh and Alpha don't stay in their shops: out round their block, with a note on the door
+    pg.evaluate("()=>window.__game.friendOut('yarosh')"); pg.wait_for_timeout(300)
+    ys = [t for t in G()['townsfolk'] if t['who'] == 'yarosh'][0]
+    check(not ys['gone'] and ys['y'] < 900, f"Yarosh is out for a walk ({ys})")
+    pg.evaluate("()=>window.__game.place(2445, 700)"); pg.wait_for_timeout(200); pg.evaluate("()=>window.__game.use('potato')"); pg.wait_for_timeout(400)
+    room_at('counter'); pg.click('#action'); pg.wait_for_timeout(300)
+    check('Out for a walk' in pg.locator('#toast').inner_text(), f"his counter has a note ({pg.locator('#toast').inner_text()})")
+    pg.evaluate("()=>window.__game.exitRooms()"); pg.wait_for_timeout(200)
     # Bobbing for Bakers at Yarosh's: tap a baker as it bobs up
-    door('potato'); pg.wait_for_timeout(300); pg.click('#place-close') if pg.locator('#place-close').is_visible() else None
+    pg.evaluate('()=>window.__game.homeAll()'); door('potato'); pg.wait_for_timeout(300); pg.click('#place-close') if pg.locator('#place-close').is_visible() else None
     pg.evaluate("()=>window.__game.bobOpen()"); pg.wait_for_timeout(300); pg.click('#bob .pl-btn'); pg.wait_for_timeout(200)
     got = 0
     for tries in range(12):

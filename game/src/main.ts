@@ -1641,7 +1641,7 @@ async function main() {
   function away(who: string): string | null {
     if ((who === 'poppop' || who === 'nonna') && fiat.out) return '📝 “Gone for a drive in the Fiat! Back soon. Love, Poppop & Nonna”';
     const l = locals.find(q => q.orig.who === who);
-    if (l && !gone(l)) return '📝 “Gone to paint the sea at the beach! Come find me. Love, Yia-Yia”';
+    if (l && !gone(l)) return l.orig.note ?? '📝 “Gone to paint the sea at the beach! Come find me. Love, Yia-Yia”';
     return null;
   }
   /** Umbrellas up over everyone out in the rain (and down again when it stops). */
@@ -1765,6 +1765,7 @@ async function main() {
     setWeather: (k: Sky, hold = true) => weather.set(k, hold),
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
+    friendOut: (who: string) => { const l = locals.find(q => q.orig.who === who)!; l.w.i = 2; l.w.x = l.t.route[2].x; l.w.y = l.t.route[2].y; l.w.wait = 0; },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },
   };

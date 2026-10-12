@@ -1157,3 +1157,13 @@ The user: "There should also be a Bobbing for Bakers game in Yarosh's", "This cu
   - Miss Heidi in the form;
   - catching a baker by dunking as it bobs up;
   - building Rea a castle, and her stomping one.
+
+## Yarosh and Alpha out and about (2026-10-12)
+- The user: "Don't keep Yarosh and Alpha in the shops."
+- Each spends a while behind their counter (Yarosh about 75 s, Alpha 90 s), then walks round their block: up past the school, a look up the street, into each other's shop for a visit, and back.
+- While they're out, their counter has a note:
+  - Yarosh: the peeling board and the washtub are still open.
+  - Alpha: the arcade machines still work.
+- `Townie.note` gives anyone their own door note. Before this, every note said Yia-Yia's.
+- Talk to them on the sidewalk for their own lines.
+- E2E: Yarosh goes out and his counter has a note. Everyone is sent home before the shop checks. New debug hook: `friendOut(who)`.

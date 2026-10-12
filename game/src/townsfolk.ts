@@ -4,7 +4,7 @@ import { ROADS_X, ROADS_Y, ROAD_W, SIDEWALK, BUILDINGS, SWINGS, SLIDE, doorOf } 
 import type { Who } from './rig/person';
 
 export interface Stop { x: number; y: number; wait?: number; swing?: number; climb?: string; inside?: string; face?: [number, number] }   // swing: seat index to swing on; climb: a building to climb up onto (and wave from the roof); inside: gone in there while waiting (out of sight); face: look that way while waiting
-export interface Townie { who: Who; name: string; speed: number; route: Stop[]; lines: string[] }
+export interface Townie { who: Who; name: string; speed: number; route: Stop[]; lines: string[]; note?: string }   // note: left on their door while they're out
 
 const SW = ROAD_W / 2 + SIDEWALK / 2;   // sidewalk centre, from a road's centre line
 const [x0, x1] = ROADS_X, [y0, y1] = ROADS_Y;
@@ -77,6 +77,20 @@ TOWNSFOLK.push(
     route: [{ x: 60, y: S1 }, { x: W0, y: S1 }, { x: W0, y: 3460, wait: 2 }, { x: W0, y: S1 }] },
   { who: 'mrbrooks', name: 'Mr. Brooks', speed: 115, lines: ['Morning, Nico.', 'Busy day at the hospital.', 'Tell your folks I said hello.', 'That fire truck is fast, eh?'],
     route: [{ x: E1, y: 60 }, { x: E1, y: N0 }, { x: hospital[0], y: N0 }, { x: hospital[0], y: hospital[1], wait: 6 }, { x: hospital[0], y: N0 }, { x: 4780, y: N0, wait: 1 }, { x: E1, y: N0 }] },
+);
+
+// Nico's friends with shops (the user, 2026-10-11: "Don't keep Yarosh and Alpha in the shops"): a while behind the
+// counter, then out round their block: past the school, popping into each other's shop, a look up the street
+const potato = door('potato'), retro = door('retro');
+TOWNSFOLK.push(
+  { who: 'yarosh', name: 'Yarosh', speed: 150, note: '📝 “Out for a walk! Back soon. (The peeling board and the tub are open: help yourself!) —Yarosh”',
+    lines: ['Hey Nico! Want a potato?', 'Alpha beat my Snake score again. Again!', 'Have you tried bobbing for bakers? Your face gets SO wet.', 'I can almost see over the school from up here.', 'Peeling potatoes is weirdly relaxing.'],
+    route: [{ x: potato[0], y: potato[1], wait: 75, inside: 'potato' }, { x: potato[0], y: N0 }, { x: E0, y: N0 }, { x: E0, y: 60, wait: 3 }, { x: E0, y: N0 },
+            { x: retro[0], y: N0 }, { x: retro[0], y: retro[1], wait: 6 }, { x: retro[0], y: N0 }, { x: W1, y: N0, wait: 2 }, { x: potato[0], y: N0 }] },
+  { who: 'alpha', name: 'Alpha', speed: 140, note: '📝 “Gone looking for old games! The machines still work: play away! —Alpha”',
+    lines: ['Nico! Did you get to the lily pads in Frog Hop yet?', 'I\'m hunting for old cartridges.', 'Yarosh owes me a baked potato.', 'Want to play Space Blasters later?', 'The last alien is the sneakiest.'],
+    route: [{ x: retro[0], y: retro[1], wait: 90, inside: 'retro' }, { x: retro[0], y: N0 }, { x: W1, y: N0 }, { x: W1, y: 60, wait: 3 }, { x: W1, y: N0 },
+            { x: potato[0], y: N0 }, { x: potato[0], y: potato[1], wait: 7 }, { x: potato[0], y: N0 }, { x: school[0], y: N0, wait: 3 }, { x: retro[0], y: N0 }] },
 );
 
 /** Where someone is along their route: walking toward stop i, or waiting at it. */
