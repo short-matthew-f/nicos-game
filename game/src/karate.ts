@@ -43,3 +43,21 @@ export function check(want: Move[], done: Move[]): 'ok' | 'done' | 'miss' {
   for (let i = 0; i < done.length; i++) if (done[i] !== want[i]) return 'miss';
   return done.length === want.length ? 'done' : 'ok';
 }
+
+// ---- training before each belt test (the user, 2026-10-12: "you had to play the non-belt games and earn the right
+// to play the game to get the next belt... Train. Train some more. Then try for your belt."). Sparring, pad rhythm,
+// joining the masters' form and kicking Mrs. Master Krantz's pads all count (win or lose: it's training). Your first
+// (white) belt needs none; after that a few sessions each time, more as you go up, and from three on they can't all be
+// the same thing. Kept in the save's `seen` counts: train:<belt you're working toward>:<kind>.
+export type TrainKind = 'spar' | 'rhythm' | 'form' | 'pads';
+export const TRAIN_KINDS: { id: TrainKind; name: string }[] = [{ id: 'spar', name: 'sparring' }, { id: 'rhythm', name: 'pad rhythm' }, { id: 'form', name: 'a form with the masters' }, { id: 'pads', name: "Mrs. Master Krantz's pads" }];
+export const TRAINING = { need: [0, 2, 3, 3, 4, 4, 5, 6] };
+export const trainKey = (toward: number, k: TrainKind) => `train:${toward}:${k}`;
+/** How Nico's training for the next belt is going. */
+export function training(seen: Record<string, number>, belt: number) {
+  const toward = nextBelt(belt), need = isBlack(belt) ? 0 : TRAINING.need[toward] ?? 0, cap = need >= 3 ? need - 1 : need;
+  const counts = TRAIN_KINDS.map(k => seen[trainKey(toward, k.id)] ?? 0);
+  const done = Math.min(need, counts.reduce((a, n) => a + Math.min(n, cap), 0));
+  const kinds = counts.filter(n => n > 0).length;
+  return { toward, need, done, kinds, ready: done >= need, oneKindOnly: need >= 3 && kinds === 1 && counts.some(n => n >= cap) };
+}

@@ -1272,3 +1272,25 @@ Whether he's hidden comes from the drawing order. Behind Burger Barn and the sli
 - The user: everyone who's played says Yarosh is way too tall. He should be taller than the kids but not the grown-ups. In real life he's about 5'3" at 14.
 - He's now at height 1.11, down from 1.42. Measured against Nonna (4'11", drawn at 1.04), 5'3" comes to about 1.11.
 - That puts him above Nico (1.0), James (1.02) and Alpha (0.9), and level with or below the adults: Miss Heidi 1.1, Yia-Yia 1.12, Nico's mom 1.16, Poppop 1.24.
+
+## Train before each belt test (2026-10-12)
+The user: "it would be neat if you had to play the non-belt games and earn the right to play the game to get the next belt... Train. Train some more. Then try for your belt."
+
+**Training rules (`karate.ts`: `training`, `TRAINING`):**
+- Training sessions are a sparring match, a pad-rhythm song, doing the form with the masters, or kicking Mrs. Master Krantz's pads.
+- Every finished session counts, won or lost: it's training.
+- The white belt still needs none (your first class).
+- After that it's 2, 3, 3, 4, 4, 5 and 6 sessions before each test.
+- From three sessions up they can't all be the same thing. Mr. Master Krantz says "Good! Now train something different."
+- Kept in the save's `seen` counts (`train:<belt you're working toward>:<kind>`), so the save format is unchanged. A new belt starts its training fresh.
+
+**On Mr. Master Krantz's card:**
+- Form practice (the belt test) is greyed out with "train first: 1/3" until Nico's ready.
+- The card says how many more sessions are needed and what counts.
+- Each session toasts the progress, and the last one says "You're ready to test for your Green belt!"
+
+**Sticker book:** the belt hints now say to train, then test.
+
+**Tests:**
+- `test/training.test.ts`: the rules above.
+- E2E: after the white belt, the yellow test is locked; two sessions later, it's ready.

@@ -53,7 +53,7 @@ import { CABINETS } from './arcade/games';
 import { PeelGame } from './peelView';
 import { BobGame } from './bobView';
 import { FishGame } from './fishView';
-import { BELTS, nextBelt, isBlack } from './karate';
+import { BELTS, nextBelt, isBlack, training, type TrainKind } from './karate';
 import { BookView } from './bookView';
 import { emblem } from './world/emblem';
 import { Routine, SHOW, type Actor, type ActorPose, type DojoEvent } from './dojo';
@@ -701,7 +701,7 @@ async function main() {
     if (dojoRoutine.done) {
       // back to their places, as they were
       restoreCast();
-      if (dojoRoutine.actors.includes('nico')) { dojoWalk.delete('nico'); stopPlay(); nico.st.moves = undefined; toast(dojoRoutine.kind === 'form' ? '🥋 You did the whole form with your masters! Kamsahamnida!' : '🥋 Great kicks! Mrs. Master Krantz high-fives you.'); boost = Math.min(BOOST.max, boost + 20); }
+      if (dojoRoutine.actors.includes('nico')) { trained(dojoRoutine.kind === 'form' ? 'form' : 'pads'); dojoWalk.delete('nico'); stopPlay(); nico.st.moves = undefined; toast(dojoRoutine.kind === 'form' ? '🥋 You did the whole form with your masters! Kamsahamnida!' : '🥋 Great kicks! Mrs. Master Krantz high-fives you.'); boost = Math.min(BOOST.max, boost + 20); }
       dojoRoutine = null; dojoIn = SHOW.every[0] + Math.random() * (SHOW.every[1] - SHOW.every[0]);
     }
   }
@@ -747,6 +747,7 @@ async function main() {
       if (kind === 'rhythm' && (info.grade === 'S' || info.grade === 'A')) { boost = Math.min(BOOST.max, boost + 30); }
       persist();
     },
+    trained: k => trained(k),
     burst: (x, y, big) => { burst(x, y); if (big) { burst(x - 14, y - 10); burst(x + 14, y + 8); } },
     shake: n => { shake = Math.max(shake, n); },
   });
@@ -758,6 +759,16 @@ async function main() {
     sfx.tap();
   }
 
+  /** A training session done (win or lose): it counts toward the next belt test (karate.ts training). */
+  function trained(kind: TrainKind) {
+    if (isBlack(biz.belt) || biz.belt < 0) return;
+    const before = training(biz.seen, biz.belt); if (before.ready) return;
+    see(biz, 'train', `${before.toward}:${kind}`); persist();
+    const now = training(biz.seen, biz.belt), next = BELTS[now.toward].name;
+    if (now.ready) toast(`🥋 Mr. Master Krantz: “You've trained hard. You're ready to test for your ${next} belt!”`);
+    else if (now.done > before.done) toast(`🥋 Training: ${now.done}/${now.need} toward your ${next} belt test`);
+    else toast(`🥋 Mr. Master Krantz: “Good! Now train something different.”`);
+  }
   /** The building's own business (its menu, buying, selling...), from the counter. */
   const placeAction = (id: string) => {
     if (GRAN[id]) { GRAN[id](); return; }
@@ -798,8 +809,10 @@ async function main() {
     // the dojo: Sensei's class (karate.ts); playing as a friend, they just say hi
     dojo: () => {
       const has = biz.belt >= 0, next = BELTS[nextBelt(biz.belt)], black = isBlack(biz.belt);
-      showCard('dojo', '🥋 Mr. Master Krantz', `Mr. Master Krantz: “${has ? pick([`Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to Litchfield Tang Soo Do! Would you like to try a class?'}”`, [
-        { label: black ? '🥋 Form practice' : has ? `🥋 Form practice: earn your ${next.name} belt` : '🥋 Form practice: your first belt', sub: black ? 'black belt!' : `${next.name.toLowerCase()} belt`, id: 'karate', onClick: () => work.karate() },
+      showCard('dojo', '🥋 Mr. Master Krantz', `Mr. Master Krantz: “${has ? pick([`Nico! Your ${BELTS[biz.belt].name.toLowerCase()} belt looks good on you.`, 'Back for more training? Good.', 'Focus. Breathe. Then strike.']) : 'Welcome to Litchfield Tang Soo Do! Would you like to try a class?'}”${(() => { const tr = training(biz.seen, biz.belt); return !has || black || tr.ready ? '' : `\n\nTrain ${tr.need - tr.done} more time${tr.need - tr.done === 1 ? '' : 's'} before your ${next.name} belt test: sparring, pad rhythm, join a form or kick the pads${tr.oneKindOnly ? ' (something different this time!)' : ''}.`; })()}`, [
+        (() => { const tr = training(biz.seen, biz.belt);
+          return { label: black ? '🥋 Form practice' : has ? `🥋 Form practice: test for your ${next.name} belt` : '🥋 Form practice: your first belt', id: 'karate', disabled: !black && !tr.ready,
+            sub: black ? 'black belt!' : tr.ready ? (has ? 'ready to test!' : 'your first class') : `train first: ${tr.done}/${tr.need}${tr.oneKindOnly ? ' (try something different)' : ''}`, onClick: () => work.karate() }; })(),
         { label: '🥊 Sparring', sub: 'pick a partner', id: 'spar', disabled: !!dojoRoutine, onClick: () => showCard('spar', '🥊 Sparring', 'Who do you want to spar with? Erin goes easy on you; Mr. Master Krantz does not!', RIVALS.map(r => ({
           label: r.name, sub: biz.scores[`spar:${r.who}`] ? 'beaten! ★' : ['easy', 'not so easy', 'medium', 'hard', 'black belt'][RIVALS.indexOf(r)], id: `spar:${r.who}`, onClick: () => { closePlace(); games.startSpar(r); },
         })), 'Not now') },
@@ -1955,6 +1968,7 @@ async function main() {
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     reaCome: () => { startFollow(beachRea.rea); },
+    trainNow: (k: TrainKind) => trained(k),
     hideGo: (kind: HideKind, spot?: number) => startHide(kind, spot),
     hide: () => (hide ? { kind: hide.kind, phase: hide.phase, result: hide.result, spot: hide.spot, primo: { ...hide.primo }, checked: [...hide.checked], count: hide.count } : null),
     raceGo: (id: string) => startRace(COURSES.find(c => c.id === id)!),

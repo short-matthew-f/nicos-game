@@ -47,7 +47,7 @@ export const PAGES: Page[] = [
   ] },
   { id: 'fish', title: 'Gone fishing', reward: 25, entries: SPECIES.map(sp => ({ id: sp.id, label: sp.name, art: ['icon', sp.kind === 'crab' ? 'crab' : sp.kind === 'bottle' ? 'bottle' : sp.kind ? sp.kind : `fish_${sp.id}`] as Art,
     hint: sp.id === 'golden' ? 'Very rare. Cast as far out as you can...' : sp.far > 0.8 ? 'A big one: cast far out from the end of the pier.' : 'Fish off the end of the pier.', has: (b: Biz) => seen(b, `fish:${sp.id}`) })) },
-  { id: 'dojo', title: 'Karate belts', reward: 40, entries: BELTS.map((bt, i) => ({ id: bt.id, label: `${bt.name} belt`, art: ['belt', bt.color] as Art, hint: i === 0 ? 'Take a class at the dojo.' : 'Earn it in Sensei\'s class.', has: (b: Biz) => bool(b.belt >= i) })) },
+  { id: 'dojo', title: 'Karate belts', reward: 40, entries: BELTS.map((bt, i) => ({ id: bt.id, label: `${bt.name} belt`, art: ['belt', bt.color] as Art, hint: i === 0 ? 'Take a class at the dojo.' : 'Train at the dojo (sparring, pad rhythm, forms), then test with Mr. Master Krantz.', has: (b: Biz) => bool(b.belt >= i) })) },
   { id: 'town', title: 'Around town', reward: 20, entries: [
     { id: 'dog', label: 'A dog of your own', art: ['icon', 'heart'], hint: 'The doghouse in your yard.', has: b => bool(b.unlocked.includes('doghouse')) },
     { id: 'potatoes', label: "Yarosh's potatoes", art: ['icon', 'bakedpot'], hint: "Order something at Yarosh's Potatoes (next to the school).", has: b => bool(['bakedpot', 'curly', 'mash', 'tots'].some(i => seen(b, `food:${i}`))) },

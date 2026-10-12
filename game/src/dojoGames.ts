@@ -10,6 +10,7 @@ export interface GamesHost {
   opened(on: boolean): void;
   best(id: string): number; setBest(id: string, n: number): void;
   won(kind: 'spar' | 'rhythm', id: string, info: { first: boolean; grade?: string }): void;
+  trained(kind: 'spar' | 'rhythm'): void;   // (a session finished, won or lost: it counts toward the next belt test)
   burst(x: number, y: number, big?: boolean): void; shake(n: number): void;
 }
 
@@ -111,6 +112,7 @@ export class DojoGames {
         events.push({ kind: 'say', actor: r.who as Actor, text: win ? r.lines.lose : r.lines.win });
         audio.tone('triangle', win ? 523 : 392, win ? 1047 : 330, 0.5, 0.1);
         if (win) this.host.won('spar', r.who, { first });
+        this.host.trained('spar');
         setTimeout(() => this.showResult(win ? 'You win!' : 'Good match!', win ? `You beat ${r.name}!` : `${r.name} got you this time.`, () => this.startSpar(r)), 1800);
       }
     }
@@ -224,6 +226,7 @@ export class DojoGames {
       if (nb) this.host.setBest(`rhythm:${song.id}`, r.score);
       this.last = { kind: 'rhythm', grade: r.grade, score: r.score };
       this.host.won('rhythm', song.id, { first: !best, grade: r.grade });
+      this.host.trained('rhythm');
       const self = this.rhythm; this.rhythm = null;
       this.showResult(`Grade ${self!.grade}`, `${self!.score.toLocaleString()} points${nb ? ' · NEW BEST!' : ''} · best combo ${self!.best} · ${self!.counts.perfect} perfect, ${self!.counts.great} great, ${self!.counts.miss} missed`, () => this.startRhythm(song));
     }
