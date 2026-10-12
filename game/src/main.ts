@@ -44,6 +44,7 @@ import { TOWNSFOLK, stepRoute, type Townie, type Walk } from './townsfolk';
 import { jobFor, jobById, pickWant, WANT, start as startJob, current as jobStep, advance as advanceJob, target as jobTarget, type Active } from './jobs';
 import { drawCat, drawBubble } from './world/critters';
 import { DogView, drawDog, doghouseArt } from './world/dog';
+import { Race, COURSES, nicoStart, type Course } from './race';
 import { makeRea, stepRea, buildFor, REA, startFollow, letGo, footstep as reaFootstep, stepFollow, seesCar, wantsToCome } from './rea';
 import { Pinball } from './pinball/view';
 import { Arcade } from './arcade/view';
@@ -1553,6 +1554,66 @@ async function main() {
     dogSpot, petSpot,
     { id: 'waterslide', x: WSLIDE.x, y: WSLIDE.y + 40, r: 80, label: '🛝 Water slide!', run: startWaterslide },
     { id: 'swim', x: POOL.x + POOL.w / 2, y: POOL.y + POOL.d + 50, r: 200, label: '🏊 Jump in', run: () => startSwim(nico.x, POOL.y + POOL.d - 40) });
+  // ---- racing Tempo along the beach (race.ts)
+  let race: Race | null = null, raceFlag: Container | null = null, raceEnd = 0;
+  const raceHud = document.createElement('div'); raceHud.className = 'race-hud'; raceHud.hidden = true; document.body.append(raceHud);
+  const tempoLocal = () => locals.find(l => l.t.who === 'tempo');
+  const raceBest = (c: Course) => biz.scores[`race:${c.id}`];   // (best winning time, in tenths of a second)
+  function flagArt(x: number, y: number) {
+    const c = new Container(), g = new Graphics();
+    g.ellipse(x + 6, y + 2, 22, 6).fill({ color: '#2B3F55', alpha: 0.18 });
+    g.roundRect(x - 4, y - 130, 8, 132, 3).fill('#FFFFFF').rect(x - 2, y - 128, 4, 128).fill('#5B6472');
+    g.roundRect(x - 2, y - 132, 64, 44, 4).fill('#FFFFFF');
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 6; i++) g.rect(x + 1 + i * 10, y - 129 + j * 10, 10, 10).fill((i + j) % 2 ? '#FFFFFF' : '#1E2733');
+    for (const dx of [-70, 70]) g.roundRect(x + dx - 3, y - 50, 6, 52, 2).fill('#E5484D');
+    g.rect(x - 70, y - 46, 140, 6).fill({ color: '#FFFFFF', alpha: 0.9 });   // the finish tape
+    c.addChild(g); c.zIndex = y; return c;
+  }
+  let raceSaid: Text | null = null, raceSayT = 0;
+  function raceSay(text: string) {
+    raceSaid?.destroy(); raceSayT = 2.4;
+    raceSaid = new Text({ text, style: { fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: '800', fontSize: 22, fill: NAVY_TEXT, stroke: { color: '#FFFFFF', width: 6 } } });
+    raceSaid.anchor.set(0.5, 1); raceSaid.zIndex = 99999; layer.addChild(raceSaid);
+  }
+  function startRace(c: Course) {
+    const l = tempoLocal(); if (!l) return;
+    closePlace(); race = new Race(c); raceEnd = 0;
+    [nico.x, nico.y] = nicoStart(c);
+    raceFlag?.destroy({ children: true }); raceFlag = flagArt(c.flag[0], c.flag[1]); layer.addChild(raceFlag);
+    raceHud.hidden = false; raceHud.textContent = 'On your marks...'; raceHud.className = 'race-hud';
+    raceSay(pick(['On your marks!', 'Ready? Red is the fastest colour!', "You're going down! Ha!"]));
+    sfx.tap();
+  }
+  function stopRace() { race = null; raceHud.hidden = true; raceFlag?.destroy({ children: true }); raceFlag = null; }
+  function raceStep(dt: number) {
+    if (raceSaid) { const t = tempoLocal(); raceSayT -= dt; if (raceSayT <= 0 || !t) { raceSaid.destroy(); raceSaid = null; } else raceSaid.position.set(t.w.x, t.w.y - 150); }
+    if (!race) return;
+    const l = tempoLocal();
+    if (!l || room || mode === 'drive') { stopRace(); return; }
+    if (race.phase === 'count') [nico.x, nico.y] = nicoStart(race.course);   // (no false starts)
+    for (const e of race.update(dt, nico.x, nico.y)) {
+      if (e === 'beep') audio.tone('square', 660, 660, 0.12, 0.06);
+      if (e === 'go') { audio.tone('square', 1320, 1320, 0.3, 0.07); raceHud.className = 'race-hud go'; }
+      if (e === 'finish') {
+        const c = race.course, won = race.winner === "nico", t10 = Math.max(1, Math.round(race.time * 10)), best = raceBest(c);
+        raceHud.className = `race-hud ${won ? 'won' : 'lost'}`;
+        if (won) {
+          sfx.cash(3); see(biz, 'race', c.id);
+          const first = !best; if (!best || t10 < best) biz.scores[`race:${c.id}`] = t10;
+          if (first) { state.money += 5; showMoney(); }
+          raceHud.textContent = `🏆 You beat Tempo! ${race.time.toFixed(1)}s${first ? ' · +$5' : best && t10 < best ? ' · new best!' : ''}`;
+          raceSay(pick(['Whoa! You\'re fast!', 'No way! Rematch!', 'Okay, okay, you win this time.']));
+        } else {
+          raceHud.textContent = `Tempo wins! ${race.time.toFixed(1)}s`;
+          raceSay(pick(['Red is the fastest colour!', 'Woo! Try again?', 'Hehe, eat my sand!']));
+        }
+        persist(); raceEnd = 2.6;
+      }
+    }
+    if (race.phase === 'count') raceHud.textContent = `${Math.ceil(race.count)}`;
+    else if (race.phase === 'go') raceHud.textContent = race.time < 0.8 ? 'GO!' : `${race.time.toFixed(1)}s`;
+    else if ((raceEnd -= dt) <= 0) stopRace();
+  }
   // ---- Rea at the beach (rea.ts): building sandcastles and stomping them flat
   const beachRea = makeRea();
   let reaView: PersonView | null = null, reaSaid: Text | null = null, reaSayT = 0, reaLoading = false, reaBooms = 0, reaMash = 0, reaLast = '';
@@ -1632,6 +1693,9 @@ async function main() {
     reaView.pose(r.x, r.y - hop, reaSt); reaView.root.zIndex = r.y;
     if (reaSaid) reaSaid.position.set(r.x, r.y - 100);
   }
+  spots.push({ id: 'race', get x() { return tempoLocal()?.w.x ?? 0; }, get y() { return (tempoLocal()?.w.y ?? 0) + 30; }, r: 120, label: '🏃 Race Tempo!',
+    when: () => !race && player !== 'tempo' && mode === 'walk' && !room && (tempoLocal()?.w.y ?? 0) > 4300,
+    run: () => showCard('race', '🏃 Race Tempo', 'Tempo: “Race you! Where to?”', COURSES.map(c => ({ label: `🏁 ${c.name}`, sub: raceBest(c) ? `best ${(raceBest(c)! / 10).toFixed(1)}s` : 'not won yet', id: `race:${c.id}`, onClick: () => startRace(c) })), 'Not now') });
   spots.push(
     { id: 'rea', get x() { return beachRea.rea.x; }, get y() { return beachRea.rea.y + 30; }, r: 80, priority: 2, when: () => !!reaView?.root.visible && mode === 'walk',
       label: () => (beachRea.rea.mode === 'beach' || beachRea.rea.mode === 'return' ? "🤝 Take Rea's hand" : '👋 Let Rea go play'),
@@ -1700,6 +1764,12 @@ async function main() {
   }
   const smoothstep = (a: number) => { a = Math.max(0, Math.min(1, a)); return a * a * (3 - 2 * a); };
   function stepLocal(l: Local, dt: number) {
+    if (race && l.t.who === 'tempo') {   // racing Nico (race.ts)
+      const t = race.tempo; l.w.x = t.x; l.w.y = t.y; l.w.vx = t.vx; l.w.vy = t.vy;
+      if (t.vx || t.vy) Object.assign(l.st, chooseView(t.vx, t.vy, l.st)); else Object.assign(l.st, chooseView(race.course.flag[0] - t.x, race.course.flag[1] - t.y, l.st));
+      stepGait(l.st, Math.hypot(t.vx, t.vy), t.vy, dt, GAIT_SCALE * l.view.height);
+      l.view.pose(t.x, t.y, l.st); return;
+    }
     if (l.climb) { stepClimb(l, dt); return; }
     // someone Nico's doing a job for (or who has one to offer) waits for him when he's close,
     // instead of walking off; a job with a meeting place sends them there and back
@@ -1788,6 +1858,8 @@ async function main() {
     setSeason: (s: Season) => { day = SEASONS.indexOf(s) * SEASON.days; },
     homeAll: () => { fiat.home(); for (const l of locals) { const k = l.t.route.findIndex(q => q.inside); if (k >= 0) { l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = l.t.route[k].wait ?? 60; } } },
     reaCome: () => { startFollow(beachRea.rea); },
+    raceGo: (id: string) => startRace(COURSES.find(c => c.id === id)!),
+    race: () => (race ? { phase: race.phase, winner: race.winner, time: race.time, tempo: { ...race.tempo }, flag: race.course.flag } : null),
     friendOut: (who: string) => { const l = locals.find(q => q.orig.who === who)!; l.w.i = 2; l.w.x = l.t.route[2].x; l.w.y = l.t.route[2].y; l.w.wait = 0; },
     yiayiaOut: () => { const l = locals.find(q => q.orig.who === 'yiayia')!; const k = l.t.route.findIndex(q => q.face); l.w.i = k; l.w.x = l.t.route[k].x; l.w.y = l.t.route[k].y; l.w.wait = 30; },
     setMoney: (m: number) => { state.money = m; showMoney(); },
@@ -2027,7 +2099,7 @@ async function main() {
       }
     }
     // Biscuit: heels, sits, lies down, fetches; waits by the door while Nico's in somewhere, rides along in the car
-    reaStep(dt);
+    reaStep(dt); raceStep(dt);
     if (dog && dogView) {
       const hidden = !!room || mode === 'drive';
       if (hidden) { const [hx, hy] = mode === 'drive' ? [car.x, car.y] : room!.outside; Object.assign(dog, { x: hx - 50, y: hy + 20, vx: 0, vy: 0, mode: 'follow', still: 0 }); }

@@ -948,6 +948,16 @@ with sync_playwright() as p:
     check(r2['mode'] == 'follow' and math.dist((r2['x'], r2['y']), (G()['nico']['x'], G()['nico']['y'])) < 200 and math.dist((r2['x'], r2['y']), (r1['x'], r1['y'])) > 150, f"...and toddles after him ({r2['x']:.0f},{r2['y']:.0f})")
     pg.evaluate(f"()=>window.__game.placeCar({r2['x'] + 140}, {r2['y'] + 20}, 0)"); pg.wait_for_timeout(700)
     check('Mashina' in pg.evaluate("()=>window.__game.rea()")['said'], f"a car! Rea: “Mashina!” ({pg.evaluate('()=>window.__game.rea()')['said']})")
+    # racing Tempo on the beach: 3, 2, 1, GO, first to the flag
+    pg.evaluate("()=>window.__game.place(2640, 4760)"); pg.wait_for_timeout(300); m0 = G()['money']
+    pg.evaluate("()=>window.__game.raceGo('pier')"); pg.wait_for_timeout(500)
+    check(pg.evaluate("()=>window.__game.race()")['phase'] == 'count' and pg.locator('.race-hud').is_visible(), 'a race: on your marks, the countdown')
+    pg.wait_for_function("window.__game.race() && window.__game.race().phase === 'go'", timeout=6000)
+    fl = pg.evaluate("()=>window.__game.race()")['flag']; pg.evaluate(f"()=>window.__game.place({fl[0] - 40}, {fl[1] + 10})"); pg.wait_for_timeout(400)
+    rc = pg.evaluate("()=>window.__game.race()")
+    check(rc and rc['winner'] == 'nico' and G()['money'] == m0 + 5 and G()['biz']['scores'].get('race:pier'), f"first to the flag: beat Tempo, +$5, a best time ({rc}, {m0} -> {G()['money']})")
+    pg.wait_for_timeout(3000)
+    check(pg.evaluate("()=>window.__game.race()") is None and not pg.locator('.race-hud').is_visible(), 'and the race packs up')
     # weather and seasons: rain (umbrellas up, puddles), winter (snow settles, the houses put up their lights)
     pg.evaluate('()=>window.__game.setWeather("rain")'); pg.wait_for_timeout(6000); w = G()['weather']
     check(w['kind'] == 'rain' and w['rain'] > 0.8 and w['wet'] > 0.1, f"rain: it pours and the ground gets wet ({w})")

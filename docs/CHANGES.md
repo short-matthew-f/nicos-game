@@ -1185,3 +1185,27 @@ The user: "Rea should! And when she sees cars she should say 'mashina'".
 **Tests:**
 - `test/rea.test.ts`: following round a corner (no corner-cutting), waiting and going home, auto-follow, seeing a car.
 - E2E: take her hand, walk off, she follows; Nico's car parked beside her gets "Mashina!".
+
+## Racing Tempo on the beach (2026-10-12)
+The user: "Build on all three of those games."
+
+- **Starting a race:** when Tempo's on the sand, "🏃 Race Tempo!" offers two courses (`race.ts`):
+  - **Sprint to the pier**, about 6 s;
+  - **Run to the lighthouse**, the long way up the coast.
+- **The race:**
+  - 3, 2, 1, GO with beeps. No false starts: Nico is held on the line until GO.
+  - A checkered finish flag with a tape. First to the flag wins.
+- **How Tempo runs:**
+  - He follows the course at 258 px/s; Nico's top speed is 270.
+  - He eases off when he's well ahead and digs in when he's behind, and kicks at the end.
+  - Flat out, Nico just wins; dawdle and Tempo does. Both are tested.
+- **Results:**
+  - The clock shows at the bottom.
+  - Winning: a trophy banner, and the best time per course in `scores['race:<id>']` (tenths of a second).
+  - First win per course: +$5.
+  - Tempo has things to say either way.
+  - The offer only appears when you aren't playing as Tempo.
+- **Sticker:** "Beat Tempo in a race".
+- **Tests:**
+  - `test/race.test.ts`: both courses are free of solids, the right winner at flat-out and at slow speed, the countdown.
+  - E2E: countdown, then Nico wins (+$5, a best time), then the race packs up.

@@ -384,3 +384,11 @@ body.dg-on #hud, body.dg-on #hint, body.dg-on #action { display: none !important
   background: radial-gradient(circle at 40% 35%, #7FC8F0, #2F7FD8 60%, #1E5FAE); box-shadow: 0 10px 0 #174A88, 0 0 26px rgba(47,127,216,.5); cursor: pointer; touch-action: none; }
 .bob-dunk:active { transform: translateY(8px); box-shadow: 0 2px 0 #174A88; }
 @media (max-aspect-ratio: 1/1) { .bob-row { flex-direction: column; } .bob-dunk { width: 130px; height: 130px; font-size: 26px; } }
+
+/* ---- racing Tempo (race.ts): the countdown, the clock, the result */
+.race-hud { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; padding: 8px 26px; border-radius: 20px;
+  font: 900 44px system-ui, -apple-system, sans-serif; color: #2B3F55; background: rgba(255,255,255,.92); box-shadow: 0 6px 18px rgba(43,63,85,.25); }
+.race-hud[hidden] { display: none; }
+.race-hud.go { color: #FFFFFF; background: #3BB273; }
+.race-hud.won { color: #2B3F55; background: #F9C846; font-size: 30px; }
+.race-hud.lost { color: #FFFFFF; background: #D9322E; font-size: 30px; }
