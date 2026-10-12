@@ -57,6 +57,9 @@ export function slideAt(t: number, from: [number, number]): Body {
   const u = ease(k / T.land);   // stand up off the end
   return { ...pose, x: lerp(SEAT1[0], LAND[0], u), y: lerp(SEAT1[1], LAND[1], u), view: 'side', amp: 0, sit: 1 - u, hold: 0.5 * (1 - u), z: Math.max(z, lerp(SEAT1[1], LAND[1], u)) };
 }
+/** Sitting (pose.ts sit) puts the hips higher above the feet than the old crouch did: drop the body this much
+ * (world px) so the hips stay on the seat. */
+const SIT_LOWER = 9;
 export const SLIDE_START: [number, number] = LADDER, SLIDE_END: [number, number] = LAND;
 
 // ---- the swings: sit on the nearest seat and swing toward and away from the camera
@@ -68,8 +71,8 @@ export function swingAt(t: number, seat: number): { body: Body; chain: number } 
   const grow = Math.min(1, t / 3);                         // pumps up to full height
   const chain = 1 + 0.32 * grow * Math.sin(2 * Math.PI * t / SWING_PERIOD);
   // feet hang a little below the plank; Nico draws between the frame and his seat
-  const y = SWING_BAR + (SWING_SEAT + 22 - SWING_BAR) * chain;
-  return { chain, body: { x: seatX(seat), y, view: 'front', face: 1, amp: 0, crouch: 1, hold: 0, sit: 0, z: SWINGS.y + 1, sy: 0.96 + 0.08 * (chain - 1) / 0.32 } };
+  const y = SWING_BAR + (SWING_SEAT + 22 + SIT_LOWER - SWING_BAR) * chain;
+  return { chain, body: { x: seatX(seat), y, view: 'front', face: 1, amp: 0, crouch: 0, hold: 0, sit: 1, z: SWINGS.y + 1, sy: 0.96 + 0.08 * (chain - 1) / 0.32 } };
 }
 
 // ---- the water slide: climb the tower, sit at the top, whoosh round the twisting chute, splash
@@ -77,16 +80,21 @@ export const WSLIDE_T = { climb: 1.1, sit: 0.3, slide: 1.4 };
 const top = slidePath(0), end = slidePath(1);
 /** Where he lands: the chute's end, dropped to the water's surface. */
 export const SPLASH: [number, number] = [end.x, POOL.y + 130];   // (well in: not close enough to an edge to climb straight out)
+const WSLIDE_SEAT = 10;   // side-view sitting: the root sits this far (world px) below the hips, on the chute
+/** Which way the chute's heading on screen at s (0..1): he faces down it. */
+const downhill = (s: number) => (slidePath(Math.min(1, s + 0.02)).x >= slidePath(Math.max(0, s - 0.02)).x ? 1 : -1);
 /** Nico on the water slide at time t (null: he's splashed down). He climbs the ladder, sits at the top, and rides the
  * chute (world/zones.ts slidePath: the same curve the slide's drawn with). */
 export function waterSlideAt(t: number): Body | null {
   const T = WSLIDE_T, z = WSLIDE.y + 2, pose = { face: 1, hold: 0, sy: 1 };
   if (t < T.climb) { const u = t / T.climb; return { ...pose, x: WSLIDE.x - 4, y: lerp(WSLIDE.y + 10, WSLIDE.y - WSLIDE.h + 2, u), view: 'back', amp: 1, crouch: 0, sit: 0, z }; }
-  if (t < T.climb + T.sit) { return { ...pose, x: lerp(WSLIDE.x - 4, top.x, (t - T.climb) / T.sit), y: top.y - top.h + 2, view: 'front', amp: 0, crouch: 1, sit: 1, z }; }
+  // sitting side-on, legs out down the chute, like the playground slide (head-on, sitting looks like standing)
+  const ride = { view: 'side' as const, amp: 0, crouch: 0, sit: 1, hold: 0.5 };
+  if (t < T.climb + T.sit) { const k = (t - T.climb) / T.sit; return { ...pose, ...ride, sit: k, x: lerp(WSLIDE.x - 4, top.x, k), y: top.y - top.h + WSLIDE_SEAT, face: downhill(0), z }; }
   const u = (t - T.climb - T.sit) / T.slide;
   if (u >= 1) return null;
-  const q = slidePath(ease(u) * 0.6 + u * 0.4);   // speeds up as it goes
-  return { ...pose, x: q.x, y: q.y - q.h + 2, view: 'front', amp: 0, crouch: 1, sit: 1, z: Math.max(z, q.y + 1) };
+  const s = ease(u) * 0.6 + u * 0.4, q = slidePath(s);   // speeds up as it goes
+  return { ...pose, ...ride, x: q.x, y: q.y - q.h + WSLIDE_SEAT, face: downhill(s), z: Math.max(z, q.y + 1) };
 }
 
 // ---- swimming

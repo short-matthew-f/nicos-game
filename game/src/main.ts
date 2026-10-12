@@ -23,8 +23,8 @@ import { Minimap } from './minimap';
 import { BallView, kick, nudge, roll, kickoff } from './world/ball';
 import { Ducks } from './world/ducks';
 import { Pigeons, Clouds, Coins, COIN } from './world/life';
-import { loadArt, hasArt, PersonView } from './rig/person';
-import { neutral, type PoseState, type View } from './rig/pose';
+import { loadArt, hasArt, PersonView, RIG_SCALE } from './rig/person';
+import { neutral, sitHipFB, type PoseState, type View } from './rig/pose';
 import { Input } from './input/stick';
 import { chooseView, moveCircle, freeAt, stepGait, GAIT_SCALE, WALK_SPEED } from './player';
 import { startUpdates, BUILD_ID } from './update';
@@ -36,7 +36,7 @@ import { slideAt, SLIDE_LEN, SLIDE_START, swingAt, seatX, waterSlideAt, SPLASH, 
 import { POOL, WSLIDE, ZONE_LOTS, PIER } from './world/zones';
 import { ROOMS, drawRoom, roomSolids, trayArt, SEAT, STOOL, STOOL_SEAT, TABLE_TOP, type Room, HOME_DECOR, decorArt, tvScreen, fishArt, birdhouseArt, drawHall, paintDoor, doorX, HALL_ROOM, HALL_DESK, HALL_EXIT, drawUnit, findArt, unitSlot, UNIT_ROOM, UNIT_EXIT, type DoorView, drawShedRoom, workbenchArt, shelvesArt, binsArt, paintArt, SHED_ROOM, SHED_EXIT, SHED_SLOTS, drawShopRoom, pieceArt, craftTableArt, counterArt, SHOP_ROOM, SHOP_EXIT, SHOP_SLOTS, SHOP_PEGS, browseAt, HOME_ROOM, HOME_EXIT, HOME_FURNITURE, PILLOW, drawHomeRoom, paintWindows, bedArt, nightstandArt, couchArt, pinballArt, kitchenArt, BAKERY_ROOM, BAKERY_EXIT, BAKERY_SLOTS, CASE_SPOTS, caseBrowseAt, drawBakeryRoom, bakedArt, ovenArt, mixTableArt, caseArt, pantryArt, bakeryCounterArt } from './world/rooms';
 import { WALLPAPERS, RUGS, REDECORATE, PAINTINGS_KEPT } from './decor';
-import { INTERIORS, drawInterior, interiorSolids, useSpot, type Interior } from './world/interiors';
+import { INTERIORS, drawInterior, interiorSolids, useSpot, chairOf, seatOf, type Interior, type Thing } from './world/interiors';
 import { RECIPES, PANTRY, BAKERY as BAKERY_RULES, recipe, cantBake, visit as bakeryVisit, whileAway as bakeryAway, emptyTill as bakeryEmpty, visitGap as bakeryGap, HENS } from './bakery';
 import type { Shop } from './store';
 import { DESIGNS, SHOP as SHOP_RULES, cantMake, visit as shopVisit, whileAway, emptyTill, visitGap, design } from './jewelry';
@@ -232,7 +232,7 @@ async function main() {
   // inside a building: the room, and where Nico is outside (the town only ever sees that)
   type Box = { x: number; y: number; w: number; d: number };
   let room: { kind: 'diner' | 'hall' | 'unit' | 'shed' | 'shop' | 'home' | 'bakery' | 'inside'; id: string; w: number; h: number; view: Container; layer: Container; solids: Box[]; worker?: PersonView;
-    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container; windows?: Graphics; lamp?: Container } | null = null;
+    outside: [number, number]; diner?: Room; doors?: DoorView[]; painted?: string[]; finds?: Map<number, Container>; outlines?: Record<string, Container>; rack?: Container; windows?: Graphics; lamp?: Container; addWorker?: () => void } | null = null;
   let carrying: { label: string; boost: number; food?: string } | null = null;   // a tray of food, from the counter to a table
   // the odd job in progress (saved; an item request's id says who and what)
   let job: Active | null = null;
@@ -245,6 +245,7 @@ async function main() {
   // (only in the dojo: the user, "The belt should only be on in the dojo"; the loop keeps it right)
   let beltShown: string | null = null;
   let dressing = '';   // (the outfit whose art is loading)
+  const artFailed = (e: unknown) => console.warn('[nico] art failed to load (it will be tried again next time)', e);
   const DECK = ZONE_LOTS.find(l => l.id === 'pooldeck')!;
   /** What he's wearing: his whites in the dojo (only Nico has them), a swimsuit round the pool (the user: "people in
    * the pool need swimsuits"), his own clothes everywhere else. And the belt, only in the dojo. */
@@ -253,7 +254,11 @@ async function main() {
     const coat = room?.id === 'hospital' && player === 'nico' && (biz.seen['book:hospital'] ?? 0) > 0;   // (his white coat: the prize for the hospital page)
     const outfit = inDojo && player === 'nico' ? 'nicodobok' : coat ? 'nicodoc' : atPool && !room ? `${player}swim` : player;
     if (nico.view.who !== outfit && dressing !== outfit) {
-      if (hasArt(outfit)) relook(nico, outfit); else { dressing = outfit; void loadArt([outfit]).then(() => { dressing = ''; }); }
+      if (hasArt(outfit)) relook(nico, outfit);
+      else {   // (a failed download tries again in a few seconds, rather than never)
+        dressing = outfit;
+        loadArt([outfit]).then(() => { dressing = ''; }, e => { console.warn('[nico] outfit art', outfit, e); setTimeout(() => { dressing = ''; }, 5000); });
+      }
     }
     const rank = Math.max(0, saved.biz.belt);   // (a beginner wears a white belt)
     const want = inDojo && nico.view.who === 'nicodobok' ? `${saved.biz.belt}` : null;
@@ -274,7 +279,9 @@ async function main() {
   let mode: 'walk' | 'drive' | 'play' = saved.driving ? 'drive' : 'walk';
   let boost = 0;   // seconds of speedy walking left (lunch)
 
-  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: here()[0], y: here()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock, day, ...(player !== 'nico' ? { player } : {}) });
+  /** Where to save him: in the middle of something (on a swing, a bench, in the pool) that's where he'll get up to. */
+  const saveSpot = (): [number, number] => (room || !play ? here() : play.kind === 'swim' ? climbOut(nico.x, nico.y) : play.to ?? play.from);
+  const persist = () => writeSave({ v: VERSION, money: state.money, nico: { x: saveSpot()[0], y: saveSpot()[1] }, car: { x: car.x, y: car.y, h: car.h }, driving: mode === 'drive', biz: state.biz, job: job ? { id: job.job.id, step: job.step, at: job.at } : null, clock, day, ...(player !== 'nico' ? { player } : {}) });
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
   setInterval(persist, 5000);
@@ -303,7 +310,9 @@ async function main() {
   nico.view.root.visible = mode === 'walk';
 
   // ---- playground: the game takes over Nico's pose for a moment
-  let play: { kind: 'slide' | 'swing' | 'bench' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep' | 'games' | 'dojo'; t: number; from: [number, number]; seat: number } | null = null;
+  // (bench: sitting on something, facing out; desk: on a chair at a desk or table, back to us. For both, `from` is
+  // where the hips go, `z` the draw order, `to` where he stands up to)
+  let play: { kind: 'slide' | 'swing' | 'bench' | 'desk' | 'dig' | 'camera' | 'waterslide' | 'swim' | 'eat' | 'sleep' | 'games' | 'dojo'; t: number; from: [number, number]; seat: number; z?: number; to?: [number, number] } | null = null;
   let aim: [number, number] = [0, 0];   // where the camera's pointing (camera mode)
   function startSlide() { mode = 'play'; play = { kind: 'slide', t: 0, from: [nico.x, nico.y], seat: 0 }; }
   const seatTaken: (string | null)[] = [null, null];   // who's on each swing
@@ -314,10 +323,11 @@ async function main() {
     seatTaken[seat] = 'nico';
     mode = 'play'; play = { kind: 'swing', t: 0, from: [nico.x, nico.y], seat };
   }
+  const DOG_SOLIDS = [...SOLIDS, POOL];   // (the dog waits at the pool's edge while he swims: no walking on the water)
   function stopPlay() {
     if (!play) return;
     if (play.kind === 'swing') { seats[play.seat].set(1); seatTaken[play.seat] = null; nico.x = seatX(play.seat); nico.y = SWINGS.y + 34; }
-    if (play.kind === 'bench') { nico.x = play.from[0]; nico.y = play.from[1] + 40; }
+    if ((play.kind === 'bench' || play.kind === 'desk') && play.to) [nico.x, nico.y] = play.to;
     if (play.kind === 'camera') viewfinder.hidden = true;
     if (play.kind === 'games') { nico.x = play.from[0]; nico.y = play.from[1] + 70; if (tvGlow) tvGlow.alpha = 0.1; }
     if (play.kind === 'sleep') { nico.x = BED_SIDE[0]; nico.y = BED_SIDE[1]; sleepEl.classList.remove('on'); }
@@ -332,7 +342,8 @@ async function main() {
   const CAM = { zoomH: 600, reach: 800, aimSpeed: 650, frame: 0.56 };   // view height while aiming, how far it can look, frame size (of the screen)
   function startCamera() {
     mode = 'play'; play = { kind: 'camera', t: 0, from: [nico.x, nico.y], seat: 0 };
-    aim = [nico.x, nico.y - 40]; viewfinder.hidden = false; hint.style.opacity = '0';
+    const [dx, dy] = ({ side: [1, 0], front: [0, 1], back: [0, -1], qfront: [0.7, 0.7], qback: [0.7, -0.7] } as const)[nico.st.view];
+    aim = [nico.x + dx * nico.st.face * 200, nico.y - 40 + dy * 200]; viewfinder.hidden = false;   // (pointing the way he's facing) hint.style.opacity = '0';
   }
   function snap() {
     if (play?.kind !== 'camera') return;
@@ -379,7 +390,12 @@ async function main() {
     run: () => { if (atEdge(nico.x, nico.y)) { stopPlay(); return; } floating = !floating; ring.visible = floating; sfx.tap(); } };
   const hopOff: Spot = { id: 'hop', x: 0, y: 0, r: Infinity, label: 'Hop off', run: stopPlay };
   const standUp: Spot = { id: 'stand', x: 0, y: 0, r: Infinity, label: 'Stand up', run: stopPlay };
-  function sitOnBench(bx: number, by: number) { mode = 'play'; play = { kind: 'bench', t: 0, from: [bx, by], seat: 0 }; }
+  /** Sit on something facing out, hips at (x, hip), drawn at z; standing up goes to `to`. */
+  function sitOn(x: number, hip: number, z: number, to: [number, number]) { mode = 'play'; play = { kind: 'bench', t: 0, from: [x, hip], seat: 0, z, to }; }
+  /** Sit on the chair at a desk or table (interiors.ts chairOf), back to us, facing it. */
+  function sitAtChair(t: Extract<Thing, { kind: 'block' }>) { const ch = chairOf(t); mode = 'play'; play = { kind: 'desk', t: 0, from: [ch.x, ch.hip], seat: 0, z: ch.floor - 0.5, to: [ch.x, ch.floor + 26] }; }
+  /** Hips to shoes, sitting (front or back view), in world px. */
+  const sitDrop = () => sitHipFB() * RIG_SCALE * nico.view.height;
 
   // ---- buildings: walk up to a door to see what's there
   const placeEl = document.getElementById('place')!, menuEl = document.getElementById('place-menu')!;
@@ -666,10 +682,10 @@ async function main() {
         v.pose(p.x, p.y, { ...neutral(p.face ?? 'front'), face: p.flip ? -1 : 1 }); v.root.zIndex = p.y; rl.addChild(v.root);
         dojoCast.set(p.who as Actor, { view: v, home: [p.x, p.y], st: { ...neutral(p.face ?? 'front'), face: p.flip ? -1 : 1 } });
       };
-      if (hasArt(p.who)) queueMicrotask(add); else void loadArt([p.who]).then(add);   // (after the room's shown: add() checks it's still this room)
+      if (hasArt(p.who)) queueMicrotask(add); else loadArt([p.who]).then(add, artFailed);   // (after the room's shown: add() checks it's still this room)
     }
-    showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids }, at ?? [r.w / 2, r.h - 100]);
-    if (r.person && !out) { if (hasArt(r.person.who)) addWorker(); else void loadArt([r.person.who]).then(addWorker); }   // (their art loads in the background: see below)
+    showRoom({ kind: 'inside', id, w: r.w, h: r.h, view, layer: rl, solids, addWorker }, at ?? [r.w / 2, r.h - 100]);
+    if (r.person && !out) { if (hasArt(r.person.who)) addWorker(); else loadArt([r.person.who]).then(addWorker, artFailed); }   // (their art loads in the background: see below)
     sfx.door();
   }
   // ---- the dojo comes alive (dojo.ts): now and then the instructors do a form together, or work the pads
@@ -831,8 +847,8 @@ async function main() {
   const GRAN: Record<string, () => void> = {
     nonna: () => showCard('nonna', '👵 Nonna', `Nonna: “${pick(['Ciao, Nico! You look hungry. Sit, sit!', 'Mangia! You\'re a growing boy.', 'I made too much pasta again. Help me eat it!'])}”`, [
       { label: '🍝 A big bowl of pasta', sub: pastaIn > 0 ? 'still full!' : 'free', id: 'pasta', disabled: pastaIn > 0, onClick: () => {
-        pastaIn = 180; see(biz, 'family', 'pasta'); const t = INTERIORS.nonna.things.find(q => q.kind === 'block' && q.use?.sit && q.use.label.includes('table'));
-        if (t && t.kind === 'block') { nico.x = t.x + t.w / 2; nico.y = t.y + t.d + 50; sitOnBench(t.x + t.w / 2, t.y + t.d + 6); }
+        pastaIn = 180; see(biz, 'family', 'pasta'); const t = INTERIORS.nonna.things.find(q => q.kind === 'block' && q.use?.at);
+        if (t && t.kind === 'block') { [nico.x, nico.y] = useSpot(t); sitAtChair(t); }
         boost = Math.min(BOOST.max, boost + 60); sfx.coin(); toast('🍝 Nonna brings a huge bowl of pasta. Mangia! You feel super speedy! ⚡');
       } },
       { label: '🏥 Go to the hospital together', sub: fiat.out ? 'the Cinquecento\'s out' : 'meet them there', id: 'hospital', disabled: fiat.out, onClick: () => goHospital() },
@@ -897,6 +913,15 @@ async function main() {
   }
   let birdhouseView: Container | null = null;
   function placeBirdhouse() { if (birdhouseView) return; birdhouseView = birdhouseArt(470, 1700); layer.addChild(birdhouseView); }
+  /** Whoever lives or works here comes and goes while Nico's inside (the grandparents off in the Cinquecento,
+   * Yia-Yia out painting): keep them drawn exactly when they're in, so the counter matches what you see. */
+  function syncHost() {
+    const p = room?.kind === 'inside' ? INTERIORS[room.id].person : undefined;
+    if (!room || !p) return;
+    const out = away(p.who);
+    if (out && room.worker) { room.worker.root.destroy({ children: true }); room.worker = undefined; }
+    else if (!out && !room.worker && hasArt(p.who)) room.addWorker?.();
+  }
   function insideSpots(): Spot[] {
     if (!room) return [];
     const r: Interior = INTERIORS[room.id], out: Spot[] = [];
@@ -917,7 +942,7 @@ async function main() {
       if (!('use' in t) || !t.use) return;
       const u = t.use, [x, y] = useSpot(t);
       out.push({ id: u.action && u.action === room!.id ? 'counter' : `thing${i}`, x, y, r: 100, label: u.label, run: () => {
-        if (u.sit) { sitOnBench(x, y - 44); return; }
+        if (u.sit && t.kind === 'block') { if (u.at) sitAtChair(t); else { const st = seatOf(t); sitOn(st.x, st.hip, st.z, [x, y]); } return; }
         if (u.action === 'bell') { for (let k = 0; k < 3; k++) audio.tone('triangle', 1568, 1568, 0.25, 0.08, k * 0.3); toast('🔔 Ding ding ding! The firefighters come running... false alarm!'); return; }
         if (u.action) { placeAction(u.action); return; }
         if (u.lines) toast(pick(u.lines));
@@ -991,7 +1016,7 @@ async function main() {
   }
   /** Spots for the decorations: buy one (it's stuck on), or use it. */
   function decorSpots(): Spot[] {
-    const spotAt: Record<string, [number, number]> = { posters: [195, 575], bookshelf: [465, 360], tv: [360, 690], beanbag: [205, 845], fishtank: [1075, 745], plant: [1220, 610], cat: [900, 830] };
+    const spotAt: Record<string, [number, number]> = { posters: [195, 575], bookshelf: [465, 360], tv: [360, 690], beanbag: [205, 845], fishtank: [1075, 745], plant: [1220, 610], cat: [975, 790] };   // (the cat: stand beside her, not in front, or her ears poke up behind his head)
     const out: Spot[] = [];
     for (const u of UNLOCKS.filter(q => q.room === 'home')) {
       const owned = isUnlocked(biz, u.id);
@@ -1032,7 +1057,7 @@ async function main() {
       { id: 'bed', x: BED_SIDE[0], y: BED_SIDE[1], r: 130, label: night ? '😴 Go to sleep' : '😴 Take a nap', run: () => {
         mode = 'play'; play = { kind: 'sleep', t: 0, from: [PILLOW[0], PILLOW[1]], seat: night ? 1 : 0 }; sfx.tap();
       } },
-      { id: 'couch', x: c.x + c.w / 2, y: c.y + c.d + 50, r: 120, label: '🛋️ Sit on the couch', run: () => sitOnBench(c.x + c.w / 2, c.y + c.d - 6) },
+      { id: 'couch', x: c.x + c.w / 2, y: c.y + c.d + 50, r: 120, label: '🛋️ Sit on the couch', run: () => sitOn(c.x + c.w / 2, c.y + c.d - 42, c.y + c.d + 1, [c.x + c.w / 2, c.y + c.d + 50]) },   // (hips on the cushions: rooms.ts couchArt)
       { id: 'fridge', x: k.x + k.w - 43, y: k.y + k.d + 50, r: 120, label: '🥤 Grab a snack', run: () => {
         if (snackIn > 0) { toast('🥤 You just had one! Save some for later.'); return; }
         snackIn = 120; boost = Math.min(BOOST.max, boost + 15); sfx.coin(); toast('🍎 An apple from the fridge. Crunch! You feel speedy! ⚡');
@@ -1428,7 +1453,7 @@ async function main() {
     layer.addChild(nico.view.root); trayView.removeFromParent(); trayView.visible = false; tableTray?.view.destroy(); tableTray = null;
     room.view.destroy({ children: true }); room = null;
     world.visible = true; minimap.view.visible = true;
-    nico.x = ox; nico.y = oy + 30; Object.assign(nico.st, { view: 'front' });
+    nico.x = ox; nico.y = oy + 30; Object.assign(nico.st, { view: 'front', hold: 0 });   // (hold: the tray's gone)
     if (carrying) { toast('You ate your lunch on the way out. Yum!'); boost = Math.min(BOOST.max, boost + carrying.boost); carrying = null; }
     persist();
   }
@@ -1522,7 +1547,7 @@ async function main() {
     { id: 'car', x: 0, y: 0, r: 110, label: 'Get in', run: getIn, when: () => mode === 'walk' },
     { id: 'slide', x: SLIDE_START[0], y: SLIDE_START[1] + 20, r: 90, label: 'Slide!', run: startSlide },
     { id: 'swing', x: (seatX(0) + seatX(1)) / 2, y: SWINGS.y + 25, r: 110, label: 'Swing', run: startSwing, priority: 0.6 },   // even with Primo on the other swing
-    ...PROPS.filter(p => p.kind === 'bench').map((p, i) => ({ id: `bench${i}`, x: p.x, y: p.y + 30, r: 70, label: 'Sit', run: () => sitOnBench(p.x, p.y) })),
+    ...PROPS.filter(p => p.kind === 'bench').map((p, i) => ({ id: `bench${i}`, x: p.x, y: p.y + 30, r: 70, label: 'Sit', run: () => sitOn(p.x, p.y - 26, p.y + 1, [p.x, p.y + 30]) })),   // (hips on the seat slats: draw.ts)
     ...PLACES.map(p => {
       const [x, y] = doorOf(BUILDINGS.find(b => b.id === p.building)!);
       return { id: p.building, x, y, r: 70, label: INTERIORS[p.building] ? '🚪 Go in' : p.action ?? 'Go in', run: () => (INTERIORS[p.building] ? enterInside(p.building) : (BIZ_DOORS[p.building] ?? showPlace)(p)) };
@@ -1791,7 +1816,7 @@ async function main() {
     if (!near && r.mode === 'beach') return;
     if (!reaView && near) {
       if (hasArt('rea')) { reaView = new PersonView('rea'); reaView.setZoom(zoom, resolution); if (low) reaView.setLow(true); layer.addChild(reaView.root); }
-      else if (!reaLoading) { reaLoading = true; void loadArt(['rea']).finally(() => { reaLoading = false; }); }
+      else if (!reaLoading) { reaLoading = true; loadArt(['rea']).catch(artFailed).finally(() => { reaLoading = false; }); }
     }
     if (r.mode === 'beach') {
       if (wantsToCome(r, nico.x, nico.y, dt) && mode === 'walk') { startFollow(r); reaSay(pick(['Nico! Me too!', 'Come! Come!', 'Up! Up!'])); }
@@ -1943,13 +1968,16 @@ async function main() {
     }
     const reached = stepRoute(l.t, l.w, dt);
     if (reached?.climb) { const b = BUILDINGS.find(q => q.id === reached.climb); if (b) { l.climb = { b, t: 0, dur: reached.wait ?? 8 }; stepClimb(l, 0); return; } }
-    if (reached?.swing !== undefined && !seatTaken[reached.swing]) { l.seat = reached.swing; seatTaken[l.seat] = l.t.who; l.swingT = 0; }
+    if (reached?.swing !== undefined) {
+      if (!seatTaken[reached.swing]) { l.seat = reached.swing; seatTaken[l.seat] = l.t.who; l.swingT = 0; }
+      else l.w.wait = 0;   // (someone's on it, likely Nico: walk on, rather than wait standing in the same spot as him)
+    }
     if (l.swingT >= 0) {
       if (l.w.wait > 0) {
         l.swingT += dt;
         const sw = swingAt(l.swingT, l.seat);
         seats[l.seat].set(sw.chain);
-        Object.assign(l.st, { view: sw.body.view, face: 1, crouch: sw.body.crouch, hold: 0, sit: 0, stride_y: 0 });
+        Object.assign(l.st, { view: sw.body.view, face: 1, crouch: sw.body.crouch, hold: 0, sit: sw.body.sit, stride_y: 0 });
         stepGait(l.st, 0, 0, dt);
         l.view.pose(sw.body.x, sw.body.y, l.st);
         l.view.root.zIndex = sw.body.z;
@@ -2096,7 +2124,7 @@ async function main() {
 
   if (player !== 'nico') playAs(player);   // (playing as a friend, from the save: once everything's set up)
   // the people inside buildings: their art loads in the background once the town is up (so the game starts as fast as before)
-  setTimeout(() => { void loadArt([...new Set(Object.values(INTERIORS).flatMap(r => [r.person?.who, ...(r.crew ?? []).map(p => p.who)]).filter((w): w is string => !!w && !hasArt(w)))]); }, 1500);
+  setTimeout(() => { loadArt([...new Set(Object.values(INTERIORS).flatMap(r => [r.person?.who, ...(r.crew ?? []).map(p => p.who)]).filter((w): w is string => !!w && !hasArt(w)))]).catch(artFailed); }, 1500);
   app.ticker.add(t => {
     const dt = Math.min(t.deltaMS / 1000, 0.05);
     fpsAcc += t.deltaMS; fpsN++;
@@ -2119,7 +2147,7 @@ async function main() {
         if (play.t >= SLIDE_LEN) { nico.x = b.x; nico.y = b.y; stopPlay(); }
       } else if (play.kind === 'games') {
         // on the beanbag, back to us, facing the TV (if there is one): the screen flickers, levels get beaten
-        b = { x: play.from[0], y: play.from[1] + 6, view: 'back', face: 1, amp: 0, crouch: 1, hold: tvGlow ? 0.5 + 0.2 * Math.sin(play.t * 9) : 0, sit: 0, z: play.from[1] + 30, sy: 1 };
+        b = { x: play.from[0], y: play.from[1] + 15, view: 'back', face: 1, amp: 0, crouch: 0, hold: tvGlow ? 0.5 + 0.2 * Math.sin(play.t * 9) : 0, sit: 1, z: play.from[1] + 31, sy: 1 };   // (z: just over the beanbag's)
         if (tvGlow) { tvGlow.tint = [0x7FD1E8, 0xF9C846, 0xF06A8A, 0x3BB273][Math.floor(play.t * 3) % 4]; tvGlow.alpha = 0.9; }
         if (tvGlow && Math.floor(play.t / 5) > Math.floor((play.t - lastDt) / 5)) { sfx.goal(); toast(`🎮 ${pick(['You beat level', 'High score on level', 'You found a secret in level'])} ${Math.floor(play.t / 5) + 1}!`); }
         if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
@@ -2154,14 +2182,19 @@ async function main() {
         aim[0] += input.vx * CAM.aimSpeed * dt; aim[1] += input.vy * CAM.aimSpeed * dt;
         const dx = aim[0] - nico.x, dy = aim[1] - nico.y, d = Math.hypot(dx, dy);
         if (d > CAM.reach) { aim[0] = nico.x + dx / d * CAM.reach; aim[1] = nico.y + dy / d * CAM.reach; }
-        b = { x: play.from[0], y: play.from[1], view: nico.st.view, face: nico.st.face, amp: 0, crouch: 0, hold: 1, sit: 0, z: play.from[1], sy: 1 };
+        const look = chooseView(aim[0] - play.from[0], aim[1] - (play.from[1] - 40), nico.st);   // (he turns to face what he's pointing it at)
+        b = { x: play.from[0], y: play.from[1], view: look.view, face: look.face, amp: 0, crouch: 0, hold: 1, sit: 0, z: play.from[1], sy: 1 };
       } else if (play.kind === 'dig') {
         // crouched over the hole, scooping (a bob of the arms), then up with whatever's there
         b = { x: play.from[0], y: play.from[1], view: 'front', face: 1, amp: 0.4, crouch: 1, hold: 0, sit: 0, z: play.from[1], sy: 1 };
         if (play.t >= 1.1) { const at: [number, number] = [play.from[0], play.from[1] - 50]; stopPlay(); dugTreasure(at); }
       } else if (play.kind === 'bench') {
-        // sitting on the bench, facing out: hips on the seat, legs dangling
-        b = { x: play.from[0], y: play.from[1] - 2, view: 'front', face: 1, amp: 0, crouch: 1, hold: 0, sit: 0, z: play.from[1] + 1, sy: 1 };
+        // sitting on it, facing out: hips on the seat, legs hanging over the front
+        b = { x: play.from[0], y: play.from[1] + sitDrop(), view: 'front', face: 1, amp: 0, crouch: 0, hold: 0, sit: 1, z: play.z ?? play.from[1], sy: 1 };
+        if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
+      } else if (play.kind === 'desk') {
+        // on the chair, back to us, at the desk (the chair's backrest draws over his lower back)
+        b = { x: play.from[0], y: play.from[1] + sitDrop(), view: 'back', face: 1, amp: 0, crouch: 0, hold: 0, sit: 1, z: play.z ?? play.from[1], sy: 1 };
         if (Math.hypot(input.vx, input.vy) > 0.5 && play.t > 0.4) stopPlay();
       } else {
         const sw = swingAt(play.t, play.seat);
@@ -2267,7 +2300,7 @@ async function main() {
       if (hidden) { const [hx, hy] = mode === 'drive' ? [car.x, car.y] : room!.outside; Object.assign(dog, { x: hx - 50, y: hy + 20, vx: 0, vy: 0, mode: 'follow', still: 0 }); }
       else {
         const moving = mode === 'walk' && Math.hypot(input.vx, input.vy) > 0.05;
-        const ev = stepDog(dog, dt, nico, moving, ball, (x, y, dx, dy) => moveCircle(x, y, dx, dy, SOLIDS, WORLD, 14));
+        const ev = stepDog(dog, dt, nico, moving, ball, (x, y, dx, dy) => moveCircle(x, y, dx, dy, DOG_SOLIDS, WORLD, 14));
         if (ev === 'got') sfx.bark();
         if (dog.mode === 'bring' || ev === 'drop') { const [bx, by] = mouthOf(dog); Object.assign(ball, { x: bx, y: by, vx: 0, vy: 0, z: ev === 'drop' ? 0 : 30, vz: 0 }); }
         if (ev === 'drop') { dogTrick = 0.6; toast(`🐶 ${DOG.name} drops the ball at your feet. Again!`); }
@@ -2281,7 +2314,7 @@ async function main() {
     ducks.update(dt);
     tickDoors(biz, dt); paintDoors(); updateStickers(dt); stepShop(dt);
     { const was = clock; clock = (clock + dt / DAY.length) % 1; if (clock < was) newDay(); }
-    wearBelt(room?.id === 'dojo');
+    wearBelt(room?.id === 'dojo'); syncHost();
     dojoStep(dt);
     weather.update(dt, seasonOf(day), { w: app.screen.width, h: app.screen.height }, night.dark); weather.sky.visible = !room;
     ripples.update(dt, !room && Math.abs(nico.x - (POOL.x + POOL.w / 2)) < 1700 && Math.abs(nico.y - (POOL.y + POOL.d / 2)) < 1200);
@@ -2368,7 +2401,7 @@ async function main() {
     spots[0].x = car.x; spots[0].y = car.y;
     cameraSpot.x = nico.x; cameraSpot.y = nico.y;
     action.show(frozen ? null : mode === 'drive' ? (car.speed < 40 ? outSpot : null)
-      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' ? standUp : play?.kind === 'camera' ? snapSpot : play?.kind === 'swim' ? swimSpot : play?.kind === 'eat' && !carrying ? standUp : null) : room ? nearest(roomSpots(), nico.x, nico.y) : nearest(spots, nico.x, nico.y));
+      : mode === 'play' ? (play?.kind === 'swing' ? hopOff : play?.kind === 'bench' || play?.kind === 'desk' ? standUp : play?.kind === 'camera' ? snapSpot : play?.kind === 'swim' ? swimSpot : play?.kind === 'eat' && !carrying ? standUp : null) : room ? nearest(roomSpots(), nico.x, nico.y) : nearest(spots, nico.x, nico.y));
     boostEl.hidden = boost <= 0;
     if (boost > 0) boostEl.textContent = `⚡ ${Math.ceil(boost)}s`;
 

@@ -92,9 +92,30 @@ function sideOps(st: PoseState): Record<string, Op[]> {
   };
 }
 
+/** Sitting, seen from the front or back (sit 0..1): the thigh points at (or away from) the camera, so it shows
+ * short; the shin hangs from the knee, and the knees spread a little. The hips drop so the shoes stay at the
+ * root, so a seat is placed by its height above the feet. Gives [thigh, shin, shoe] ops. (Game-only, like `sit`.) */
+export const SIT_THIGH = 29, SIT_SHIN = 29, SIT_SPLAY = 12;
+const sitThigh = (sit: number) => SIT_THIGH * (1 - 0.65 * sit);
+/** How far the hips sit above the shoes when sitting front/back on (rig units). */
+export const sitHipFB = (sit = 1) => sitThigh(sit) + SIT_SHIN;
+function bentFB(hx: number, hy: number, splay: number, sit: number): [Op[], Op[], Op[]] {
+  const lt = sitThigh(sit), ls = SIT_SHIN, ta = splay * sit, sa = -0.3 * ta, tr = ta * RAD, sr = sa * RAD;
+  const kx = hx - lt * Math.sin(tr), ky = hy + lt * Math.cos(tr);
+  return [
+    [['t', hx, hy], ['r', ta], ['s', 1, (lt + 6) / 50.0]],
+    [['t', kx, ky], ['r', sa], ['s', 1, Math.max(0, ls - 8) / 50.0]],
+    [['t', kx - ls * Math.sin(sr), ky + ls * Math.cos(sr)]],
+  ];
+}
+// holding something in front: the arms swing in and foreshorten (toward the camera from the front; from the
+// back they reach away, mostly hidden by the body) [deg in, shortening]
+const HOLD = { front: [20, 0.45], back: [8, 0.5] } as const;
+
 function fbOps(st: PoseState): Record<string, Op[]> {
   const ph = 2 * Math.PI * st.phase / CYCLE;
-  const amp = st.amp, [, dd] = gait(st);
+  const amp = st.amp, sit = st.sit ?? 0, [, gdd] = gait(st);
+  const dd = sit > 0 ? 58 - sitHipFB(sit) : gdd;
   const off = st.stride_y * CYCLE / (2 * Math.PI) * amp * Math.sin(ph);
   const sway = SWAY * amp * Math.cos(ph);
   const side = (i: number) => {
@@ -107,21 +128,26 @@ function fbOps(st: PoseState): Record<string, Op[]> {
   };
   const shoe = (i: number): Op[] => { const q = side(i); return [['t', i * LX, -q.lift + q.off]]; };
   const arm = (i: number): Op[] => {
-    const a = side(i).arm;
-    return [['t', i * AX + sway, -100 + dd - st.breath], ['r', -i * (ARM_OUT + 3.0 * Math.abs(a))], ['s', 1, 1 - 0.14 * Math.abs(a)]];
+    const a = side(i).arm, h = st.hold, [hin, hshort] = HOLD[st.view === 'back' ? 'back' : 'front'];
+    return [['t', i * AX + sway, -100 + dd - st.breath], ['r', -i * (ARM_OUT + 3.0 * Math.abs(a)) * (1 - h) + i * hin * h], ['s', 1, (1 - 0.14 * Math.abs(a)) * (1 - hshort * h)]];
   };
-  return {
-    legl: leg(-1), legr: leg(1), shl: shoe(-1), shr: shoe(1),
-    up: [['t', sway, -58 + dd - st.breath]], arml: arm(-1), armr: arm(1),
-  };
+  const up: Op[] = [['t', sway, -58 + dd - st.breath]];
+  if (sit > 0) {
+    const [tl, kl, sl] = bentFB(-LX, -58 + dd, -SIT_SPLAY, sit), [tr, kr, sr] = bentFB(LX, -58 + dd, SIT_SPLAY, sit);
+    return { legl: tl, knl: kl, legr: tr, knr: kr, shl: sl, shr: sr, up, arml: arm(-1), armr: arm(1) };
+  }
+  return { legl: leg(-1), legr: leg(1), shl: shoe(-1), shr: shoe(1), up, arml: arm(-1), armr: arm(1) };
 }
 
 // 3/4 views: the front/back gait, with hips and shoulders placed for a turned body
 const QLX = [-10, 9], QAX = [-19, 15], QNEAR_DY = 2;   // [near (viewer-left), far]
 
+const QHOLD = -40;   // 3/4 views: both arms reach forward (toward the way he faces, drawn facing right)
+
 function qOps(st: PoseState): Record<string, Op[]> {
   const ph = 2 * Math.PI * st.phase / CYCLE;
-  const amp = st.amp, [, dd] = gait(st);
+  const amp = st.amp, sit = st.sit ?? 0, [, gdd] = gait(st);
+  const dd = sit > 0 ? 58 - sitHipFB(sit) : gdd;
   const off = st.stride_y * CYCLE / (2 * Math.PI) * amp * Math.sin(ph);
   const sway = SWAY * amp * Math.cos(ph);
   const side = (i: number) => {
@@ -135,13 +161,15 @@ function qOps(st: PoseState): Record<string, Op[]> {
   };
   const shoe = (i: number): Op[] => { const q = side(i); return [['t', QLX[k(i)], -q.lift + q.off + dy(i)]]; };
   const arm = (i: number): Op[] => {
-    const a = side(i).arm, rest = i < 0 ? 8 : -6;
-    return [['t', QAX[k(i)] + sway, -100 + dd - st.breath], ['r', rest + (i < 0 ? -1 : 1) * 3.0 * Math.abs(a)], ['s', 1, 1 - 0.14 * Math.abs(a)]];
+    const a = side(i).arm, rest = i < 0 ? 8 : -6, h = st.hold;
+    return [['t', QAX[k(i)] + sway, -100 + dd - st.breath], ['r', (rest + (i < 0 ? -1 : 1) * 3.0 * Math.abs(a)) * (1 - h) + QHOLD * h], ['s', 1, (1 - 0.14 * Math.abs(a)) * (1 - 0.2 * h)]];
   };
-  return {
-    armf: arm(1), legf: leg(1), shf: shoe(1), legn: leg(-1), shn: shoe(-1),
-    up: [['t', sway, -58 + dd - st.breath]], armn: arm(-1),
-  };
+  const up: Op[] = [['t', sway, -58 + dd - st.breath]];
+  if (sit > 0) {
+    const [tf, kf, sf] = bentFB(QLX[1], -58 + dd, SIT_SPLAY * 0.5, sit), [tn, kn, sn] = bentFB(QLX[0], -58 + dd + QNEAR_DY, -SIT_SPLAY * 0.5, sit);
+    return { armf: arm(1), legf: tf, knf: kf, shf: sf, legn: tn, knn: kn, shn: sn, up, armn: arm(-1) };
+  }
+  return { armf: arm(1), legf: leg(1), shf: shoe(1), legn: leg(-1), shn: shoe(-1), up, armn: arm(-1) };
 }
 
 /** Ops for every part of the active view, keyed by the part names in nico.json. */

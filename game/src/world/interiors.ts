@@ -7,7 +7,8 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { NAVY, BAND } from './draw';
 import { iconRow, bigThing } from './icons';
 
-export interface Use { label: string; lines?: string[]; sit?: boolean; boost?: number; action?: string }
+/** sit: sit on it, facing out (a sofa, a bench). at: sit at it on a chair (a desk, a table), back to us. */
+export interface Use { label: string; lines?: string[]; sit?: boolean; at?: boolean; boost?: number; action?: string }
 /** block: furniture (footprint x, y, w, d; drawn h tall; `items`: emoji along its top). wall: on the back
  * wall. emoji: a big picture standing at (x, y). rug: on the floor. */
 export type Thing =
@@ -30,6 +31,7 @@ const onWall = (x: number, y: number, w: number, h: number, fill: string, text?:
 const big = (x: number, y: number, e: string, size: number, use?: Use, solid?: [number, number]): Thing => ({ kind: 'emoji', x, y, e, size, use, solid });
 const rug = (x: number, y: number, w: number, h: number, color: string, color2?: string): Thing => ({ kind: 'rug', x, y, w, h, color, color2 });
 const sitHere = (label = '🪑 Sit down'): Use => ({ label, sit: true });
+const sitAt = (label: string): Use => ({ label, sit: true, at: true });   // (a chair goes in front of it)
 
 /** A family's living room: a sofa, a TV, a kitchen corner and a table; a grown-up at home with a treat. */
 function house(id: string, title: string, wall: string, sofa: string, who: string, name: string, lines: string[], treat: { label: string; boost: number }): Interior {
@@ -49,7 +51,7 @@ export const INTERIORS: Record<string, Interior> = {
   school: room('school', 'School', { wall: '#F2E6CF', trim: '#B5654F', floor: ['#E3C49A', '#D9B88A'] }, [
     onWall(380, 40, 440, 160, '#2F3B33', '2 + 2 = 4', undefined, { label: '✏️ Draw on the chalkboard', lines: ['You draw a rocket on the chalkboard. 🚀', 'You write NICO WAS HERE in big letters.', 'You draw the janitor. He laughs.'] }),
     onWall(880, 60, 70, 70, '#FFFFFF', undefined, 'clock'), onWall(110, 50, 180, 120, '#F9E39A', 'ABC'),
-    ...[0, 1, 2].flatMap(r => [0, 1, 2, 3].map(i => block(170 + i * 230, 420 + r * 130, 130, 40, 60, '#E8C18A', '#B9895A', i === 1 && r === 0 ? 'books' : undefined, sitHere('🪑 Sit at a desk')))),
+    ...[0, 1, 2].flatMap(r => [0, 1, 2, 3].map(i => block(170 + i * 230, 420 + r * 130, 130, 40, 60, '#E8C18A', '#B9895A', i === 1 && r === 0 ? 'books' : undefined, sitAt('🪑 Sit at a desk')))),
     block(940, 262, 200, 60, 70, '#B9895A', '#8A5A3B', 'apple globe', { label: "🌍 Spin the globe", lines: ['You spin the globe and point... Australia!', 'You spin the globe and point... the middle of the ocean.'] }),
   ], { who: 'janitor', name: 'the janitor', x: 1080, y: 420, lines: ["School's out! I'm giving the floors a good polish.", 'Mind the wet floor, kiddo.', 'Found a lost lunchbox. Not yours, is it?'] }),
   hospital: { ...room('hospital', 'Hospital', { wall: '#EAF3FB', trim: '#8FB3D9', floor: ['#F4F6F8', '#E9EEF3'], tiles: true }, [
@@ -77,7 +79,7 @@ export const INTERIORS: Record<string, Interior> = {
   icecream: room('icecream', 'Ice Cream', { wall: '#FFE3EA', stripe: '#FFFFFF', trim: '#7FD1C1', floor: ['#FFFFFF', '#F7C8D0'], tiles: true }, [
     onWall(380, 40, 440, 150, '#7FD1C1', '12 FLAVOURS!'),
     block(300, 350, 600, 70, 90, '#E9F7F5', '#7FD1C1', 'icecream'),
-    ...[[200, 600], [600, 640], [1000, 600]].map(([x, y]) => block(x - 60, y, 120, 50, 60, '#F7C8D0', '#E8A9B4', undefined, sitHere('🪑 Sit at a table'))),
+    ...[[200, 600], [600, 580], [1000, 600]].map(([x, y]) => block(x - 60, y, 120, 50, 60, '#F7C8D0', '#E8A9B4', undefined, sitAt('🪑 Sit at a table'))),
   ], { who: 'scoop', name: 'the ice cream server', x: 600, y: 340, lines: ['What flavour today?'], action: 'icecream' }),
   parts: room('parts', 'Parts & Tools', { wall: '#DCE6EE', trim: '#34495E', floor: ['#C9CED6', '#BCC2CB'] }, [
     onWall(80, 40, 360, 170, '#C9A46A', undefined, 'wrench hammer screwdriver saw ruler', { label: '🔧 Look at the tools', lines: ['So many wrenches! Big ones, tiny ones.', 'A saw, a drill, a level. Poppop would love it here.'] }),
@@ -121,7 +123,7 @@ export const INTERIORS: Record<string, Interior> = {
     onWall(120, 40, 160, 110, '#BFE3F5'), onWall(860, 50, 230, 120, '#FFFFFF', undefined, 'face1 face2 face3', { label: 'canvas Look at the family photos', lines: ['A photo of you as a baby, covered in tomato sauce.', 'Poppop and Nonna on their wedding day.', 'Everyone at the lake. Poppop is wearing his plaid shirt (of course).'] }),
     block(80, 262, 360, 70, 80, '#9AA6B2', '#F4F6F8', 'tomato garlic olive cheese'),   // the counter
     block(480, 262, 200, 70, 90, '#2C3440', '#5B6472', 'pot'),            // the stove (Nonna's pot of sauce)
-    block(470, 520, 300, 120, 60, '#C9874A', '#8A5A3B', 'plate plate', sitHere('🍽️ Sit at the table')),
+    block(470, 520, 300, 120, 60, '#C9874A', '#8A5A3B', 'plate plate', sitAt('🍽️ Sit at the table')),
     block(880, 560, 260, 70, 70, '#D77B72', '#B85C4E', undefined, sitHere('🛋️ Sit on the quilt couch')),
     big(1130, 400, 'plant', 70, undefined, [50, 30]),
   ], { who: 'nonna', name: 'Nonna', x: 580, y: 250, lines: ['Ciao, Nico! Are you hungry? You look hungry.'], action: 'nonna' }),
@@ -163,7 +165,7 @@ export const INTERIORS: Record<string, Interior> = {
     block(330, 530, 220, 55, 70, '#D9A066', '#8A5A3B', 'potato potato potato', { label: '🔪 Help Yarosh peel potatoes', action: 'peel' }),   // the peeling board (peel.ts)
     big(130, 470, 'potsack', 110, { label: '🥔 Look at the potatoes', lines: ['A whole sack of potatoes. Some of them have funny faces.', 'Yarosh says this one looks like you.', 'Russet, red, gold, sweet. Who knew there were so many?'] }, [90, 30]),
     big(1040, 600, 'washtub', 120, { label: '💦 Bob for bakers!', action: 'bob' }, [150, 46]),   // (bob.ts)
-    ...[[260, 640], [760, 650]].map(([x, y]) => block(x - 70, y, 140, 50, 60, '#E8C18A', '#B9895A', undefined, sitHere('🪑 Sit at a table'))),
+    ...[[260, 640], [760, 650]].map(([x, y]) => block(x - 70, y, 140, 50, 60, '#E8C18A', '#B9895A', undefined, sitAt('🪑 Sit at a table'))),
   ], { who: 'yarosh', name: 'Yarosh', x: 600, y: 322, lines: ['Potatoes! What\'ll it be?'], action: 'potato' }),
   retro: room('retro', "Alpha's Retro Games", { wall: '#2B2A4A', stripe: '#3B3768', trim: '#4FE3C1', floor: ['#2F2F38', '#26262E'], tiles: true }, [
     onWall(60, 40, 300, 160, '#1E2733', 'HIGH SCORES', undefined, { label: '🏆 Read the high scores', action: 'scores' }),
@@ -197,7 +199,10 @@ export function drawInterior(r: Interior): { view: Container; layer: Container }
   g.rect(0, wall - 14, w, 14).fill(c.trim);
   g.roundRect(w / 2 - 100, h - 30, 200, 30, 6).fill('#5E3E28');   // the door
   view.addChild(g, layer);
-  for (const t of r.things) layer.addChild(thingArt(t));
+  for (const t of r.things) {
+    layer.addChild(thingArt(t));
+    if (t.kind === 'block' && t.use?.at) layer.addChild(chairArt(t));
+  }
   return { view, layer };
 }
 export function thingArt(t: Thing): Container {
@@ -227,11 +232,37 @@ export function thingArt(t: Thing): Container {
   }
   return c;
 }
+// ---- seats
+/** A chair in front of a desk or table (Use.at), pulled up to it, its back to the room. All in world px:
+ * `floor` is where its legs stand (its zIndex: anyone sitting on it draws just behind it, so the backrest
+ * covers their lower back), `hip` where a sitter's hips go. */
+export const CHAIR = { gap: 30, seat: 34, depth: 14, w: 46, back: 22 };   // (back: how far the backrest rises over the seat: about half a sitter's back)
+export function chairOf(t: Extract<Thing, { kind: 'block' }>) {
+  const x = t.x + t.w / 2, floor = t.y + t.d + CHAIR.gap;
+  return { x, floor, hip: floor - CHAIR.seat - CHAIR.depth / 2 };
+}
+/** Where a sitter's hips go on a block they sit on (a sofa, a bench): on its top, a little back from the
+ * front edge, drawn in front of it (z). And where they stand up to. */
+export function seatOf(t: Extract<Thing, { kind: 'block' }>) {
+  const F = t.y + t.d, top = F - t.h, depth = Math.min(34, t.d);
+  return { x: t.x + t.w / 2, hip: top - depth * 0.4, z: F + 1 };
+}
+function chairArt(t: Extract<Thing, { kind: 'block' }>): Container {
+  const { x, floor } = chairOf(t), { w, seat, depth, back } = CHAIR, c = new Container(), g = new Graphics(), wood = t.front, top = floor - seat;
+  g.ellipse(x + 4, floor - 1, w / 2 + 4, 6).fill({ color: NAVY, alpha: 0.16 });
+  g.roundRect(x - w / 2 - BAND, top - back - BAND, w + 2 * BAND, seat + back + 2 * BAND, 8).fill('#FFFFFF');   // (the sticker edge)
+  g.rect(x - w / 2 + 3, top, 6, seat).fill(wood).rect(x + w / 2 - 9, top, 6, seat).fill(wood);                 // legs
+  g.roundRect(x - w / 2, top - depth, w, depth + 4, 4).fill(t.top);                                            // the seat
+  g.roundRect(x - w / 2, top - back, w, back, 6).fill(wood).roundRect(x - w / 2 + 6, top - back + 5, w - 12, 6, 3).fill(t.top);   // the backrest
+  c.addChild(g); c.zIndex = floor; return c;
+}
+
 /** What you bump into: blocks and big emoji (their `solid` footprint), and the back wall. */
 export function interiorSolids(r: Interior): { x: number; y: number; w: number; d: number }[] {
   const out = [{ x: 0, y: 0, w: r.w, d: r.wall + 14 }, ...(r.crew ?? []).map(p => ({ x: p.x - 22, y: p.y - 16, w: 44, d: 18 }))];
   for (const t of r.things) {
     if (t.kind === 'block') out.push({ x: t.x, y: t.y, w: t.w, d: t.d });
+    if (t.kind === 'block' && t.use?.at) { const ch = chairOf(t); out.push({ x: ch.x - CHAIR.w / 2, y: ch.floor - 14, w: CHAIR.w, d: 14 }); }
     if (t.kind === 'emoji' && t.solid) out.push({ x: t.x - t.solid[0] / 2, y: t.y - t.solid[1], w: t.solid[0], d: t.solid[1] });
   }
   return out;

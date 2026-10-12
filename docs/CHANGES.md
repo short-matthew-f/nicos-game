@@ -1342,3 +1342,37 @@ The user: "Nonna doesn't operate a store. She was however an Ophthalmologist. An
 - From then on, Nico wears it inside the hospital: new look `nicodoc`, a white coat with a stethoscope over his green flannel and jeans. He's back in his own clothes outside, the same way as his dobok at the dojo.
 - Only Nico wears it, not the friends you can play as.
 - E2E: with the page collected, he's in the coat at the hospital, and in his flannel outside.
+
+## Code health check: every state, every character (2026-10-12)
+- The user: "Put Nico in every achievable state and make sure the rendering looks sensible. Is he sitting at a desk facing toward us rather than toward a desk?" and "any and all states possible for really any character. We want to make sure things look 'normal' enough in our sticker world."
+- He was. Every "Sit at a desk / table" (the school's 12 desks, the ice-cream, Yarosh's and Nonna's tables, Nonna's pasta) reused the park-bench pose. That is a front view, crouched, so he squatted in front of the furniture facing us, with his back to it. The user picked: back to us at desks and tables; sofas and benches stay facing us, but lower.
+
+### Sitting (`rig/pose.ts`, `rig/person.ts`, `world/interiors.ts`)
+- The front, back and 3/4 views can now sit (`sit`, which used to work only side-on). The thigh points at the camera (or away from it), so it shows short. The shin hangs from the knee and the knees spread a little. This is the side view's knee trick: a second copy of the leg art is the shin (`knl`/`knr`, `knf`/`knn`). The hips drop so the shoes stay at the root, and `sitHipFB()` gives the hip height for placing him on a seat. At sit 0 nothing changes, so pose parity with the Python rig holds.
+- Desks and tables (`Use.at`, `sitAt()`) have a chair pulled up to them, drawn by `chairArt`, with its footprint solid. He sits on it back to us, facing the desk, and the chair's backrest covers his lower back (`chairOf`). The ice-cream shop's middle table moved back 60 px so its chair isn't in the doorway (the interiors test caught this).
+- Sofas, benches, the waiting room and the home couch: hips on the seat (`seatOf`, the couch cushions, the bench slats), legs over the front, drawn in front of it. The home couch used to hide him completely (drawn behind it). Standing up goes back to where he walked up (`play.to`).
+- The swings, the beanbag and the water slide use the new sit too. Seen head-on the water slide still read as standing, so he now rides it side-on, legs out down the chute, like the playground slide.
+
+### Holding (`rig/pose.ts`)
+- `hold` (arms forward) only worked side-on. Now in the front and back views the arms swing in and foreshorten, and in the 3/4 views they reach the way he faces. This makes the tray, the camera, the controller on the beanbag and Primo's wave on the roof visible.
+- The camera turns him to face where he's aiming, and starts aimed the way he was facing.
+
+### Smaller fixes (`main.ts`, `rea.ts`)
+- Walking out of a diner with food left his arms stuck forward until his next activity (`hold` was never reset). Fixed.
+- A failed outfit download (swimsuit, dobok, white coat) locked that outfit out for the session. It now tries again after 5 s. The other background art loads catch their failures too, instead of throwing unhandled errors.
+- Townsfolk on the swings sit too (they copied the swing's crouch and dropped its `sit`, so they stood on the seat).
+- The grandparents (and Yia-Yia) are drawn in their house exactly when they're in (`syncHost`). Before, Nonna stayed in her kitchen after leaving in the Cinquecento, and "Talk to Poppop" showed with nobody there when they came back.
+- A townsperson whose swing is taken (by Nico) walks on, instead of standing inside him for the whole stop.
+- Saving mid-activity saves where he'd get up to (`saveSpot`), so a reload doesn't send him back to the start of town.
+- The dog waits at the pool's edge instead of walking on the water.
+- Rea, caught up, steps round to Nico's side (holding his hand) instead of stopping straight behind him, where his body hid her.
+- The pet-the-cat spot is beside the cat, so her ears no longer poke up behind his head.
+
+### Looking at everything (`verify/game_states.py`, `verify/rig_sheet.py`, `game/dev/rigsheet.html`)
+- `game_states.py` screenshots every state and writes contact sheets: walking in all 8 directions, every activity, all 28 rooms and everything usable in each one, the minigame screens, night and weather, and the townsfolk. It is a visual check, not a test.
+- `dev/rigsheet.html` (with `rig_sheet.py` to screenshot it) shows every character's art in every pose the game uses. Run it after adding a character or a pose.
+- The e2e check "Rea takes his hand" was flaky. Rea can decide by herself to come along during its 60 s wait, and then the tap let her go instead. If she's already coming, it now lets her go and waits for her to settle first.
+- Known, left as is:
+  - A host who leaves while Nico's inside leaves their small solid footprint behind (an invisible bump where they stood).
+  - Primo's wave on the roof now shows as hands coming together (it reads as clapping).
+  - Standing up from a chair puts him 26 px in front of it. The interiors test checks the use spot, not this, so a table close to a wall could put him in a solid.

@@ -16,6 +16,7 @@ export const OUTLINE = 3;        // rig units (was 6, the SVG sticker band; Nico
 export const SHADOW = { x: 5, y: 9, blur: 3, alpha: 0.22 };
 
 const arts = new Map<Who, ArtMeta>();
+const SHINS: Record<string, string> = { bl: 'bk', fl: 'fk', legl: 'knl', legr: 'knr', legf: 'knf', legn: 'knn' };
 // ?v= so a new deploy never mixes with cached art (Pages lets browsers cache files for 10 minutes)
 const BUST = `?v=${encodeURIComponent(BUILD_ID)}`;
 export const hasArt = (who: Who) => arts.has(who);
@@ -44,10 +45,11 @@ export class PersonView {
         const sprite = new Sprite(Texture.from(base + meta.img + BUST));
         c.addChild(sprite);
         const out = [{ meta, sprite }];
-        // side view: a second copy of each leg, for the shin when the knees bend (pose.ts 'bk'/'fk')
-        if (v === 'side' && (meta.part === 'bl' || meta.part === 'fl')) {
+        // a second copy of each leg, for the shin when the knees bend (sitting; pose.ts 'bk'/'fk', 'knl'/'knr', 'knf'/'knn')
+        const shinPart = SHINS[meta.part];
+        if (shinPart) {
           const shin = new Sprite(Texture.from(base + meta.img + BUST)); shin.visible = false; c.addChild(shin);
-          out.push({ meta: { ...meta, part: meta.part === 'bl' ? 'bk' : 'fk' }, sprite: shin });
+          out.push({ meta: { ...meta, part: shinPart }, sprite: shin });
         }
         return out;
       });

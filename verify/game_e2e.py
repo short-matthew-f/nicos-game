@@ -949,6 +949,10 @@ with sync_playwright() as p:
     check(pg.evaluate("()=>window.__game.rea().booms") > 0 and G()['biz']['seen'].get('town:rea'), 'Rea stomps one flat (BOOM!) and it goes in the sticker book')
     # she tags along: take her hand, walk off, she follows; a car: "Mashina!"
     r1 = pg.evaluate("()=>window.__game.rea()"); pg.evaluate(f"()=>window.__game.place({r1['x'] + 40}, {r1['y'] + 40})"); pg.wait_for_timeout(300)
+    if r1['mode'] != 'beach':   # (while we waited for a stomp she may have decided to come along by herself: let her go, and wait till she's back at her castles)
+        if r1['mode'] in ('follow', 'wait'): pg.click('#action')
+        pg.wait_for_function("window.__game.rea().mode === 'beach'", timeout=30000)
+        r1 = pg.evaluate("()=>window.__game.rea()"); pg.evaluate(f"()=>window.__game.place({r1['x'] + 40}, {r1['y'] + 40})"); pg.wait_for_timeout(300)
     check(G()['action'] == 'rea', f"next to Rea: take her hand ({G()['action']})")
     pg.click('#action'); pg.wait_for_timeout(200)
     check(pg.evaluate("()=>window.__game.rea()")['mode'] == 'follow', 'Rea takes his hand')

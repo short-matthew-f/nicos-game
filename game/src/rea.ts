@@ -12,7 +12,7 @@ import { shoreY } from './world/zones';
 export const REA = {
   sites: [2030, 2210, 2390].map(x => [x, Math.round(shoreY(x) - 150)] as [number, number]),
   speed: 46, build: 5, admire: [2.5, 5] as [number, number], windup: 0.7, giggle: 1.8, rest: [1, 3] as [number, number], fall: 0.6,
-  follow: { gap: 80, run: 235, back: 120, wait: 25, auto: 0.08, autoNear: 160, every: 20, cap: 4000 },
+  follow: { gap: 80, beside: 38, run: 235, back: 120, wait: 25, auto: 0.08, autoNear: 160, every: 20, cap: 4000 },
   lines: { build: ['Castle!', 'Mine!', 'Sand!'], admire: ['Pretty!', 'Look!', 'Big castle!'], boom: ['BOOM!', 'Crash!', 'Uh oh!'], giggle: ['Hehehe!', 'Again!', 'Again again!'] },
 };
 export type CastleState = 'none' | 'building' | 'up' | 'down';
@@ -117,6 +117,11 @@ export function stepFollow(r: Rea, dt: number, canFollow: boolean): 'home' | nul
       const speed = Math.min(REA.follow.run, 60 + left * 1.4);   // (runs to catch up, toddles when close)
       if (walkTo(r, r.path[0][0], r.path[0][1], speed, dt)) r.path.shift();
       rememberStep(r);
+    } else if (r.path.length) {
+      // caught up: toddle round to his side and hold his hand (not straight behind him, where he'd hide her)
+      const [nx, ny] = r.path[r.path.length - 1], side = r.x < nx ? -1 : 1;
+      r.path = [[nx, ny]];
+      walkTo(r, nx + side * REA.follow.beside, ny + 4, 60, dt);
     }
     r.doing = r.vx || r.vy ? 'walk' : 'rest';
     return null;
